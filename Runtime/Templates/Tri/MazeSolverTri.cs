@@ -1,4 +1,6 @@
-using Eye.Maps.Tri;
 
-public class MazeSolverTri : GenericMazeSolver<TriangularIndex2D>
-{ }
+namespace Eye.Maps.Templates
+{
+    public class MazeSolverTri : GenericMazeSolver<TriangularIndex2D>
+    { }
+}

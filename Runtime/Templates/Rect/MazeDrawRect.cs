@@ -1,16 +1,16 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-
-public class MazeDrawRect : MazeDrawGeneric<RectangularCoord>
+namespace Eye.Maps.Templates
 {
-    
-    protected override GenericMazeMap<RectangularCoord> CreateMazeMap()
+    public class MazeDrawRect : MazeDrawGeneric<RectangularCoord>
     {
-        return new MazeMapRect(base.mazeSize);
-    }
-    protected override RectangularCoord DefaultMazeSize()
-    {
-        return new RectangularCoord(new Vector2Int(10, 10));
+
+        protected override GenericMazeMap<RectangularCoord> CreateMazeMap()
+        {
+            return new MazeMapRect(base.mazeSize);
+        }
+        protected override RectangularCoord DefaultMazeSize()
+        {
+            return new RectangularCoord(new Vector2Int(10, 10));
+        }
     }
 }

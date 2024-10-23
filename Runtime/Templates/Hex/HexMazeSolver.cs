@@ -1,2 +1,5 @@
-﻿public class HexMazeSolver : GenericMazeSolver<Eye.Maps.Hex.HexIndex2D>
-{ }
+﻿namespace Eye.Maps.Templates
+{
+    public class HexMazeSolver : GenericMazeSolver<HexIndex2D>
+    { }
+}

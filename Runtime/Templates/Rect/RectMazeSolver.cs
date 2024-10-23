@@ -1,2 +1,5 @@
-﻿public class RectMazeSolver : GenericMazeSolver<RectangularCoord>
-{ }
+﻿namespace Eye.Maps.Templates
+{
+    public class RectMazeSolver : GenericMazeSolver<RectangularCoord>
+    { }
+}

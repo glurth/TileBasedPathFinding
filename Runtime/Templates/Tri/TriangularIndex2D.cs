@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-namespace Eye.Maps.Tri
+namespace Eye.Maps.Templates
 {
     /// <summary>
     /// Represents a triangular tile coordinate implementing ITileCoordinate interface.

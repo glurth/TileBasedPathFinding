@@ -1,6 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class MazeSolverCubic : GenericMazeSolver<CubicCoord>
-{ }
+namespace Eye.Maps.Templates
+{
+    public class MazeSolverCubic : GenericMazeSolver<CubicCoord>
+    { }
+}

@@ -1,12 +1,12 @@
 # Pathfinding Library for Unity
 
-This repository provides a flexible and extensible pathfinding library for Unity, designed to work with tile-based maps. The library includes interfaces for defining tile coordinates and maps, as well as a static class that implements the A* algorithm for pathfinding. The main components are the `Eye.Maps` namespace interfaces and pathfinding classes.
+This repository provides a generic pathfinding library for Unity, designed to work with any shape of tile-based maps. The library includes interfaces for defining tile coordinates and maps, as well as a static class that implements the A* algorithm for pathfinding. The main components are the `Eye.Maps` namespace interfaces and pathfinding classes.
 
 ## Project Structure
 
 The repository contains the following main files:
 
-### 1. `Interfaces.cs`
+### 1. `ITileCoordinate.cs`
 
 This file defines interfaces for representing tile coordinates and maps:
 
@@ -24,7 +24,7 @@ This file defines interfaces for representing tile coordinates and maps:
   - Extends the `IMap<T>` interface, adding methods for visual representation.
   - Provides functions for checking map boundaries, retrieving world positions of tiles, and determining border orientations for rendering.
 
-### 2. `Pathfinding.cs`
+### 2. `TilePathFinder.cs`
 
 This file contains the implementation of the A* pathfinding algorithm:
 
@@ -46,6 +46,7 @@ This file contains the implementation of the A* pathfinding algorithm:
 - **Flexible Pathfinding**: Supports both standard map-based pathfinding and custom cost functions.
 - **Integration with Unity**: Uses Unity's `Vector3` and `Quaternion` types for world positioning and orientation, making it suitable for game development.
 - **Heuristic Distance Calculation**: The library provides heuristic functions for efficient pathfinding, commonly used in A* algorithms.
+- **The project uses, and includes, a generic priority queue implementation for efficient pathfinding.
 
 ## Getting Started
 
@@ -77,7 +78,7 @@ else
 Dependencies
 
     Requires Unity (using UnityEngine types such as Vector3 and Quaternion).
-    The project uses a priority queue implementation for efficient pathfinding.
+    
 
 License
 
