@@ -40,6 +40,17 @@ This file contains the implementation of the A* pathfinding algorithm:
     2. Using a custom delegate for calculating movement costs.
   - Uses a priority queue to manage the pathfinding frontier.
 
+### 3. TemplateFolder
+  **This folder contains functional examples that show how to implement the interfaces and use the path-finding class.**
+  - Contains concrete examples of coordinate systems that implement the ITileCoordinate interface.
+    - Rectangular
+    - Hex
+    - Triangluar
+    - Cubic (3D)
+  - It also contains generic MAZE generation and drawing classes, plus with concrete implementations of them using each of the above coordinate types.  
+  - A Generic maze SOLVING class is also provided, using a lineRenderer to display the result.
+
+	
 ## Key Features
 
 - **Modular Design**: The library is built using interfaces and generic types to allow for easy extension and customization.
@@ -74,17 +85,19 @@ else
 {
     Debug.Log("Path not found");
 }
+```
 
-Dependencies
+## Dependencies
 
     Requires Unity (using UnityEngine types such as Vector3 and Quaternion).
     
 
-License
+## License
 
-No license is provided without written permission. (Just ask)
+    This code is proprietary, and no license is granted without written permission. However, if you're a solo developer, feel free to reach out—permission will be granted upon request. 
 
-Contributing
+
+#Contributing
 
 Contributions are welcome! Please submit pull requests or open issues for any bugs or enhancements.
 Contact
