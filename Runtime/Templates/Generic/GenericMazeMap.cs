@@ -29,24 +29,26 @@ namespace Eye.Maps.Templates
             this._size = size;
             this.worldScale = worldScale;
 
+
+            // Generate the maze
+            //GenerateMaze();
+        }
+
+        public void GenerateMaze(bool testAllWalls=false)
+        {
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
-                bool[] wallsArray = new bool[numWallDimensions];
-                for (int i = 0; i < numWallDimensions; i++)
+                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
+                for (int i = 0; i < size.NumberOfNeighbors(); i++)
                     wallsArray[i] = true;
                 walls.Add(tileCoord.value, wallsArray);
                 visited.Add(tileCoord.value, false);
             }
-            // Generate the maze
-            GenerateMaze();
-        }
-
-        private void GenerateMaze()
-        {
-            //start = new Vector2Int(0, 0);  // Example start
-            //end = new Vector2Int(_size.x - 1, _size.y - 1);  // Example end
-            List<T> mainPath = GenerateMainPath(start, end);
-            GenerateBranches(mainPath);
+            if (!testAllWalls)
+            {
+                List<T> mainPath = GenerateMainPath(start, end);
+                GenerateBranches(mainPath);
+            }
         }
 
         private List<T> GenerateMainPath(T start, T end)
@@ -198,7 +200,10 @@ namespace Eye.Maps.Templates
 
 
         abstract public Vector3 GetWorldPosition(T coord);
-
+        virtual public Quaternion GetWorldOrientation(T coord)
+        {
+            return Quaternion.identity;
+        }
         // Check if a given coordinate is within the bounds of the maze
         abstract public bool IsWithinBounds(T coord);
 

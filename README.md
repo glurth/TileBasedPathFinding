@@ -89,17 +89,17 @@ else
 
 ## Dependencies
 
-    Requires Unity (using UnityEngine types such as Vector3 and Quaternion).
+  Requires Unity (using UnityEngine types such as Vector3 and Quaternion).
     
 
 ## License
 
-    This code is proprietary, and no license is granted without written permission. However, if you're a solo developer, feel free to reach out—permission will be granted upon request. 
+  This code is proprietary, and no license is granted without written permission. However, if you're a solo developer, feel free to reach out—permission will be granted upon request. 
 
 
 #Contributing
 
-Contributions are welcome! Please submit pull requests or open issues for any bugs or enhancements.
+  Contributions are welcome! Please submit pull requests or open issues for any bugs or enhancements.
 Contact
 
 For any questions or feedback, feel free to reach out.

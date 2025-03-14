@@ -6,7 +6,9 @@ namespace Eye.Maps.Templates
 
         protected override GenericMazeMap<RectangularCoord> CreateMazeMap()
         {
-            return new MazeMapRect(base.mazeSize);
+            MazeMapRect maze= new MazeMapRect(base.mazeSize);
+            maze.GenerateMaze();
+            return maze;
         }
         protected override RectangularCoord DefaultMazeSize()
         {

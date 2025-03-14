@@ -11,6 +11,7 @@ namespace Eye.Maps.Templates
             end: new TriangularIndex2D(size.x - 1, size.y - 1),
             worldScale)
         {
+
         }
 
         public override IEnumerable<TriangularIndex2D> allMapCoords
@@ -23,30 +24,33 @@ namespace Eye.Maps.Templates
 
             }
         }
-        private static float tileHeight = Mathf.Sqrt(3f);
+
+        private static float tileWidth = 2f / Mathf.Sqrt(3f);
         public override Vector3 GetWorldPosition(TriangularIndex2D coord)
         {
-            float tileScale = 1;
+
             // Calculate the width and height of an equilateral triangle
-            float halfWidth = tileScale / 2f;
-            float halfHeight = (Mathf.Sqrt(3f) / 2f) * tileScale; // Height of the equilateral triangle
+            float halfWidth = tileWidth / 2f;
+            float centroidHeight = 1f / 3f;
 
             // Compute the horizontal coordinate (x offset)
             float worldX = coord.x * halfWidth;
 
             // Compute the vertical coordinate (y offset)
-            float worldY = coord.y * halfHeight; // Use 0.75 to account for row staggering
+            float worldY;
 
             // Adjust for the upward or downward orientation of the triangle
             if (!coord.IsPointingUp())
             {
                 // For downward-pointing triangles, shift x to the right by half width
-                //       worldX += halfWidth / 2;
+                worldY = (coord.y) + centroidHeight;
             }
-
+            else
+                worldY = ((coord.y + 1)) - centroidHeight;
             // Return the computed position
             return new Vector3(worldX, worldY, 0);
         }
+
 
         // Check if a given coordinate is within the bounds of the maze
         public override bool IsWithinBounds(TriangularIndex2D coord)
@@ -55,6 +59,17 @@ namespace Eye.Maps.Templates
         }
         float[] neighborAnglesUp = new float[] { 0, 120, 240 };
         float[] neighborAnglesDown = new float[] { 0, 240, 120 };
+
+        public override Quaternion GetWorldOrientation(TriangularIndex2D coord)
+        {
+            float rot;
+            if (!coord.IsPointingUp())
+                return Quaternion.identity;
+            else
+                return Quaternion.Euler(0, 0, 180);
+            
+        }
+
         public override Quaternion NeighborBorderOrientation(TriangularIndex2D coord, int neighborIndex)
         {
             float rot;

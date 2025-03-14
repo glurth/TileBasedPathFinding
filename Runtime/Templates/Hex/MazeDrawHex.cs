@@ -5,7 +5,9 @@ namespace Eye.Maps.Templates
 
         protected override GenericMazeMap<HexIndex2D> CreateMazeMap()
         {
-            return new MazeMapHex(mazeSize);
+            MazeMapHex maze = new MazeMapHex(mazeSize);
+            maze.GenerateMaze();
+            return maze;
         }
         protected override HexIndex2D DefaultMazeSize()
         {

@@ -6,8 +6,11 @@ namespace Eye.Maps.Templates
 
         protected override GenericMazeMap<CubicCoord> CreateMazeMap()
         {
-            return new MazeMapCubic(base.mazeSize);
+            MazeMapCubic maze = new MazeMapCubic(mazeSize);
+            maze.GenerateMaze();
+            return maze;
         }
+
         protected override CubicCoord DefaultMazeSize()
         {
             return new CubicCoord(new Vector3Int(10, 10, 10));
