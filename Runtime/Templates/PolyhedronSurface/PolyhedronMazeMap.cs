@@ -111,7 +111,11 @@ namespace Eye.Maps.Templates
             Vector3 coordPos = GetWorldPosition(coord);
             Vector3 neighborPos = GetWorldPosition(coord.GetNeighbor(0));
             Vector3 diff = neighborPos - coordPos;
-            return Quaternion.LookRotation(-sourceMap.faceDetails[coord.faceIndex].normal,Vector3.Cross(diff,coordPos));
+            Quaternion orientataion = Quaternion.identity;
+            if (coord.NumberOfNeighbors() % 2 != 0)
+               diff  = Quaternion.AngleAxis(180 / coord.NumberOfNeighbors(), -sourceMap.faceDetails[coord.faceIndex].normal)* diff;
+            orientataion *= Quaternion.LookRotation(-sourceMap.faceDetails[coord.faceIndex].normal, diff);
+            return orientataion;
         }
         public override bool IsWithinBounds(FaceCoordinate coord)
         {

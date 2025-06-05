@@ -55,8 +55,17 @@ public static class RegularPolygonMesh
         return mesh;
     }
 
-    private static Mesh CreatePolygonMesh(int sides, float radius)
+    /// <summary>
+    /// Generates a 2d (x,y plane) solid mesh in the shape of a regular polygon with the specified number of sides.  
+    /// The bottom edge of the shape will always be horizontal (x axis) when horizBottom is true. Otherwise, the polygon will have it's first CORNER pointing upwards (y axis +) relative to the center.
+    /// </summary>
+    /// <param name="sides">number of sides the polygon should have</param>
+    /// <param name="radius">circumscribed radius of the polygon (distance from center to all corners)</param>
+    /// <param name="horizBottom">when true (default): The bottom edge of the shape will always be horizontal.  When false: the first corner will point up.</param>
+    /// <returns>a Mesh that represents the shape</returns>
+    private static Mesh CreatePolygonMesh(int sides, float radius, bool horizBottom=true)
     {
+        const float piOver2 = Mathf.PI / 2f;
         Mesh mesh = new Mesh();
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
@@ -68,8 +77,17 @@ public static class RegularPolygonMesh
         uv0.Add(centerUV);
         uv2.Add(centerUV);
 
-        float angleStep = 2f * Mathf.PI / sides;
-        float angleOffset = Mathf.PI/2f ;
+        float piOverSides = Mathf.PI / sides;
+        float angleStep = 2f * piOverSides;
+        float angleOffset = 0;
+        if (horizBottom)
+        {
+            bool evenNumSides = (sides % 2 == 0);
+            bool multiFourNumSides = (sides % 4 == 0);
+            angleOffset = piOver2;
+            if (multiFourNumSides) angleOffset = piOverSides;
+            else if (evenNumSides) angleOffset = piOverSides + piOver2;
+        }
         for (int i = 0; i < sides; i++) // Loop from 0 to sides - 1
         {
             float angle = angleOffset + i * angleStep;

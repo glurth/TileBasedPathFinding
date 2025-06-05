@@ -156,7 +156,7 @@ namespace Eye.Maps.Templates
         public static bool AreNotNull(params object[] objs)
         {
             foreach (object obj in objs)
-                if (obj == null) return false;
+                if (obj== null || obj.Equals(null) ) return false;
             return true;
         }
 
