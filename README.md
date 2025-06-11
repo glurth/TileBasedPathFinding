@@ -2,6 +2,10 @@
 
 This repository provides a generic pathfinding library for Unity, designed to work with any shape of tile-based maps. The library includes interfaces for defining tile coordinates and maps, as well as a static class that implements the A* algorithm for pathfinding. The main components are the `Eye.Maps` namespace interfaces and pathfinding classes.
 
+## Installation
+
+In the unity editor, package manager, click to add a package from a git url:  https://github.com/glurth/UIPrefabGenerator.git
+
 ## Project Structure
 
 The repository contains the following main files:
