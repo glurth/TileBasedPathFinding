@@ -4,9 +4,7 @@
   "displayName": "MapPackage",
   "description": "MapPackage including coordinate classes and path finding tools",
   "unity": "2019.1",
-  "dependencies": {
-    "com.glurth.commonassettypes": "https://github.com/glurth/CommonAssetTypes.git#main"
-  },
+  "dependencies": {},
   "author": {
     "name": "Glurth"
   },
