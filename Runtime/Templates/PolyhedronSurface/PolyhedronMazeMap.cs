@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System;
-
+using EyE.UnityAssetTypes;
 namespace Eye.Maps.Templates
 {
     public class FaceCoordinate : ITileCoordinate<FaceCoordinate>

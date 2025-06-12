@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using EyE.UnityAssetTypes;
+
 namespace Eye.Maps.Templates
 {
     public class PolyhedronMazeDraw : MazeDrawGeneric<FaceCoordinate>

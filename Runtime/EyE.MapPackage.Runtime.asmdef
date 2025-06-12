@@ -1,7 +1,9 @@
 {
     "name": "EyE.MapPackage.Runtime",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:11611afca5e76df4f91f013dea468bf3"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

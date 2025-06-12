@@ -1003,7 +1003,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 792062482}
-  m_Mesh: {fileID: 4300000, guid: 3678bd07ee0ac31409b2be6c80e6bf8b, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 8608b99a689c75d4ca89b8040a123f70, type: 2}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1535,8 +1535,8 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   drawBorderWalls: 0
-  floorMesh: {fileID: 0}
-  facesAndNeighbors: {fileID: 11400000, guid: 36a20350933c66348b2a0b3f45189afb, type: 2}
+  floorMesh: {fileID: 4300000, guid: 8608b99a689c75d4ca89b8040a123f70, type: 2}
+  facesAndNeighbors: {fileID: 11400000, guid: 64e9dce36ddccd8409177045bd77867d, type: 2}
 --- !u!4 &1313517988
 Transform:
   m_ObjectHideFlags: 0
