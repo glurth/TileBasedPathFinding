@@ -102,14 +102,14 @@ namespace Eye.Maps.Templates
 
             }
         }
-        public override Vector3 GetWorldPosition(FaceCoordinate coord)
+        public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
             return sourceMap.faceDetails[coord.faceIndex].normal;
         }
-        public override Quaternion GetWorldOrientation(FaceCoordinate coord)
+        public override Quaternion GetModelSpaceOrientation(FaceCoordinate coord)
         {
-            Vector3 coordPos = GetWorldPosition(coord);
-            Vector3 neighborPos = GetWorldPosition(coord.GetNeighbor(0));
+            Vector3 coordPos = GetModelSpacePosition(coord);
+            Vector3 neighborPos = GetModelSpacePosition(coord.GetNeighbor(0));
             Vector3 diff = neighborPos - coordPos;
             Quaternion orientataion = Quaternion.identity;
             if (coord.NumberOfNeighbors() % 2 != 0)
@@ -124,8 +124,8 @@ namespace Eye.Maps.Templates
 
         public override Quaternion NeighborBorderOrientation(FaceCoordinate coord, int neighborIndex)
         {
-            Vector3 coordPos = GetWorldPosition(coord);
-            Vector3 neighborPos = GetWorldPosition(coord.GetNeighbor(neighborIndex));
+            Vector3 coordPos = GetModelSpacePosition(coord);
+            Vector3 neighborPos = GetModelSpacePosition(coord.GetNeighbor(neighborIndex));
             Vector3 diff = neighborPos - coordPos;
             Vector3 avg = (coordPos + neighborPos) * 0.5f;
             diff = diff.normalized;

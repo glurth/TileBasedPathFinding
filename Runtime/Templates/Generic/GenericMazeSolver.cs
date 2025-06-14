@@ -40,7 +40,7 @@ namespace Eye.Maps.Templates
 
                     List<Vector3> positions = new List<Vector3>();
                     foreach (TileOnPath<T> step in path.StartToEnd())
-                        positions.Add(mazeSource.maze.GetWorldPosition((T)step.coordinate));
+                        positions.Add(mazeSource.maze.GetModelSpacePosition((T)step.coordinate));
                     Debug.Log("Found path of " + positions.Count + " steps");
                     lineRenderer.positionCount = positions.Count;
                     lineRenderer.SetPositions(positions.ToArray());

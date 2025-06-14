@@ -19,7 +19,7 @@ namespace Eye.Maps.Templates
             }
         }
 
-        public override Vector3 GetWorldPosition(HexIndex2D coord)
+        public override Vector3 GetModelSpacePosition(HexIndex2D coord)
         {
             return coord.WorldPosXZPosition(this);
             //return new Vector3(coord.x, coord.y, 0);

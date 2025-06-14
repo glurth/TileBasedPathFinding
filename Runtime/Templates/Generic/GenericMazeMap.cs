@@ -149,27 +149,35 @@ namespace Eye.Maps.Templates
             return unVisitedneighbors;
         }
 
-
+        private int GetNeighborIndexOf(T current, T neighbor)
+        {
+            int neighborIndexCounter = 0;
+            foreach (T n in current.GetNeighbors())
+            {
+                if (n.Equals(neighbor))
+                    return neighborIndexCounter;
+                neighborIndexCounter++;
+            }
+           // Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+            return -1;
+        }
         private void RemoveWall(T current, T next)
         {
-            int GetNeighborIndexOf(T current, T neighbor)
-            {
-                int neighborIndexCounter = 0;
-                foreach (T n in current.GetNeighbors())
-                {
-                    if (n.Equals(neighbor))
-                        return neighborIndexCounter;
-                    neighborIndexCounter++;
-                }
-                Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
-                return -1;
-            }
+            
 
 
             int nieghborIndex = GetNeighborIndexOf(current, next);
             int reverseNeighborIndex = GetNeighborIndexOf(next, current);
             walls[current][nieghborIndex] = false;
             walls[next][reverseNeighborIndex] = false;
+        }
+
+        //returns cost to move from one tile to it's neighbor, returns -1 if impassible, or not neighbors
+        public float GetMoveCost(ITileCoordinate<T> coordT, ITileCoordinate<T> coordTDest, float max = -1, bool bothdir = false)
+        {
+            int neighborIndex = GetNeighborIndexOf(coordT.value, coordTDest.value);
+            if (neighborIndex == -1) return -1;
+            return GetMoveCost(coordT, neighborIndex, max, bothdir);
         }
 
         // Get move cost between neighboring tiles, -1 means impassable
@@ -199,11 +207,32 @@ namespace Eye.Maps.Templates
 
 
 
-        abstract public Vector3 GetWorldPosition(T coord);
-        virtual public Quaternion GetWorldOrientation(T coord)
+        abstract public Vector3 GetModelSpacePosition(T coord);
+        virtual public Quaternion GetModelSpaceOrientation(T coord)
         {
             return Quaternion.identity;
         }
+        /// <summary>
+        /// Get the coordinate at/closest to a given world position
+        /// </summary>
+        /// <param name="pos">model space position</param>
+        /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>
+        virtual public T GetCoordinate(Vector3 pos)
+        {
+            T closest= default(T);
+            float minDist = float.PositiveInfinity;
+            foreach (T coord in allMapCoords)
+            {
+                float distsq = (GetModelSpacePosition(coord) - pos).sqrMagnitude;
+                if (distsq < minDist)
+                {
+                    closest = coord;
+                    minDist = distsq;
+                }
+            }
+            return closest;
+        }
+
         // Check if a given coordinate is within the bounds of the maze
         abstract public bool IsWithinBounds(T coord);
 

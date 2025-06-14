@@ -72,8 +72,8 @@ namespace Eye.Maps.Templates
             {
                 foreach (T coord in maze.allMapCoords)
                 {
-                    Vector3 tilePosition = maze.GetWorldPosition(coord);
-                    Quaternion tileRotation = maze.GetWorldOrientation(coord);
+                    Vector3 tilePosition = maze.GetModelSpacePosition(coord);
+                    Quaternion tileRotation = maze.GetModelSpaceOrientation(coord);
                     Vector3 tileScale = floorPrefab.transform.localScale * this.tileScale;
                     Matrix4x4 floorMatrix = Matrix4x4.TRS(tilePosition, tileRotation, tileScale);
                     floorMatrices.Add(floorMatrix);
@@ -82,7 +82,7 @@ namespace Eye.Maps.Templates
 
             foreach (T coord in maze.allMapCoords)
             {
-                Vector3 tilePosition = maze.GetWorldPosition(coord);
+                Vector3 tilePosition = maze.GetModelSpacePosition(coord);
                 bool[] wallsForTile = maze.Walls[coord];
 
                 int neighborCount = coord.NumberOfNeighbors();
@@ -100,7 +100,7 @@ namespace Eye.Maps.Templates
                             continue;
                         }
 
-                        Vector3 neighborPosition = maze.GetWorldPosition(neighbor);
+                        Vector3 neighborPosition = maze.GetModelSpacePosition(neighbor);
                         Vector3 wallPosition = (tilePosition + neighborPosition) / 2;
                         Quaternion wallRotation = maze.NeighborBorderOrientation(coord, i);
                         float neighborDist = (tilePosition - neighborPosition).magnitude;
@@ -123,16 +123,16 @@ namespace Eye.Maps.Templates
             {
                 if (instantiatedStartPositionMarker == null)
                     instantiatedStartPositionMarker = Instantiate(startPositionMarkerPrefab, this.transform);
-                instantiatedStartPositionMarker.transform.localPosition = maze.GetWorldPosition(maze.start);
-                instantiatedStartPositionMarker.transform.rotation = maze.GetWorldOrientation(maze.start);
+                instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
+                instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
                 instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
             }
             if (endPositionMarkerPrefab != null)
             {
                 if (instantiatedEndPositionMarker == null)
                     instantiatedEndPositionMarker = Instantiate(endPositionMarkerPrefab, this.transform);
-                instantiatedEndPositionMarker.transform.localPosition = maze.GetWorldPosition(maze.end);
-                instantiatedEndPositionMarker.transform.rotation = maze.GetWorldOrientation(maze.end);
+                instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
+                instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
                 instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
             }
             UpdateWorldMatricies();

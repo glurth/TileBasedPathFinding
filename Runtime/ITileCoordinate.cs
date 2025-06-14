@@ -96,7 +96,16 @@ namespace Eye.Maps
         /// </summary>
         /// <param name="coord">The tile coordinate for which to get the world position.</param>
         /// <returns>The world position as a Vector3.</returns>
-        public Vector3 GetWorldPosition(T coord);
+        public Vector3 GetModelSpacePosition(T coord);
+
+
+        /// <summary>
+        /// Get the coordinate at/closest to a given world position
+        /// </summary>
+        /// <param name="pos">would position</param>
+        /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>
+        public T GetCoordinate(Vector3 pos);
+
 
         /// <summary>
         /// Retrieves the orientation of the border between the specified tile coordinate and its neighbor.

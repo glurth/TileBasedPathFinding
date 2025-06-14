@@ -23,7 +23,7 @@ namespace Eye.Maps.Templates
             }
         }
 
-        public override Vector3 GetWorldPosition(RectangularCoord coord)
+        public override Vector3 GetModelSpacePosition(RectangularCoord coord)
         {
             return new Vector3(coord.x, coord.y, 0);
         }

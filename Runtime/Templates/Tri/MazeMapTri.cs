@@ -26,7 +26,7 @@ namespace Eye.Maps.Templates
         }
 
         private static float tileWidth = 2f / Mathf.Sqrt(3f);
-        public override Vector3 GetWorldPosition(TriangularIndex2D coord)
+        public override Vector3 GetModelSpacePosition(TriangularIndex2D coord)
         {
 
             // Calculate the width and height of an equilateral triangle
@@ -60,7 +60,7 @@ namespace Eye.Maps.Templates
         float[] neighborAnglesUp = new float[] { 0, 120, 240 };
         float[] neighborAnglesDown = new float[] { 0, 240, 120 };
 
-        public override Quaternion GetWorldOrientation(TriangularIndex2D coord)
+        public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {
             float rot;
             if (!coord.IsPointingUp())

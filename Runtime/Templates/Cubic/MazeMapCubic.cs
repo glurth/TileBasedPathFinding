@@ -23,7 +23,7 @@ namespace Eye.Maps.Templates
             }
         }
 
-        public override Vector3 GetWorldPosition(CubicCoord coord)
+        public override Vector3 GetModelSpacePosition(CubicCoord coord)
         {
             return new Vector3(coord.x, coord.y, coord.z);
         }
