@@ -7,9 +7,9 @@ namespace Eye.Maps.Templates
 {
     public class FaceCoordinate : ITileCoordinate<FaceCoordinate>
     {
-        FacesAndNeighbors sourceRef;
+        public FacesAndNeighbors sourceRef;
         public int faceIndex;
-        FaceDetails details => sourceRef.faceDetails[faceIndex];
+        public FaceDetails details => sourceRef.faceDetails[faceIndex];
 
         public FaceCoordinate(FacesAndNeighbors facesAndNeighbors, int index)
         {
