@@ -7,7 +7,7 @@ namespace Eye.Maps.Templates
 {
     public class FaceCoordinate : ITileCoordinate<FaceCoordinate>
     {
-        public FacesAndNeighbors sourceRef;
+        FacesAndNeighbors sourceRef;
         public int faceIndex;
         public FaceDetails details => sourceRef.faceDetails[faceIndex];
 
@@ -79,7 +79,7 @@ namespace Eye.Maps.Templates
 
     public class FaceMazeMap : GenericMazeMap<FaceCoordinate>
     {
-        FacesAndNeighbors sourceMap;
+        public FacesAndNeighbors sourceMap;
 
         public FaceMazeMap(FacesAndNeighbors sourceMap):base(
             new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
