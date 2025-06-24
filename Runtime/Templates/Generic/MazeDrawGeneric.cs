@@ -63,8 +63,7 @@ namespace Eye.Maps.Templates
 
         private void GenerateMazeVisuals()
         {
-            float wallThickness = this.tileScale * wallThicknessFraction;
-            float wallHeight = this.tileScale * wallHeightFraction;
+
             floorMatrices.Clear();
             wallMatrices.Clear();
 
@@ -100,19 +99,7 @@ namespace Eye.Maps.Templates
                             continue;
                         }
 
-                        Vector3 neighborPosition = maze.GetModelSpacePosition(neighbor);
-                        Vector3 wallPosition = (tilePosition + neighborPosition) / 2;
-                        Quaternion wallRotation = maze.NeighborBorderOrientation(coord, i);
-                        float neighborDist = (tilePosition - neighborPosition).magnitude;
-                        float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);//   2f * neighborDist * Mathf.Sin(Mathf.PI / neighborCount) / Mathf.Sqrt(2);
-                        Vector3 wallScale = new Vector3(
-                            computedEdgeLength * wallWidthFraction,// neighborDist*wallPrefab.transform.localScale.x * wallWidthFraction,
-                            neighborDist*wallThickness,
-                            neighborDist*wallHeight//wallPrefab.transform.localScale.z
-                        );
-
-                        Matrix4x4 wallMatrix = Matrix4x4.TRS(wallPosition, wallRotation, wallScale);
-
+                        Matrix4x4 wallMatrix = GetNeighborWallMatrix(coord, i,tilePosition,neighborCount);
                         wallMatrices.Add(wallMatrix);
                         //Debug.Log("created wall between " + coord + " and " + neighbor);
                     }
@@ -136,6 +123,23 @@ namespace Eye.Maps.Templates
                 instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
             }
             UpdateWorldMatricies();
+        }
+        protected virtual Matrix4x4 GetNeighborWallMatrix(T coord, int neighborIndex, Vector3 tilePosition, int neighborCount)
+        {
+            T neighbor = coord.GetNeighbor(neighborIndex);
+            float wallThickness = this.tileScale * wallThicknessFraction;
+            float wallHeight = this.tileScale * wallHeightFraction;
+            Vector3 neighborPosition = maze.GetModelSpacePosition(neighbor);
+            Vector3 wallPosition = (tilePosition + neighborPosition) / 2;
+            Quaternion wallRotation = maze.NeighborBorderOrientation(coord, neighborIndex);
+            float neighborDist = (tilePosition - neighborPosition).magnitude;
+            float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
+            Vector3 wallScale = new Vector3(
+                computedEdgeLength * wallWidthFraction,
+                neighborDist * wallThickness,
+                neighborDist * wallHeight
+            );
+            return Matrix4x4.TRS(wallPosition.normalized, wallRotation, wallScale);
         }
 
         private void UpdateWorldMatricies()

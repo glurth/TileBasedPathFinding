@@ -104,7 +104,20 @@ namespace Eye.Maps.Templates
         }
         public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
-            return sourceMap.faceDetails[coord.faceIndex].normal;
+            // return sourceMap.faceDetails[coord.faceIndex].normal;
+            List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
+            if (faceTriStarts==null || faceTriStarts.Count == 0)
+                return sourceMap.faceDetails[coord.faceIndex].normal;//fallback
+            int triIndex = faceTriStarts[0];
+            if (faceTriStarts.Count == 1)
+            {                
+                Vector3 sumPos = sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex]];
+                sumPos += sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex+1]];
+                sumPos += sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex + 2]];
+                return sumPos / 3f;
+            }
+            //if multiple triangle make up each face, it must be constructed such that the first triangle index references the center of the face.
+            return sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex]];
         }
         public override Quaternion GetModelSpaceOrientation(FaceCoordinate coord)
         {

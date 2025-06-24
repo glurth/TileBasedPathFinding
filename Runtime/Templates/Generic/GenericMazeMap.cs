@@ -3,6 +3,17 @@ using System.Collections.Generic;
 
 namespace Eye.Maps.Templates
 {
+    public struct LineSegment
+    {
+        public Vector3 A, B;
+
+        public LineSegment(Vector3 a, Vector3 b)
+        {
+            A = a;
+            B = b;
+        }
+    }
+
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
     abstract public class GenericMazeMap<T> : IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
     {
@@ -34,7 +45,7 @@ namespace Eye.Maps.Templates
             //GenerateMaze();
         }
 
-        public void GenerateMaze(bool testAllWalls=false)
+        public void GenerateMaze(bool testAllWalls = false)
         {
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
@@ -158,12 +169,12 @@ namespace Eye.Maps.Templates
                     return neighborIndexCounter;
                 neighborIndexCounter++;
             }
-           // Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+            // Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
             return -1;
         }
         private void RemoveWall(T current, T next)
         {
-            
+
 
 
             int nieghborIndex = GetNeighborIndexOf(current, next);
@@ -208,6 +219,25 @@ namespace Eye.Maps.Templates
 
 
         abstract public Vector3 GetModelSpacePosition(T coord);
+
+        virtual public LineSegment GetModelSpaceEdge(T coord, int neighborIndex)
+        {
+            // the below fails for curved surface mazes because the distance from the origin is based on face centers, not model verticies
+            Vector3 tilePosition = GetModelSpacePosition(coord);
+            int neighborCount = coord.NumberOfNeighbors();
+            Quaternion edgeRotation = NeighborBorderOrientation(coord, neighborIndex);
+            T neighbor = coord.GetNeighbor(neighborIndex);
+
+            Vector3 neighborPosition = GetModelSpacePosition(neighbor);//returns a position even for out of bounds coords
+            Vector3 wallPosition = (tilePosition + neighborPosition) / 2;
+            Quaternion wallRotation = NeighborBorderOrientation(coord, neighborIndex);
+            float neighborDist = (tilePosition - neighborPosition).magnitude;
+            float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
+            Vector3 wallLength =  wallRotation * Vector3.right * computedEdgeLength*0.5f;
+            return new LineSegment(wallPosition + wallLength, wallPosition - wallLength);
+        }
+
+
         virtual public Quaternion GetModelSpaceOrientation(T coord)
         {
             return Quaternion.identity;
