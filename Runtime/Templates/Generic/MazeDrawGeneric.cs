@@ -139,7 +139,7 @@ namespace Eye.Maps.Templates
                 neighborDist * wallThickness,
                 neighborDist * wallHeight
             );
-            return Matrix4x4.TRS(wallPosition.normalized, wallRotation, wallScale);
+            return Matrix4x4.TRS(wallPosition, wallRotation, wallScale);
         }
 
         private void UpdateWorldMatricies()

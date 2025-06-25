@@ -19,7 +19,9 @@ namespace Eye.Maps.Templates
     {
         private T _size;
 
+
         private Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        public void SetWalls(Dictionary<T, bool[]> walls) { this.walls = walls; }
         public IReadOnlyDictionary<T, bool[]> Walls { get { return walls; } }
 
         private Dictionary<T, bool> visited = new Dictionary<T, bool>();
