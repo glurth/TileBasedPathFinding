@@ -7,7 +7,7 @@ namespace Eye.Maps.Templates
         protected override GenericMazeMap<CubicCoord> CreateMazeMap()
         {
             MazeMapCubic maze = new MazeMapCubic(mazeSize);
-            maze.GenerateMaze();
+            maze.GenerateMaze(null);
             return maze;
         }
 

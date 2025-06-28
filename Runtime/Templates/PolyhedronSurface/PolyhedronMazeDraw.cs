@@ -12,7 +12,7 @@ namespace Eye.Maps.Templates
         protected override GenericMazeMap<FaceCoordinate> CreateMazeMap()
         {
             FaceMazeMap maze = new FaceMazeMap(facesAndNeighbors);
-            maze.GenerateMaze();
+            maze.GenerateMaze(null);
             return maze;
         }
 

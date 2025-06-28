@@ -508,9 +508,9 @@ MonoBehaviour:
     m_x: 10
     m_y: 10
   tileScale: 1
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.2
-  wallWidthFraction: 1.1
+  wallThicknessFraction: 0.05
+  wallHeightFraction: 0.05
+  wallWidthFraction: 1
   wallPrefab: {fileID: 8119638376899218977, guid: a4589dea4b35af640b3fe154f84e9fa5,
     type: 3}
   floorPrefab: {fileID: 7943533984822289363, guid: 89c21075ecedb8a4dbae8de2b4826856,

@@ -6,7 +6,7 @@ namespace Eye.Maps.Templates
         protected override GenericMazeMap<TriangularIndex2D> CreateMazeMap()
         {
             MazeMapTri maze = new MazeMapTri(mazeSize);
-            maze.GenerateMaze();
+            maze.GenerateMaze(null);
             return maze;
         }
         protected override TriangularIndex2D DefaultMazeSize()

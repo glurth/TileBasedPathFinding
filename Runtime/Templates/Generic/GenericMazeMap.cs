@@ -1,8 +1,25 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+
+using EyE.Threading;
 
 namespace Eye.Maps.Templates
 {
+    /// <summary>
+    /// Thread-safe reference to a float value, for reporting progress across threads.
+    /// </summary>
+    public class ProgressFloatRef
+    {
+        private float value;
+        private readonly object lockObj = new object();
+
+        public float Value
+        {
+            get { lock (lockObj) return value; }
+            set { lock (lockObj) this.value = value; }
+        }
+    }
     public struct LineSegment
     {
         public Vector3 A, B;
@@ -33,7 +50,7 @@ namespace Eye.Maps.Templates
         public T start;
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
-
+        
         public GenericMazeMap(T size, T start, T end, float worldScale = 1f)
         {
             this.start = start;
@@ -46,7 +63,7 @@ namespace Eye.Maps.Templates
             // Generate the maze
             //GenerateMaze();
         }
-
+        /*
         public void GenerateMaze(bool testAllWalls = false)
         {
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
@@ -147,7 +164,166 @@ namespace Eye.Maps.Templates
             }
             return path;
         }
+        */
 
+        /// <summary>
+        /// Asynchronously generates a maze using time-sliced yielding.
+        /// </summary>
+        /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
+        /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
+        /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
+        public async UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
+        {
+            var yieldTimer = new YieldTimer(cancelRef, false);
+            int totalSteps = 0;
+            foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+                totalSteps++;
+            int completedSteps = 0;
+
+            foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+            {
+                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
+                for (int i = 0; i < size.NumberOfNeighbors(); i++)
+                    wallsArray[i] = true;
+
+                walls[tileCoord.value] = wallsArray;
+                visited[tileCoord.value] = false;
+
+                completedSteps++;
+                if (progressRef != null)
+                    progressRef.Value = (float)completedSteps / totalSteps;
+
+                await yieldTimer.YieldOnTimeSlice();
+            }
+
+            if (!testAllWalls)
+            {
+                List<T> mainPath = await GenerateMainPathAsync(start, end, yieldTimer);
+                await GenerateBranchesAsync(mainPath, yieldTimer);
+            }
+
+            if (progressRef != null)
+                progressRef.Value = 1f;
+        }
+
+        /// <summary>
+        /// Synchronously generates the maze by invoking the async version and backgrounding it.
+        /// </summary>
+        /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
+        /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
+        /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
+        public void GenerateMaze(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
+        {
+            GenerateMazeAsync(cancelRef, testAllWalls, progressRef).Forget();
+        }
+
+        /// <summary>
+        /// Asynchronously generates the main path from start to end.
+        /// </summary>
+        /// <param name="start">The starting tile.</param>
+        /// <param name="end">The target tile to reach.</param>
+        /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
+        private async UniTask<List<T>> GenerateMainPathAsync(T start, T end, YieldTimer yieldTimer)
+        {
+            Stack<T> stack = new Stack<T>();
+            List<T> path = new List<T>();
+            stack.Push(start);
+            visited[start] = true;
+
+            while (stack.Count > 0)
+            {
+                T current = stack.Peek();
+                path.Add(current);
+
+                if (current.Equals(end))
+                    break;
+
+                List<T> neighbors = GetUnvisitedNeighbors(current);
+
+                if (neighbors.Count > 0)
+                {
+                    T next = neighbors[random.Next(neighbors.Count)];
+                    RemoveWall(current, next);
+                    visited[next] = true;
+                    stack.Push(next);
+                }
+                else
+                {
+                    stack.Pop();
+                }
+
+                await yieldTimer.YieldOnTimeSlice();
+            }
+
+            return path;
+        }
+
+        /// <summary>
+        /// Asynchronously generates branching paths off the main path.
+        /// </summary>
+        /// <param name="mainPath">The main path tiles to branch from.</param>
+        /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
+        private async UniTask GenerateBranchesAsync(List<T> mainPath, YieldTimer yieldTimer)
+        {
+            List<T> allPathSteps = new List<T>(mainPath);
+            int maxZeros = 1000;
+            int pathLengthZeroCount = 0;
+
+            while (pathLengthZeroCount < maxZeros)
+            {
+                float curve = Mathf.Pow(Random.value, 2);
+                T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
+                List<T> newPath = await GenerateRandomPathAsync(branchStart, yieldTimer);
+
+                if (newPath.Count == 0)
+                    pathLengthZeroCount++;
+                else
+                    pathLengthZeroCount = 0;
+
+                allPathSteps.AddRange(newPath);
+                await yieldTimer.YieldOnTimeSlice();
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously generates a random path from a given start tile.
+        /// </summary>
+        /// <param name="start">Starting tile for the path.</param>
+        /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
+        private async UniTask<List<T>> GenerateRandomPathAsync(T start, YieldTimer yieldTimer)
+        {
+            List<T> path = new List<T>();
+            Stack<T> stack = new Stack<T>();
+            stack.Push(start);
+
+            while (stack.Count > 0)
+            {
+                T current = stack.Peek();
+                List<T> neighbors = GetUnvisitedNeighbors(current);
+
+                if (neighbors.Count > 0)
+                {
+                    T next = neighbors[random.Next(neighbors.Count)];
+                    RemoveWall(current, next);
+                    visited[next] = true;
+                    path.Add(next);
+                    stack.Push(next);
+                }
+                else
+                {
+                    stack.Pop();
+                }
+
+                await yieldTimer.YieldOnTimeSlice();
+            }
+
+            return path;
+        }
+
+        /// <summary>
+        /// Returns the list of unvisited neighboring tiles.
+        /// </summary>
+        /// <param name="tile">Current tile to check from.</param>
         private List<T> GetUnvisitedNeighbors(T tile)
         {
             List<T> unVisitedneighbors = new List<T>();

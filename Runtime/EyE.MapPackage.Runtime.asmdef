@@ -2,7 +2,8 @@
     "name": "EyE.MapPackage.Runtime",
     "rootNamespace": "",
     "references": [
-        "GUID:11611afca5e76df4f91f013dea468bf3"
+        "GUID:11611afca5e76df4f91f013dea468bf3",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

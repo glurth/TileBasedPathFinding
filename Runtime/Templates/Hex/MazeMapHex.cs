@@ -24,7 +24,10 @@ namespace Eye.Maps.Templates
             return coord.WorldPosXZPosition(this);
             //return new Vector3(coord.x, coord.y, 0);
         }
-
+        override public Quaternion GetModelSpaceOrientation(HexIndex2D coord)
+        {
+            return Quaternion.Euler(0, 0, 30);
+        }
         // Check if a given coordinate is within the bounds of the maze
         public override bool IsWithinBounds(HexIndex2D coord)
         {

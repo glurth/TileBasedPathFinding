@@ -1,3 +1,4 @@
+using UnityEngine;
 namespace Eye.Maps.Templates
 {
     public class MazeDrawHex : MazeDrawGeneric<HexIndex2D>
@@ -6,9 +7,10 @@ namespace Eye.Maps.Templates
         protected override GenericMazeMap<HexIndex2D> CreateMazeMap()
         {
             MazeMapHex maze = new MazeMapHex(mazeSize);
-            maze.GenerateMaze();
+            maze.GenerateMaze(null);
             return maze;
         }
+
         protected override HexIndex2D DefaultMazeSize()
         {
             return new HexIndex2D(10, 10);
