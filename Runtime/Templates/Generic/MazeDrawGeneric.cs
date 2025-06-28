@@ -11,6 +11,7 @@ namespace Eye.Maps.Templates
             get => _maze;
             set
             {
+                Debug.Log("maze set");
                 if (value != _maze)
                 {
                     _maze = value;
@@ -50,7 +51,17 @@ namespace Eye.Maps.Templates
         void OnEnable()
         {
             if (createMazeOnEnable)
-                maze = CreateMazeMap();
+            {
+                GenericMazeMap<T> newMaze = CreateMazeMap();
+                foreach (T coord in newMaze.allMapCoords)
+                {
+                    bool[] wallsForTile = newMaze.Walls[coord];
+                    Debug.Log("created map Coord " + coord + " walls: " + string.Join(",", wallsForTile));
+                }
+                maze = newMaze;
+            }
+            //if (maze != null)
+              //  GenerateMazeVisuals();
         }
 
         void Update()
@@ -100,7 +111,7 @@ namespace Eye.Maps.Templates
             {
                 Vector3 tilePosition = maze.GetModelSpacePosition(coord);
                 bool[] wallsForTile = maze.Walls[coord];
-
+                Debug.Log("Coord " + coord + " walls: " + string.Join(",", wallsForTile));
                 int neighborCount = coord.NumberOfNeighbors();
                // Debug.Log("creating walls for coord: " + coord + "  newighbors: " + string.Join(',', coord.GetNeighbors()));
                 for (int i = 0; i < neighborCount; i++)

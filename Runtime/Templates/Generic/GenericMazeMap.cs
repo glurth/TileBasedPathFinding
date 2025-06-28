@@ -174,7 +174,7 @@ namespace Eye.Maps.Templates
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
         public async UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
         {
-            var yieldTimer = new YieldTimer(cancelRef, false);
+            var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
                 totalSteps++;
@@ -212,9 +212,9 @@ namespace Eye.Maps.Templates
         /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
         /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
-        public void GenerateMaze(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
+        public void GenerateMaze(bool testAllWalls = false)
         {
-            GenerateMazeAsync(cancelRef, testAllWalls, progressRef).Forget();
+            GenerateMazeAsync(null, testAllWalls, null).GetAwaiter().GetResult();//.Forget();
         }
 
         /// <summary>
