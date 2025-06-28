@@ -519,6 +519,7 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
 --- !u!4 &154078485
 Transform:
   m_ObjectHideFlags: 0
@@ -1360,6 +1361,7 @@ MonoBehaviour:
     type: 3}
   drawBorderWalls: 0
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
 --- !u!4 &705191334
 Transform:
   m_ObjectHideFlags: 0
@@ -1559,6 +1561,7 @@ MonoBehaviour:
     type: 3}
   drawBorderWalls: 0
   floorMesh: {fileID: 4300000, guid: 8608b99a689c75d4ca89b8040a123f70, type: 2}
+  createMazeOnEnable: 1
   facesAndNeighbors: {fileID: 11400000, guid: 64e9dce36ddccd8409177045bd77867d, type: 2}
 --- !u!4 &796440790
 Transform:
@@ -1696,7 +1699,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &850890790
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1724,6 +1727,7 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
 --- !u!4 &850890791
 Transform:
   m_ObjectHideFlags: 0
@@ -1907,7 +1911,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &957235581
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1933,6 +1937,7 @@ MonoBehaviour:
     type: 3}
   drawBorderWalls: 0
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
   facesAndNeighbors: {fileID: 11400000, guid: 5af88d779ed87fd46b1f47df9326d219, type: 2}
 --- !u!4 &957235582
 Transform:
@@ -2030,6 +2035,7 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
 --- !u!4 &1029864100
 Transform:
   m_ObjectHideFlags: 0
@@ -2418,6 +2424,7 @@ MonoBehaviour:
     type: 3}
   drawBorderWalls: 0
   floorMesh: {fileID: 4300000, guid: 8608b99a689c75d4ca89b8040a123f70, type: 2}
+  createMazeOnEnable: 1
   facesAndNeighbors: {fileID: 11400000, guid: 9eea31101d9dd5d48a667f0c5bf301cf, type: 2}
 --- !u!4 &1313517988
 Transform:
@@ -2558,7 +2565,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1566221489
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2587,6 +2594,7 @@ MonoBehaviour:
     type: 3}
   drawBorderWalls: 1
   floorMesh: {fileID: 0}
+  createMazeOnEnable: 1
 --- !u!4 &1566221490
 Transform:
   m_ObjectHideFlags: 0

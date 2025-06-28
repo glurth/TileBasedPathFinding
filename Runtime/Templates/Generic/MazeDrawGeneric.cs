@@ -5,7 +5,21 @@ namespace Eye.Maps.Templates
 {
     public abstract class MazeDrawGeneric<T> : MonoBehaviour where T : ITileCoordinate<T>
     {
-        public GenericMazeMap<T> maze;
+        public GenericMazeMap<T> _maze=null;
+        public GenericMazeMap<T> maze
+        {
+            get => _maze;
+            set
+            {
+                if (value != _maze)
+                {
+                    _maze = value;
+                    GenerateMazeVisuals();
+                }
+               
+            }
+
+        }
         public T mazeSize;
 
         public float tileScale = 1f;               // Size of the tiles
@@ -32,24 +46,11 @@ namespace Eye.Maps.Templates
             mazeSize = DefaultMazeSize();
         }
 
+        public bool createMazeOnEnable = true;
         void OnEnable()
         {
-            maze = CreateMazeMap();
-            GenerateMazeVisuals();
-            if (floorPrefab != null)
-            {
-                floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
-                if (floorMesh == null)
-                {
-                    floorMesh = RegularPolygonMesh.GeneratePolygon(maze.size.NumberOfNeighbors(),1f,RegularPolygonMesh.SizeSpecification.Edgelength);
-                }
-                floorMaterial = floorPrefab.GetComponent<MeshRenderer>().sharedMaterial;
-            }
-            if (wallPrefab != null)
-            {
-                wallMesh = wallPrefab.GetComponent<MeshFilter>().sharedMesh;
-                wallMaterial = wallPrefab.GetComponent<MeshRenderer>().sharedMaterial;
-            }
+            if (createMazeOnEnable)
+                maze = CreateMazeMap();
         }
 
         void Update()
@@ -63,6 +64,22 @@ namespace Eye.Maps.Templates
 
         private void GenerateMazeVisuals()
         {
+            //we don't instantiate prefabs- we just get their mats and meshes
+            if (floorPrefab != null)
+            {
+                floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
+                if (floorMesh == null)
+                {
+                    floorMesh = RegularPolygonMesh.GeneratePolygon(maze.size.NumberOfNeighbors(), 1f, RegularPolygonMesh.SizeSpecification.Edgelength);
+                }
+                floorMaterial = floorPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+            }
+            if (wallPrefab != null)
+            {
+                wallMesh = wallPrefab.GetComponent<MeshFilter>().sharedMesh;
+                wallMaterial = wallPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+            }
+
 
             floorMatrices.Clear();
             wallMatrices.Clear();
