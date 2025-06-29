@@ -192,6 +192,21 @@ namespace Eye.Maps.Templates
             return true;
         }
 
+        /// <summary>
+        /// Splits a list of matrices into chunks of up to maxSetCount each.
+        /// </summary>
+        public static IEnumerable<List<Matrix4x4>> InChunks(List<Matrix4x4> matrices, int maxSetCount)
+        {
+            if (matrices == null || matrices.Count == 0 || maxSetCount <= 0)
+                yield break;
+
+            for (int i = 0; i < matrices.Count; i += maxSetCount)
+            {
+                int count = System.Math.Min(maxSetCount, matrices.Count - i);
+                yield return matrices.GetRange(i, count);
+            }
+        }
+
         private void DrawInstances()
         {
             if (transform.hasChanged)
@@ -200,16 +215,17 @@ namespace Eye.Maps.Templates
                 UpdateWorldMatricies();
 
             }
-
-            if(AreNotNull(floorMesh, floorMaterial))//(floorPrefab != null)
+            const int MaxInstances = 1023;
+            if (AreNotNull(floorMesh, floorMaterial))//(floorPrefab != null)
             {
-                Graphics.DrawMeshInstanced(floorMesh, 0, floorMaterial, worldFloorMatrices);
+                foreach (List<Matrix4x4> floorSet in InChunks(worldFloorMatrices, MaxInstances))
+                    Graphics.DrawMeshInstanced(floorMesh, 0, floorMaterial, worldFloorMatrices);
             }
 
             if (AreNotNull(wallMesh, wallMaterial))//wallPrefab != null)
             {
-
-                Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, worldWallMatrices);
+                foreach (List<Matrix4x4> wallSet in InChunks(worldWallMatrices, MaxInstances))
+                    Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, wallSet);
             }
         }
     }
