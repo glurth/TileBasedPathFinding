@@ -31,8 +31,14 @@ namespace Eye.Maps.Templates
         }
     }
 
+    abstract public class GenericMazeMapBase
+    {
+        abstract public UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null);
+        abstract public void GenerateMaze(bool testAllWalls = false);
+    }
+
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
-    abstract public class GenericMazeMap<T> : IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
+    abstract public class GenericMazeMap<T> : GenericMazeMapBase, IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
     {
         private T _size;
 
@@ -172,7 +178,7 @@ namespace Eye.Maps.Templates
         /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
         /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
-        public async UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
+        public override async UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
         {
             var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
@@ -212,7 +218,7 @@ namespace Eye.Maps.Templates
         /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
         /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
-        public void GenerateMaze(bool testAllWalls = false)
+        public override void GenerateMaze(bool testAllWalls = false)
         {
             GenerateMazeAsync(null, testAllWalls, null).GetAwaiter().GetResult();//.Forget();
         }

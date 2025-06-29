@@ -62,12 +62,10 @@ namespace Eye.Maps.Templates
 
         public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {
-            float rot;
             if (!coord.IsPointingUp())
                 return Quaternion.identity;
             else
                 return Quaternion.Euler(0, 0, 180);
-            
         }
 
         public override Quaternion NeighborBorderOrientation(TriangularIndex2D coord, int neighborIndex)
