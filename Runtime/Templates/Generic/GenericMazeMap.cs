@@ -6,20 +6,7 @@ using EyE.Threading;
 
 namespace Eye.Maps.Templates
 {
-    /// <summary>
-    /// Thread-safe reference to a float value, for reporting progress across threads.
-    /// </summary>
-    public class ProgressFloatRef
-    {
-        private float value;
-        private readonly object lockObj = new object();
 
-        public float Value
-        {
-            get { lock (lockObj) return value; }
-            set { lock (lockObj) this.value = value; }
-        }
-    }
     public struct LineSegment
     {
         public Vector3 A, B;

@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
+using EyE.Threading;
+using Cysharp.Threading.Tasks;
 
 namespace Eye.Maps.Templates
 {
@@ -9,17 +11,16 @@ namespace Eye.Maps.Templates
         public GenericMazeMap<T> maze
         {
             get => _maze;
-            set
-            {
-               // Debug.Log("maze set");
-                if (value != _maze)
-                {
-                    _maze = value;
-                    GenerateMazeVisuals();
-                }
-               
-            }
-
+        }
+        public void SetMaze(GenericMazeMap<T> toValue)
+        {
+            _maze = toValue;
+            GenerateMazeVisuals();
+        }
+        public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, CancelBoolRef cancelRef=null, ProgressFloatRef progressRef=null)
+        {
+            _maze = toValue;
+            await GenerateMazeVisualsAsync(cancelRef,progressRef);
         }
         public T mazeSize;
 
@@ -58,7 +59,8 @@ namespace Eye.Maps.Templates
                     bool[] wallsForTile = newMaze.Walls[coord];
                     Debug.Log("created map Coord " + coord + " walls: " + string.Join(",", wallsForTile));
                 }*/
-                maze = newMaze;
+                SetMaze(newMaze);
+                //maze = newMaze;
             }
             //if (maze != null)
               //  GenerateMazeVisuals();
@@ -75,6 +77,8 @@ namespace Eye.Maps.Templates
 
         private void GenerateMazeVisuals()
         {
+            GenerateMazeVisualsAsync(null, null).GetAwaiter().GetResult();//fire and wait
+            return;
             //we don't instantiate prefabs- we just get their mats and meshes
             if (floorPrefab != null)
             {
@@ -152,6 +156,103 @@ namespace Eye.Maps.Templates
             }
             UpdateWorldMatricies();
         }
+
+        private async UniTask GenerateMazeVisualsAsync(CancelBoolRef cancelRef,ProgressFloatRef progressRef)
+        {
+            EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef,cancelRef==null);
+            if (progressRef != null) progressRef.StageMessage = "Generating Visuals";
+            //we don't instantiate prefabs- we just get their mats and meshes
+            if (floorPrefab != null)
+            {
+                floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
+                if (floorMesh == null)
+                {
+                    floorMesh = RegularPolygonMesh.GeneratePolygon(maze.size.NumberOfNeighbors(), 1f, RegularPolygonMesh.SizeSpecification.Edgelength);
+                }
+                floorMaterial = floorPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+            }
+            if (wallPrefab != null)
+            {
+                wallMesh = wallPrefab.GetComponent<MeshFilter>().sharedMesh;
+                wallMaterial = wallPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+            }
+
+
+            floorMatrices.Clear();
+            wallMatrices.Clear();
+
+            if (floorPrefab != null)
+            {
+                if (progressRef != null) progressRef.StageMessage = "Generating Visuals: floors";
+                foreach (T coord in maze.allMapCoords)
+                {
+                    Vector3 tilePosition = maze.GetModelSpacePosition(coord);
+                    Quaternion tileRotation = maze.GetModelSpaceOrientation(coord);
+                    Vector3 tileScale = floorPrefab.transform.localScale * this.tileScale;
+                    Matrix4x4 floorMatrix = Matrix4x4.TRS(tilePosition, tileRotation, tileScale);
+                    floorMatrices.Add(floorMatrix);
+                    await yieldTimer.YieldOnTimeSlice();
+                }
+            }
+            if (progressRef != null)
+            {
+                progressRef.StageMessage = "Generating Visuals: walls";
+                progressRef.Value += 0.5f;
+            }
+            foreach (T coord in maze.allMapCoords)
+            {
+                Vector3 tilePosition = maze.GetModelSpacePosition(coord);
+                bool[] wallsForTile = maze.Walls[coord];
+                // Debug.Log("Coord " + coord + " walls: " + string.Join(",", wallsForTile));
+                int neighborCount = coord.NumberOfNeighbors();
+                // Debug.Log("creating walls for coord: " + coord + "  newighbors: " + string.Join(',', coord.GetNeighbors()));
+                for (int i = 0; i < neighborCount; i++)
+                {
+                    if (wallsForTile[i])
+                    {
+                        T neighbor = coord.GetNeighbor(i);
+
+                        // Skip creating border walls if drawBorderWalls is false and the neighbor is outside the maze bounds
+                        if (!drawBorderWalls && !maze.IsWithinBounds(neighbor))
+                        {
+                            //Debug.Log("skipping neighbor["+i+"] with face index:"+neighbor+" due to out of bounds");
+                            continue;
+                        }
+
+                        Matrix4x4 wallMatrix = GetNeighborWallMatrix(coord, i, tilePosition, neighborCount);
+                        wallMatrices.Add(wallMatrix);
+                        //await yieldTimer.YieldOnTimeSlice();
+                        //Debug.Log("created wall between " + coord + " and " + neighbor);
+                    }
+                }
+                await yieldTimer.YieldOnTimeSlice();
+            }
+
+            if (startPositionMarkerPrefab != null)
+            {
+                if (instantiatedStartPositionMarker == null)
+                    instantiatedStartPositionMarker = Instantiate(startPositionMarkerPrefab, this.transform);
+                instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
+                instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
+                instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
+            }
+            if (endPositionMarkerPrefab != null)
+            {
+                if (instantiatedEndPositionMarker == null)
+                    instantiatedEndPositionMarker = Instantiate(endPositionMarkerPrefab, this.transform);
+                instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
+                instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
+                instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
+            }
+            await yieldTimer.YieldOnTimeSlice();
+            if (progressRef != null)
+            {
+                progressRef.StageMessage = "Generating Visuals: transforms";
+                progressRef.Value += 0.3f;
+            }
+            UpdateWorldMatricies();
+        }
+
         protected virtual Matrix4x4 GetNeighborWallMatrix(T coord, int neighborIndex, Vector3 tilePosition, int neighborCount)
         {
             T neighbor = coord.GetNeighbor(neighborIndex);
@@ -213,13 +314,12 @@ namespace Eye.Maps.Templates
             {
                 transform.hasChanged = false;
                 UpdateWorldMatricies();
-
             }
             const int MaxInstances = 1023;
             if (AreNotNull(floorMesh, floorMaterial))//(floorPrefab != null)
             {
                 foreach (List<Matrix4x4> floorSet in InChunks(worldFloorMatrices, MaxInstances))
-                    Graphics.DrawMeshInstanced(floorMesh, 0, floorMaterial, worldFloorMatrices);
+                    Graphics.DrawMeshInstanced(floorMesh, 0, floorMaterial, floorSet);
             }
 
             if (AreNotNull(wallMesh, wallMaterial))//wallPrefab != null)
