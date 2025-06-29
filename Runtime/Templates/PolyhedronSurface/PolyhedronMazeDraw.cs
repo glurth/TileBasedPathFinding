@@ -7,15 +7,17 @@ namespace Eye.Maps.Templates
 {
     public class PolyhedronMazeDraw : MazeDrawGeneric<FaceCoordinate>
     {
-        public FacesAndNeighbors facesAndNeighbors;
 
+        public FacesAndNeighbors facesAndNeighbors=> ((FaceMazeMap)maze).sourceMap;
+
+        public FacesAndNeighbors createOnEnableSourceFacesAndNeighbors;
         protected override GenericMazeMap<FaceCoordinate> CreateMazeMap()
         {
-            FaceMazeMap maze = new FaceMazeMap(facesAndNeighbors);
+            FaceMazeMap maze = new FaceMazeMap(createOnEnableSourceFacesAndNeighbors);
             maze.GenerateMaze();
             return maze;
         }
-
+        
         protected override FaceCoordinate DefaultMazeSize()
         {
             return new FaceCoordinate(facesAndNeighbors,facesAndNeighbors.faceDetails.Count);// facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].neighborIndices, facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].normal);
