@@ -8,6 +8,8 @@ namespace Eye.Maps.Templates
     public class FaceCoordinate : ITileCoordinate<FaceCoordinate>
     {
         FacesAndNeighbors sourceRef;
+        //made public for serialization
+        public FacesAndNeighbors SourceRef { get => sourceRef; }
         public int faceIndex;
         public FaceDetails details => sourceRef.faceDetails[faceIndex];
 
