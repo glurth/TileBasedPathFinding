@@ -22,6 +22,7 @@ namespace Eye.Maps.Templates
     {
         abstract public UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null);
         abstract public void GenerateMaze(bool testAllWalls = false);
+        abstract public System.Type CoordinateType {get;}
     }
 
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
@@ -209,7 +210,7 @@ namespace Eye.Maps.Templates
         {
             GenerateMazeAsync(null, testAllWalls, null).GetAwaiter().GetResult();//.Forget();
         }
-
+        public override System.Type CoordinateType { get => typeof(T); }
         /// <summary>
         /// Asynchronously generates the main path from start to end.
         /// </summary>
