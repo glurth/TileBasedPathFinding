@@ -57,10 +57,17 @@ namespace Eye.Maps.Templates
             FaceDetails coordFaceDetails = facesAndNeighbors.faceDetails[coord.faceIndex];
             FaceDetails neighborFaceDetails = facesAndNeighbors.faceDetails[neighbor.faceIndex];
             List<Vector3> endpoints = new List<Vector3>(2);
+            HashSet<int> neighborUniqueVertIDs = new HashSet<int>();
+            foreach (int neighborCornerVertIndex in neighborFaceDetails.cornerVertexMeshIndices)
+            {
+                neighborUniqueVertIDs.Add(meshIndexToUniqueID[neighborCornerVertIndex]);
+            }
             foreach (int faceCornerVertIndex in coordFaceDetails.cornerVertexMeshIndices)
             {   
                 int cornerUniqueID = meshIndexToUniqueID[faceCornerVertIndex];
-                foreach (int neighborCornerVertIndex in neighborFaceDetails.cornerVertexMeshIndices)
+                if (neighborUniqueVertIDs.Contains(cornerUniqueID))
+                    endpoints.Add(mesh.vertices[faceCornerVertIndex]);
+                /*foreach (int neighborCornerVertIndex in neighborFaceDetails.cornerVertexMeshIndices)
                 {
                     int neighborCornerUniqueID= meshIndexToUniqueID[neighborCornerVertIndex];
                    // Vector3 posN = mesh.vertices[neighborCornerVertIndex];
@@ -70,7 +77,7 @@ namespace Eye.Maps.Templates
                         endpoints.Add(mesh.vertices[faceCornerVertIndex]);
                         break;
                     }
-                }
+                }*/
                 if (endpoints.Count > 1) break;
             }
             if (endpoints.Count < 2) throw new System.Exception("Unexpected processing- unable to find matching corners for faces: [" + coord + "] ,[" + neighbor + "]");
