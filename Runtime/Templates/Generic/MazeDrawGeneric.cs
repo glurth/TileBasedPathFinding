@@ -86,6 +86,7 @@ namespace Eye.Maps.Templates
             EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef,cancelRef==null);
             if (progressRef != null) progressRef.StageMessage = "Generating Visuals";
             //we don't instantiate prefabs- we just get their mats and meshes
+            await UniTask.SwitchToMainThread();
             if (floorPrefab != null)
             {
                 floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
@@ -101,7 +102,7 @@ namespace Eye.Maps.Templates
                 wallMaterial = wallPrefab.GetComponent<MeshRenderer>().sharedMaterial;
             }
 
-
+            await UniTask.SwitchToThreadPool();
             floorMatrices.Clear();
             wallMatrices.Clear();
 
@@ -151,7 +152,7 @@ namespace Eye.Maps.Templates
                 }
                 await yieldTimer.YieldOnTimeSlice();
             }
-
+            await UniTask.SwitchToMainThread();
             if (startPositionMarkerPrefab != null)
             {
                 if (instantiatedStartPositionMarker == null)
@@ -174,6 +175,7 @@ namespace Eye.Maps.Templates
                 progressRef.StageMessage = "Generating Visuals: transforms";
                 progressRef.Value += 0.3f;
             }
+            await UniTask.SwitchToThreadPool();
             UpdateWorldMatricies();
         }
 

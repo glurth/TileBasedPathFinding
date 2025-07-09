@@ -208,7 +208,7 @@ namespace Eye.Maps.Templates
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
         public override void GenerateMaze(bool testAllWalls = false)
         {
-            GenerateMazeAsync(null, testAllWalls, null).GetAwaiter().GetResult();//.Forget();
+            GenerateMazeAsync(null, testAllWalls, null).AsTask().GetAwaiter().GetResult();//.Forget();
         }
         public override System.Type CoordinateType { get => typeof(T); }
         /// <summary>
