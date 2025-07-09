@@ -265,7 +265,7 @@ namespace Eye.Maps.Templates
 
             while (pathLengthZeroCount < maxZeros)
             {
-                float curve = Mathf.Pow(Random.value, 2);
+                float curve = Mathf.Pow( await ThreadRand.GetRandAsync(), 2);
                 T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
                 List<T> newPath = await GenerateRandomPathAsync(branchStart, yieldTimer);
 
