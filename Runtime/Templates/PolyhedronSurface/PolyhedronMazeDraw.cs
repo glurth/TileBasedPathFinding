@@ -31,12 +31,14 @@ namespace Eye.Maps.Templates
             Mesh mesh = facesAndNeighbors.meshRef;
             lastMesh = mesh;
             Dictionary<Vector3, int> uniqueVerts = new Dictionary<Vector3, int>();
-            meshIndexToUniqueID = new int[mesh.vertexCount];
+            FaceMazeMap faceMaze = maze as FaceMazeMap;
+            meshIndexToUniqueID = new int[faceMaze.AsyncUsableVertexList.Length];
+            //meshIndexToUniqueID = new int[mesh.vertexCount];
             int uniqueIndexCounter = 0;
 
-            for (int i = 0; i < mesh.vertexCount; i++)
+            for (int i = 0; i < faceMaze.AsyncUsableVertexList.Length; i++)
             {
-                Vector3 v = mesh.vertices[i];
+                Vector3 v = faceMaze.AsyncUsableVertexList[i];
                 if (!uniqueVerts.TryGetValue(v, out int uniqueIdx))
                 {
                     uniqueIdx = uniqueIndexCounter++;
@@ -62,11 +64,12 @@ namespace Eye.Maps.Templates
             {
                 neighborUniqueVertIDs.Add(meshIndexToUniqueID[neighborCornerVertIndex]);
             }
+            FaceMazeMap faceMaze = maze as FaceMazeMap;
             foreach (int faceCornerVertIndex in coordFaceDetails.cornerVertexMeshIndices)
             {   
                 int cornerUniqueID = meshIndexToUniqueID[faceCornerVertIndex];
                 if (neighborUniqueVertIDs.Contains(cornerUniqueID))
-                    endpoints.Add(mesh.vertices[faceCornerVertIndex]);
+                    endpoints.Add(faceMaze.AsyncUsableVertexList[faceCornerVertIndex]);// mesh.vertices[faceCornerVertIndex]);
                 /*foreach (int neighborCornerVertIndex in neighborFaceDetails.cornerVertexMeshIndices)
                 {
                     int neighborCornerUniqueID= meshIndexToUniqueID[neighborCornerVertIndex];

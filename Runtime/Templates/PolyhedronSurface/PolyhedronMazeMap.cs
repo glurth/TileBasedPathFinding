@@ -81,7 +81,26 @@ namespace Eye.Maps.Templates
 
     public class FaceMazeMap : GenericMazeMap<FaceCoordinate>
     {
-        public FacesAndNeighbors sourceMap;
+        FacesAndNeighbors _sourceMap;
+        public FacesAndNeighbors sourceMap
+        {
+            get => _sourceMap;
+            set
+            {
+                _sourceMap = value;
+                if (_sourceMap.meshRef == null)
+                    Debug.LogError("FacesAndNeighbors passed to FaceMazeMap.sourceMap does not contain a valid mesh reference");
+                else
+                {
+                    asyncUsableVertexList = _sourceMap.meshRef.vertices;
+                    asyncUsableTriangleList = _sourceMap.meshRef.triangles;
+                }
+            }
+        }
+        public Vector3[] AsyncUsableVertexList=>asyncUsableVertexList;
+        Vector3[] asyncUsableVertexList = null;
+        public int[] AsyncUsableTriangleList =>asyncUsableTriangleList;
+        int[] asyncUsableTriangleList = null;
 
         public FaceMazeMap(FacesAndNeighbors sourceMap):base(
             new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
@@ -113,13 +132,13 @@ namespace Eye.Maps.Templates
             int triIndex = faceTriStarts[0];
             if (faceTriStarts.Count == 1)
             {                
-                Vector3 sumPos = sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex]];
-                sumPos += sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex+1]];
-                sumPos += sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex + 2]];
+                Vector3 sumPos = asyncUsableVertexList[asyncUsableTriangleList[triIndex]];
+                sumPos += asyncUsableVertexList[asyncUsableTriangleList[triIndex+1]];
+                sumPos += asyncUsableVertexList[asyncUsableTriangleList[triIndex + 2]];
                 return sumPos / 3f;
             }
             //if multiple triangle make up each face, it must be constructed such that the first triangle index references the center of the face.
-            return sourceMap.meshRef.vertices[sourceMap.meshRef.triangles[triIndex]];
+            return asyncUsableVertexList[asyncUsableTriangleList[triIndex]];
         }
         public override Quaternion GetModelSpaceOrientation(FaceCoordinate coord)
         {

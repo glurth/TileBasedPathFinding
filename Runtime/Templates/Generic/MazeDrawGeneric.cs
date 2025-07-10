@@ -77,16 +77,18 @@ namespace Eye.Maps.Templates
 
         private void GenerateMazeVisuals()
         {
-            GenerateMazeVisualsAsync(null, null).GetAwaiter().GetResult();//fire and wait
+            GenerateMazeVisualsAsync(null, null).AsTask().GetAwaiter().GetResult();//fire and wait
             return;
         }
 
         private async UniTask GenerateMazeVisualsAsync(CancelBoolRef cancelRef,ProgressFloatRef progressRef)
         {
-            EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef,cancelRef==null);
+            bool runSync = cancelRef == null;
+            EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef, runSync);
             if (progressRef != null) progressRef.StageMessage = "Generating Visuals";
             //we don't instantiate prefabs- we just get their mats and meshes
-            await UniTask.SwitchToMainThread();
+            if (!runSync)
+                await UniTask.SwitchToMainThread();
             if (floorPrefab != null)
             {
                 floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
@@ -102,7 +104,7 @@ namespace Eye.Maps.Templates
                 wallMaterial = wallPrefab.GetComponent<MeshRenderer>().sharedMaterial;
             }
 
-            await UniTask.SwitchToThreadPool();
+
             floorMatrices.Clear();
             wallMatrices.Clear();
 
@@ -119,6 +121,8 @@ namespace Eye.Maps.Templates
                     await yieldTimer.YieldOnTimeSlice();
                 }
             }
+            if(!runSync)
+                await UniTask.SwitchToThreadPool();
             if (progressRef != null)
             {
                 progressRef.StageMessage = "Generating Visuals: walls";
@@ -152,7 +156,8 @@ namespace Eye.Maps.Templates
                 }
                 await yieldTimer.YieldOnTimeSlice();
             }
-            await UniTask.SwitchToMainThread();
+            if (!runSync)
+                await UniTask.SwitchToMainThread();
             if (startPositionMarkerPrefab != null)
             {
                 if (instantiatedStartPositionMarker == null)
@@ -175,8 +180,10 @@ namespace Eye.Maps.Templates
                 progressRef.StageMessage = "Generating Visuals: transforms";
                 progressRef.Value += 0.3f;
             }
-            await UniTask.SwitchToThreadPool();
-            UpdateWorldMatricies();
+            Matrix4x4 localToWorldMatrix = transform.localToWorldMatrix;
+            if (!runSync)
+                await UniTask.SwitchToThreadPool();
+            UpdateWorldMatricies(localToWorldMatrix);
         }
 
         protected virtual Matrix4x4 GetNeighborWallMatrix(T coord, int neighborIndex, Vector3 tilePosition, int neighborCount)
@@ -197,9 +204,9 @@ namespace Eye.Maps.Templates
             return Matrix4x4.TRS(wallPosition, wallRotation, wallScale);
         }
 
-        private void UpdateWorldMatricies()
+        private void UpdateWorldMatricies(Matrix4x4 localToWorldMatrix)
         {
-            Matrix4x4 w = transform.localToWorldMatrix;
+            Matrix4x4 w = localToWorldMatrix;
             worldWallMatrices.Clear();
             foreach (Matrix4x4 m in wallMatrices)
                 worldWallMatrices.Add(w * m);
@@ -239,7 +246,7 @@ namespace Eye.Maps.Templates
             if (transform.hasChanged)
             {
                 transform.hasChanged = false;
-                UpdateWorldMatricies();
+                UpdateWorldMatricies(transform.localToWorldMatrix);
             }
             const int MaxInstances = 1023;
             if (AreNotNull(floorMesh, floorMaterial))//(floorPrefab != null)

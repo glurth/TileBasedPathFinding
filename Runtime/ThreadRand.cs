@@ -49,7 +49,7 @@ namespace EyE.Threading
 
             float[] temp = new float[BufferSize];
             for (int i = 0; i < BufferSize; i++)
-                temp[i] = Mathf.Pow(Random.value, 2);
+                temp[i] = Random.value;
 
             lock (_lock)// thread safely populate the buffer member
             {
