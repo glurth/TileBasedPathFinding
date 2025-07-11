@@ -23,6 +23,7 @@ namespace Eye.Maps.Templates
         abstract public UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null);
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
+        abstract public Bounds GetModelSpaceBounds();
     }
 
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
@@ -388,7 +389,14 @@ namespace Eye.Maps.Templates
             return -1; // Impassable if out of bounds or blocked
         }
 
-
+        override public Bounds GetModelSpaceBounds()
+        {
+            Bounds bounds;
+            Vector3 sizePos = GetModelSpacePosition(size);
+            //this is the center of 1 tile past x,y (for 2d) - need to subtract half a tiles worth
+            bounds = new Bounds(sizePos / 2, sizePos);
+            return bounds;
+        }
 
         abstract public Vector3 GetModelSpacePosition(T coord);
 
