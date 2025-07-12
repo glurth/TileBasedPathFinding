@@ -24,6 +24,10 @@ namespace Eye.Maps.Templates
             return coord.WorldPosXZPosition(this);
             //return new Vector3(coord.x, coord.y, 0);
         }
+        public override Vector3 SingleTileModelSpaceOffset()
+        {
+            return GetModelSpacePosition(new HexIndex2D(1, 1)) - GetModelSpacePosition(new HexIndex2D(0, 0));
+        }
         override public Quaternion GetModelSpaceOrientation(HexIndex2D coord)
         {
             return Quaternion.Euler(0, 0, 30);

@@ -50,7 +50,10 @@ namespace Eye.Maps.Templates
             // Return the computed position
             return new Vector3(worldX, worldY, 0);
         }
-
+        public override Vector3 SingleTileModelSpaceOffset()
+        {
+            return GetModelSpacePosition(new TriangularIndex2D(1, 1)) - GetModelSpacePosition(new TriangularIndex2D(0, 0));
+        }
 
         // Check if a given coordinate is within the bounds of the maze
         public override bool IsWithinBounds(TriangularIndex2D coord)

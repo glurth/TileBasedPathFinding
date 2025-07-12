@@ -24,6 +24,7 @@ namespace Eye.Maps.Templates
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
         abstract public Bounds GetModelSpaceBounds();
+        abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
     }
 
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.

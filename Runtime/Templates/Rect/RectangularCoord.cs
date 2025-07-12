@@ -11,8 +11,11 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
     {
         data = value;
     }
-
-   // public RectangularCoord value => this;
+    public RectangularCoord(int x, int y)
+    {
+        data = new Vector2Int(x,y);
+    }
+    // public RectangularCoord value => this;
 
     public int x => data.x;
     public int y => data.y;

@@ -27,7 +27,10 @@ namespace Eye.Maps.Templates
         {
             return new Vector3(coord.x, coord.y, 0);
         }
-
+        public override Vector3 SingleTileModelSpaceOffset()
+        {
+            return GetModelSpacePosition(new RectangularCoord(1, 1)) - GetModelSpacePosition(new RectangularCoord(0, 0));
+        }
         // Check if a given coordinate is within the bounds of the maze
         public override bool IsWithinBounds(RectangularCoord coord)
         {

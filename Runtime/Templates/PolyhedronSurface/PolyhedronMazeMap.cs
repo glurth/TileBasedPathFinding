@@ -140,6 +140,14 @@ namespace Eye.Maps.Templates
             //if multiple triangle make up each face, it must be constructed such that the first triangle index references the center of the face.
             return asyncUsableVertexList[asyncUsableTriangleList[triIndex]];
         }
+        public override Vector3 SingleTileModelSpaceOffset()
+        {
+            return GetModelSpacePosition(new FaceCoordinate(sourceMap, 1)) - GetModelSpacePosition(new FaceCoordinate(sourceMap,0));
+        }
+        public override Bounds GetModelSpaceBounds()
+        {
+            return new Bounds(Vector3.zero, 2f * Vector3.one); //radius would be 1, diameter is bounds size
+        }
         public override Quaternion GetModelSpaceOrientation(FaceCoordinate coord)
         {
             Vector3 coordPos = GetModelSpacePosition(coord);

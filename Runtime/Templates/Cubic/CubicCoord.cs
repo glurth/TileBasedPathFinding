@@ -15,6 +15,10 @@ namespace Eye.Maps.Templates
             data = value;
         }
 
+        public CubicCoord(int x, int y, int z)
+        {
+            data = new Vector3Int(x,y,z);
+        }
         public int x => data.x;
         public int y => data.y;
         public int z => data.z;
