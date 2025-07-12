@@ -396,6 +396,8 @@ namespace Eye.Maps.Templates
             Vector3 sizePos = GetModelSpacePosition(size);
             //this is the center of 1 tile past x,y (for 2d) - need to subtract half a tiles worth
             bounds = new Bounds(sizePos / 2, sizePos);
+            Vector3 singleTileOffset = SingleTileModelSpaceOffset();
+            bounds.center -= singleTileOffset * 0.5f;
             return bounds;
         }
 
