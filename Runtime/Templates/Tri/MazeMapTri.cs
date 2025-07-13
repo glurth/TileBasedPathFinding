@@ -25,30 +25,21 @@ namespace Eye.Maps.Templates
             }
         }
 
-        private static float tileWidth = 2f / Mathf.Sqrt(3f);
+//        private static float tileWidth = 2f / Mathf.Sqrt(3f);
+        private static readonly float tileHeight = Mathf.Sqrt(3f) / 2f;
+        private static readonly float centroidOffset = tileHeight / 3f;
+
         public override Vector3 GetModelSpacePosition(TriangularIndex2D coord)
         {
+            float worldX = coord.x * 0.5f;
+            float worldY = coord.y * tileHeight;
 
-            // Calculate the width and height of an equilateral triangle
-            float halfWidth = tileWidth / 2f;
-            float centroidHeight = 1f / 3f;
-
-            // Compute the horizontal coordinate (x offset)
-            float worldX = coord.x * halfWidth;
-
-            // Compute the vertical coordinate (y offset)
-            float worldY;
-
-            // Adjust for the upward or downward orientation of the triangle
             if (!coord.IsPointingUp())
-            {
-                // For downward-pointing triangles, shift x to the right by half width
-                worldY = (coord.y) + centroidHeight;
-            }
+                worldY += centroidOffset;
             else
-                worldY = ((coord.y + 1)) - centroidHeight;
-            // Return the computed position
+                worldY += tileHeight - centroidOffset;
             return new Vector3(worldX, worldY, 0);
+
         }
         public override Vector3 SingleTileModelSpaceOffset()
         {

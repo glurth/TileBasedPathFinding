@@ -119,7 +119,7 @@ namespace Eye.Maps.Templates
                 {
                     Vector3 tilePosition = maze.GetModelSpacePosition(coord);
                     Quaternion tileRotation = maze.GetModelSpaceOrientation(coord);
-                    Vector3 tileScale = floorPrefab.transform.localScale * this.tileScale;
+                    Vector3 tileScale = floorPrefab.transform.localScale;// * this.tileScale;
                     Matrix4x4 floorMatrix = Matrix4x4.TRS(tilePosition, tileRotation, tileScale);
                     floorMatrices.Add(floorMatrix);
                     await yieldTimer.YieldOnTimeSlice();
