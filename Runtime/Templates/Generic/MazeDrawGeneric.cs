@@ -89,6 +89,10 @@ namespace Eye.Maps.Templates
             //we don't instantiate prefabs- we just get their mats and meshes
             if (!runSync)
                 await UniTask.SwitchToMainThread();
+
+            Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
+            tileScale = Mathf.Max(tileOffset.x, tileOffset.y, tileOffset.z);
+
             if (floorPrefab != null)
             {
                 floorMesh = floorPrefab.GetComponent<MeshFilter>().sharedMesh;
