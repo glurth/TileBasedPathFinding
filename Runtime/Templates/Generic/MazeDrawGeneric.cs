@@ -154,6 +154,8 @@ namespace Eye.Maps.Templates
                 bool[] wallsForTile = maze.Walls[coord];
                 // Debug.Log("Coord " + coord + " walls: " + string.Join(",", wallsForTile));
                 int neighborCount = coord.NumberOfNeighbors();
+                coordToWallIndices[coord] = wallMatrices.Count - 1;  //*******visibility
+                tileVisibility[coord] = !startHidden; //*******visibility
                 // Debug.Log("creating walls for coord: " + coord + "  newighbors: " + string.Join(',', coord.GetNeighbors()));
                 for (int i = 0; i < neighborCount; i++)
                 {
@@ -170,8 +172,7 @@ namespace Eye.Maps.Templates
 
                         Matrix4x4 wallMatrix = GetNeighborWallMatrix(coord, i, tilePosition, neighborCount);
                         wallMatrices.Add(wallMatrix);
-                        coordToWallIndices[coord] = wallMatrices.Count - 1;  //*******visibility
-                        tileVisibility[coord] = !startHidden; //*******visibility
+
                         //await yieldTimer.YieldOnTimeSlice();
                         //Debug.Log("created wall between " + coord + " and " + neighbor);
                     }
