@@ -33,15 +33,29 @@ namespace Eye.Maps.Templates
         public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
         public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
         public bool drawBorderWalls = true;        // Determines if border walls should be drawn
+        public bool startHidden = false;
 
         private List<Matrix4x4> floorMatrices = new List<Matrix4x4>(); // Transformation matrices for floors
         private List<Matrix4x4> wallMatrices = new List<Matrix4x4>();  // Transformation matrices for walls
+
+        //visibility stuff
+        private Dictionary<T, bool> tileVisibility = new Dictionary<T, bool>();
+        private bool visibilityChangedSinceLastDraw = true;
+       // private Dictionary<T, int> coordToFloorIndices = new Dictionary<T, int>();
+        private Dictionary<T, int> coordToWallIndices = new Dictionary<T, int>();
+       // private List<Matrix4x4> visibleFloorMatrices = new List<Matrix4x4>();
+        private List<Matrix4x4> visibleWallMatrices = new List<Matrix4x4>();
+
+        //refs
         private GameObject instantiatedStartPositionMarker;
         private GameObject instantiatedEndPositionMarker;
-        public Mesh floorMesh;//public as test
+        private Mesh floorMesh;
         private Material floorMaterial;
         private Mesh wallMesh;
         private Material wallMaterial;
+
+
+
 
         private void Reset()
         {
@@ -122,6 +136,8 @@ namespace Eye.Maps.Templates
                     Vector3 tileScale = floorPrefab.transform.localScale;// * this.tileScale;
                     Matrix4x4 floorMatrix = Matrix4x4.TRS(tilePosition, tileRotation, tileScale);
                     floorMatrices.Add(floorMatrix);
+                    //coordToFloorIndices[coord] = floorMatrices.Count - 1;//*******visibility
+                    
                     await yieldTimer.YieldOnTimeSlice();
                 }
             }
@@ -154,6 +170,8 @@ namespace Eye.Maps.Templates
 
                         Matrix4x4 wallMatrix = GetNeighborWallMatrix(coord, i, tilePosition, neighborCount);
                         wallMatrices.Add(wallMatrix);
+                        coordToWallIndices[coord] = wallMatrices.Count - 1;  //*******visibility
+                        tileVisibility[coord] = !startHidden; //*******visibility
                         //await yieldTimer.YieldOnTimeSlice();
                         //Debug.Log("created wall between " + coord + " and " + neighbor);
                     }
@@ -252,18 +270,56 @@ namespace Eye.Maps.Templates
                 transform.hasChanged = false;
                 UpdateWorldMatricies(transform.localToWorldMatrix);
             }
+            if (visibilityChangedSinceLastDraw)//*******visibility
+                UpdateVisibleMatrices();
             const int MaxInstances = 1023;
             if (AreNotNull(floorMesh, floorMaterial))//(floorPrefab != null)
             {
                 foreach (List<Matrix4x4> floorSet in InChunks(worldFloorMatrices, MaxInstances))
+                //foreach (List<Matrix4x4> floorSet in InChunks(visibleFloorMatrices, MaxInstances))
                     Graphics.DrawMeshInstanced(floorMesh, 0, floorMaterial, floorSet);
             }
 
             if (AreNotNull(wallMesh, wallMaterial))//wallPrefab != null)
             {
-                foreach (List<Matrix4x4> wallSet in InChunks(worldWallMatrices, MaxInstances))
+                //foreach (List<Matrix4x4> wallSet in InChunks(worldWallMatrices, MaxInstances))
+                foreach (List<Matrix4x4> wallSet in InChunks(visibleWallMatrices, MaxInstances))
                     Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, wallSet);
             }
+        }
+
+
+        public void SetTileVisibility(T coord, bool isVisible)
+        {
+            if (!tileVisibility.ContainsKey(coord) || tileVisibility[coord] != isVisible)
+            {
+                tileVisibility[coord] = isVisible;
+                visibilityChangedSinceLastDraw = true;
+            }
+        }
+        private void UpdateVisibleMatrices()
+        {
+            //visibleFloorMatrices.Clear();
+            visibleWallMatrices.Clear();
+
+            foreach (var kvp in tileVisibility)
+            {
+                if (!kvp.Value) continue;
+            //    if (coordToFloorIndices.TryGetValue(kvp.Key, out int floorIdx))
+            //        visibleFloorMatrices.Add(worldFloorMatrices[floorIdx]);
+                if (coordToWallIndices.TryGetValue(kvp.Key, out int startIdx))
+                {
+                    int wallCount = kvp.Key.NumberOfNeighbors();
+                    for (int i = 0; i < wallCount; i++)
+                    {
+                        int wallIdx = startIdx + i;
+                        if (wallIdx < worldWallMatrices.Count)
+                            visibleWallMatrices.Add(worldWallMatrices[wallIdx]);
+                    }
+                }
+            }
+
+            visibilityChangedSinceLastDraw = false;
         }
     }
 }
