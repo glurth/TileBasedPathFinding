@@ -310,11 +310,15 @@ namespace Eye.Maps.Templates
                 if (coordToWallIndices.TryGetValue(kvp.Key, out int startIdx))
                 {
                     int wallCount = kvp.Key.NumberOfNeighbors();
+                    int wallIdx = startIdx;
                     for (int i = 0; i < wallCount; i++)
                     {
-                        int wallIdx = startIdx + i;
-                        if (wallIdx < worldWallMatrices.Count)
-                            visibleWallMatrices.Add(worldWallMatrices[wallIdx]);
+                        if (maze.Walls[kvp.Key][i])
+                        {   
+                            if (wallIdx < worldWallMatrices.Count)
+                                visibleWallMatrices.Add(worldWallMatrices[wallIdx]);
+                            wallIdx++;
+                        }
                     }
                 }
             }
