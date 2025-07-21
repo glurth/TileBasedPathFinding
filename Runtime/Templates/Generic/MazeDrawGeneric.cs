@@ -17,10 +17,13 @@ namespace Eye.Maps.Templates
             _maze = toValue;
             GenerateMazeVisuals();
         }
+        bool skipUpdateMazeGenerationRunning = false;// locks Update function
         public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, CancelBoolRef cancelRef=null, ProgressFloatRef progressRef=null)
         {
+            skipUpdateMazeGenerationRunning = true;
             _maze = toValue;
             await GenerateMazeVisualsAsync(cancelRef,progressRef);
+            skipUpdateMazeGenerationRunning = false;
         }
         public T mazeSize;
 
@@ -82,7 +85,8 @@ namespace Eye.Maps.Templates
 
         void Update()
         {
-            DrawInstances(); // Draw the instances each frame
+            if(!skipUpdateMazeGenerationRunning)
+                DrawInstances(); // Draw the instances each frame
         }
 
         // Abstract method for creating the specific maze map
@@ -155,7 +159,8 @@ namespace Eye.Maps.Templates
                 // Debug.Log("Coord " + coord + " walls: " + string.Join(",", wallsForTile));
                 int neighborCount = coord.NumberOfNeighbors();
                 coordToWallIndices[coord] = wallMatrices.Count;  //*******visibility
-                tileVisibility[coord] = !startHidden; //*******visibility
+                SetTileVisibility(coord, !startHidden);
+                //tileVisibility[coord] = !startHidden; //*******visibility
                 // Debug.Log("creating walls for coord: " + coord + "  newighbors: " + string.Join(',', coord.GetNeighbors()));
                 for (int i = 0; i < neighborCount; i++)
                 {
@@ -303,18 +308,19 @@ namespace Eye.Maps.Templates
             //visibleFloorMatrices.Clear();
             visibleWallMatrices.Clear();
 
-            foreach (var kvp in tileVisibility)
+            foreach (KeyValuePair<T, bool> kvp in tileVisibility)
             {
                 if (!kvp.Value) continue;
+                T coord = kvp.Key;
             //    if (coordToFloorIndices.TryGetValue(kvp.Key, out int floorIdx))
             //        visibleFloorMatrices.Add(worldFloorMatrices[floorIdx]);
-                if (coordToWallIndices.TryGetValue(kvp.Key, out int startIdx))
+                if (coordToWallIndices.TryGetValue(coord, out int startIdx))
                 {
-                    int wallCount = kvp.Key.NumberOfNeighbors();
+                    int wallCount = coord.NumberOfNeighbors();
                     int wallIdx = startIdx;
                     for (int i = 0; i < wallCount; i++)
                     {
-                        if (maze.Walls[kvp.Key][i])
+                        if (maze.Walls[coord][i])
                         {   
                             if (wallIdx < worldWallMatrices.Count)
                                 visibleWallMatrices.Add(worldWallMatrices[wallIdx]);
