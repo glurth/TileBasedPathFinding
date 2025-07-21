@@ -125,8 +125,8 @@ namespace Eye.Maps.Templates
         }
         public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
-            // return sourceMap.faceDetails[coord.faceIndex].normal;
-            List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
+            return sourceMap.faceDetails[coord.faceIndex].normal;
+            /*List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
             if (faceTriStarts==null || faceTriStarts.Count == 0)
                 return sourceMap.faceDetails[coord.faceIndex].normal;//fallback
             int triIndex = faceTriStarts[0];
@@ -138,7 +138,7 @@ namespace Eye.Maps.Templates
                 return sumPos / 3f;
             }
             //if multiple triangle make up each face, it must be constructed such that the first triangle index references the center of the face.
-            return asyncUsableVertexList[asyncUsableTriangleList[triIndex]];
+            return asyncUsableVertexList[asyncUsableTriangleList[triIndex]];*/
         }
         public override Vector3 SingleTileModelSpaceOffset()
         {
