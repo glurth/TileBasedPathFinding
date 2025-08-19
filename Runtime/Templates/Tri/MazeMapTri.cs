@@ -51,8 +51,8 @@ namespace Eye.Maps.Templates
         {
             return coord.x >= 0 && coord.y >= 0 && coord.x < size.x && coord.y < size.y;
         }
-        float[] neighborAnglesUp = new float[] { 0, 120, 240 };
-        float[] neighborAnglesDown = new float[] { 0, 240, 120 };
+        float[] neighborAnglesUp = new float[] { 0, 120 , 240  };
+        float[] neighborAnglesDown = new float[] { 180, 120+180, 240 + 180 };
 
         public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {

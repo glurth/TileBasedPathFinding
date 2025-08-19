@@ -7,6 +7,8 @@ namespace Eye.Maps.Templates
 {
 
 public class MazeSolverPolygon : GenericMazeSolver<FaceCoordinate>
-{ }
+{
+
+    }
 
 }

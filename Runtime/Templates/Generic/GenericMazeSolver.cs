@@ -5,7 +5,8 @@ namespace Eye.Maps.Templates
 {
     public class GenericMazeSolver<T> : MonoBehaviour where T : ITileCoordinate<T>
     {
-        public MazeDrawGeneric<T> mazeSource;
+      //  [SerializeReference]
+        public IMazeDrawer<T> mazeSource;
         public bool solve;
         public LineRenderer lineRenderer;
         public int loopLimit = 100000;
@@ -13,7 +14,7 @@ namespace Eye.Maps.Templates
         // Start is called before the first frame update
         void Start()
         {
-
+            mazeSource = gameObject.GetComponent<IMazeDrawer<T>>();
         }
 
         public void Solve(GenericMazeMap<T> map)
@@ -40,7 +41,10 @@ namespace Eye.Maps.Templates
 
                     List<Vector3> positions = new List<Vector3>();
                     foreach (TileOnPath<T> step in path.StartToEnd())
+                    {
                         positions.Add(mazeSource.maze.GetModelSpacePosition((T)step.coordinate));
+                        mazeSource.SetTileVisibility((T)step.coordinate, true);
+                    }
                     Debug.Log("Found path of " + positions.Count + " steps");
                     lineRenderer.positionCount = positions.Count;
                     lineRenderer.SetPositions(positions.ToArray());

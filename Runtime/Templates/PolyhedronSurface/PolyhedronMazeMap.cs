@@ -103,9 +103,9 @@ namespace Eye.Maps.Templates
         int[] asyncUsableTriangleList = null;
 
         public FaceMazeMap(FacesAndNeighbors sourceMap):base(
-            new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
-            new FaceCoordinate(sourceMap, 0),
-            new FaceCoordinate(sourceMap, sourceMap.faceDetails.Count - 1))
+            size: new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
+            start:new FaceCoordinate(sourceMap, 0),
+            end:  new FaceCoordinate(sourceMap, sourceMap.faceDetails.Count - 1))
         {
             if(sourceMap==null) throw new ArgumentNullException("May not pass null to FaceMazeMap constructor");
             if (sourceMap.faceDetails == null || sourceMap.faceDetails.Count==0) throw new ArgumentNullException("May not pass FaceMazeMap with no faceDetails to FaceMazeMap constructor");
@@ -172,7 +172,9 @@ namespace Eye.Maps.Templates
             Vector3 avg = (coordPos + neighborPos) * 0.5f;
             diff = diff.normalized;
             avg = avg.normalized;
-            return Quaternion.LookRotation(avg, diff);// Vector3.Cross(diff, avg));
+            //return Quaternion.LookRotation(avg, diff);// Vector3.Cross(diff, avg));
+            //Debug.Log("NeighborBorderOrientation:   coordtoneighbor dir:" + diff);
+            return Quaternion.LookRotation(avg, diff);// Vector3.Cross(diff, avg),diff);
         }
     }
     /*

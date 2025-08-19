@@ -15,7 +15,10 @@ public static class PrismMesh
     [MenuItem("Asset/GenPrisimMesh")]
     public static void GenDefaultPrisim()
     {
-        FromEdgeLengths(1, 1, 60, 2);
+        Mesh mesh =FromEdgeLengths(1, 1, 60, 2);
+#if UNITY_EDITOR
+        SaveMeshAsset(mesh, "Prisim1-1-60-2");
+#endif
     }
 
     /// <summary>
@@ -76,6 +79,9 @@ public static class PrismMesh
             14,16,15, 16,17,15
         };
 
+
+
+
         if (orientation == PrismOrientation.RectangleDown)
         {
             Quaternion q = Quaternion.Euler(90f, 0f, 0f);
@@ -83,16 +89,41 @@ public static class PrismMesh
                 verts[i] = q * verts[i];
         }
 
+
+        Vector2[] uvs = new Vector2[]
+        {
+            // base tri
+            new Vector2(verts[0].x, verts[0].y),
+            new Vector2(verts[1].x, verts[1].y),
+            new Vector2(verts[2].x, verts[2].y),
+
+            // top tri
+            new Vector2(verts[3].x, verts[3].y),
+            new Vector2(verts[4].x, verts[4].y),
+            new Vector2(verts[5].x, verts[5].y),
+
+            // side 1
+            new Vector2(0, 0), new Vector2(0, 1),
+            new Vector2(1, 0), new Vector2(1, 1),
+
+            // side 2
+            new Vector2(0, 0), new Vector2(0, 1),
+            new Vector2(1, 0), new Vector2(1, 1),
+
+            // side 3
+            new Vector2(0, 0), new Vector2(0, 1),
+            new Vector2(1, 0), new Vector2(1, 1),
+        };
+
         Mesh mesh = new Mesh();
         mesh.name = name;
         mesh.vertices = verts;
         mesh.triangles = tris;
+        mesh.uv = uvs;
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
-#if UNITY_EDITOR
-        SaveMeshAsset(mesh, name);
-#endif
+
 
         return mesh;
     }
@@ -106,6 +137,17 @@ public static class PrismMesh
         AssetDatabase.CreateAsset(mesh, path);
         AssetDatabase.SaveAssets();
         Debug.Log("Saved prism mesh to: " + path);
+    }
+    static void noSaveMeshAsset(Mesh mesh, string name)
+    {
+        string path = AssetDatabase.GetAssetPath(Selection.activeObject);
+        if (string.IsNullOrEmpty(path)) path = "Assets";
+        else if (!Directory.Exists(path)) path = Path.GetDirectoryName(path);
+
+        string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{path}/{name}.asset");
+        AssetDatabase.CreateAsset(mesh, assetPath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 #endif
 }

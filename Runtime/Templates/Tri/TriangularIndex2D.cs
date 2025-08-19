@@ -45,12 +45,18 @@ namespace Eye.Maps.Templates
         new TriangularIndex2D(-1,0),
         new TriangularIndex2D(1,0 )
         };
-        private static readonly TriangularIndex2D[] downNeighborOffsets = new TriangularIndex2D[]
+        private static readonly TriangularIndex2D[] olddownNeighborOffsets = new TriangularIndex2D[]
         {
         new TriangularIndex2D(0, -1),
         new TriangularIndex2D(-1, 0),
         new TriangularIndex2D(1, 0)
         };
+        private static readonly TriangularIndex2D[] downNeighborOffsets = new TriangularIndex2D[]
+{
+        new TriangularIndex2D(0, -1),
+        new TriangularIndex2D(1, 0),
+        new TriangularIndex2D(-1, 0)
+};
         public bool IsPointingUp()
         {
             // Alternate pointing up and down based on row and column
