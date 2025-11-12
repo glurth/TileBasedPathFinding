@@ -11,7 +11,18 @@ namespace Eye.Maps.Templates
         //made public for serialization
         public FacesAndNeighbors SourceRef { get => sourceRef; }
         public int faceIndex;
-        public FaceDetails details => sourceRef.faceDetails[faceIndex];
+        bool isCount = false;
+        public FaceDetails details
+        {
+            get
+            {
+                if (faceIndex < sourceRef.faceDetails.Count)
+                    return sourceRef.faceDetails[faceIndex];
+                if(isCount)
+                    return sourceRef.faceDetails[0];
+                throw new Exception("FaceCoordinate( index:[" + faceIndex + "]) is invalid for given FacesAndNeighbors SourceRef");
+            }
+        }
 
         public FaceCoordinate(FacesAndNeighbors facesAndNeighbors, int index)
         {
@@ -19,7 +30,8 @@ namespace Eye.Maps.Templates
             if (facesAndNeighbors == null)
                 throw new ArgumentNullException("may not pass null FacesAndNeighbors object to FaceCoordinate constructor");
             if (index >= facesAndNeighbors.faceDetails.Count)
-                throw new ArgumentException("Index provided["+index+"] to FaceCoordinate is invalid.  Max value:" + (facesAndNeighbors.faceDetails.Count-1));
+                isCount = true;
+           //     throw new ArgumentException("Index provided["+index+"] to FaceCoordinate is invalid.  Max value:" + (facesAndNeighbors.faceDetails.Count-1)); //removed because a "SIZE" coordinate does
             faceIndex = index;
         }
 
@@ -111,7 +123,14 @@ namespace Eye.Maps.Templates
             if (sourceMap.faceDetails == null || sourceMap.faceDetails.Count==0) throw new ArgumentNullException("May not pass FaceMazeMap with no faceDetails to FaceMazeMap constructor");
             this.sourceMap = sourceMap;
         }
-
+        //needed because source map contains a mesh we need to access- can only e done on mainthread
+        static async public Cysharp.Threading.Tasks.UniTask<FaceMazeMap> CreateFaceMazeMapAsync(FacesAndNeighbors sourceMap)
+        {
+            await Cysharp.Threading.Tasks.UniTask.SwitchToMainThread();
+            FaceMazeMap newMap = new FaceMazeMap(sourceMap);
+            await Cysharp.Threading.Tasks.UniTask.SwitchToThreadPool();
+            return newMap;
+        }
         public override IEnumerable<FaceCoordinate> allMapCoords
         {
             get

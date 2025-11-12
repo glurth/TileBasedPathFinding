@@ -31,11 +31,11 @@ namespace Eye.Maps.Templates
         }
         
         protected bool skipUpdateMazeGenerationRunning = false;// locks Update function
-        public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, CancelBoolRef cancelRef=null, ProgressFloatRef progressRef=null)
+        public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext, ProgressFloatRef progressRef=null)
         {
             skipUpdateMazeGenerationRunning = true;
             _maze = toValue;
-            await GenerateMazeVisualsAsync(cancelRef,progressRef);
+            await GenerateMazeVisualsAsync(taskContext,progressRef);
             skipUpdateMazeGenerationRunning = false;
         }
         public T mazeSize;
@@ -300,11 +300,11 @@ namespace Eye.Maps.Templates
             return;
         }
 
-        private async UniTask GenerateMazeVisualsAsync(CancelBoolRef cancelRef,ProgressFloatRef progressRef)
+        private async UniTask GenerateMazeVisualsAsync(TaskHandler taskContext, ProgressFloatRef progressRef)
         {
             Debug.Log("Generating MazeWallMatrix");
-            bool runSync = cancelRef == null;
-            EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef, runSync);
+            bool runSync = !taskContext.IsAsynchrnousProcess;//  cancelRef == null;
+          //  EyE.Threading.YieldTimer yieldTimer = new EyE.Threading.YieldTimer(cancelRef, runSync);
             if (progressRef != null) progressRef.StageMessage = "Generating Visuals";
             //we don't instantiate prefabs- we just get their mats and meshes
             if (!runSync)
@@ -362,8 +362,8 @@ namespace Eye.Maps.Templates
                     Matrix4x4 floorMatrix = Matrix4x4.TRS(tilePosition, tileRotation, tileScale);
                     floorMatrices.Add(floorMatrix);
                     //coordToFloorIndices[coord] = floorMatrices.Count - 1;//*******visibility
-                    
-                    await yieldTimer.YieldOnTimeSlice();
+
+                    await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
                 }
             }
             if(!runSync)
@@ -431,7 +431,7 @@ namespace Eye.Maps.Templates
                         // Debug.Log("NO wall for coord: " + coord + "  neighbor idx: " + i + " (neighbor coord: " + coord.GetNeighbor(i) + ")");
                     }
                 }
-                await yieldTimer.YieldOnTimeSlice();
+                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
             Debug.Log(logstr);
 
@@ -456,7 +456,7 @@ namespace Eye.Maps.Templates
                 instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
                 instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
             }
-            await yieldTimer.YieldOnTimeSlice();
+            await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             if (progressRef != null)
             {
                 progressRef.StageMessage = "Generating Visuals: transforms";

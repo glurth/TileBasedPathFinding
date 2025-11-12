@@ -164,7 +164,9 @@ namespace Eye.Maps.Templates
         }
         public override int GetHashCode()
         {
-            return x + (y * 1000000);// + (x * y);
+            return System.HashCode.Combine(x, y);
+            //return x * 379 ^ y;
+            //return x + (y * 1000000);// + (x * y);
                                      // return ShiftAndWrap(x.GetHashCode(), 2) ^ y.GetHashCode();
         }
 

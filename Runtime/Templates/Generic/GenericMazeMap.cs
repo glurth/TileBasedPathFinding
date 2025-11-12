@@ -20,7 +20,7 @@ namespace Eye.Maps.Templates
 
     abstract public class GenericMazeMapBase
     {
-        abstract public UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null);
+        abstract public UniTask GenerateMazeAsync(TaskHandler taskContext, bool testAllWalls = false);
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
         abstract public Bounds GetModelSpaceBounds();
@@ -168,9 +168,9 @@ namespace Eye.Maps.Templates
         /// <param name="cancelRef">A reference used to support cancellation mid-process.</param>
         /// <param name="testAllWalls">If true, skips path and branch generation, only initializes walls/visited.</param>
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
-        public override async UniTask GenerateMazeAsync(CancelBoolRef cancelRef, bool testAllWalls = false, ProgressFloatRef progressRef = null)
+        public override async UniTask GenerateMazeAsync(TaskHandler taskContext, bool testAllWalls = false)
         {
-            var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
+            //var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
                 totalSteps++;
@@ -186,20 +186,21 @@ namespace Eye.Maps.Templates
                 visited[tileCoord.value] = false;
 
                 completedSteps++;
-                if (progressRef != null)
-                    progressRef.Value = (float)completedSteps / totalSteps;
+                taskContext.IncrementProgress((float)completedSteps / totalSteps);
+                //if (progressRef != null)
+                //    progressRef.Value = (float)completedSteps / totalSteps;
 
-                await yieldTimer.YieldOnTimeSlice();
+                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
             if (!testAllWalls)
             {
-                List<T> mainPath = await GenerateMainPathAsync(start, end, yieldTimer);
-                await GenerateBranchesAsync(mainPath, yieldTimer);
+                List<T> mainPath = await GenerateMainPathAsync(start, end, taskContext);//.Yield yieldTimer);
+                await GenerateBranchesAsync(mainPath, taskContext);
             }
 
-            if (progressRef != null)
-                progressRef.Value = 1f;
+            //if (progressRef != null)
+              //  progressRef.Value = 1f;
         }
 
         /// <summary>
@@ -210,7 +211,7 @@ namespace Eye.Maps.Templates
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
         public override void GenerateMaze(bool testAllWalls = false)
         {
-            GenerateMazeAsync(null, testAllWalls, null).AsTask().GetAwaiter().GetResult();//.Forget();
+            GenerateMazeAsync(new TaskHandler(false), testAllWalls).AsTask().GetAwaiter().GetResult();//.Forget();
         }
         public override System.Type CoordinateType { get => typeof(T); }
         /// <summary>
@@ -219,7 +220,7 @@ namespace Eye.Maps.Templates
         /// <param name="start">The starting tile.</param>
         /// <param name="end">The target tile to reach.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask<List<T>> GenerateMainPathAsync(T start, T end, YieldTimer yieldTimer)
+        private async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             Stack<T> stack = new Stack<T>();
             List<T> path = new List<T>();
@@ -248,7 +249,7 @@ namespace Eye.Maps.Templates
                     stack.Pop();
                 }
 
-                await yieldTimer.YieldOnTimeSlice();
+                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
             return path;
@@ -259,7 +260,7 @@ namespace Eye.Maps.Templates
         /// </summary>
         /// <param name="mainPath">The main path tiles to branch from.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask GenerateBranchesAsync(List<T> mainPath, YieldTimer yieldTimer)
+        private async UniTask GenerateBranchesAsync(List<T> mainPath, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             List<T> allPathSteps = new List<T>(mainPath);
             int maxZeros = 1000;
@@ -269,7 +270,7 @@ namespace Eye.Maps.Templates
             {
                 float curve = Mathf.Pow( await ThreadRand.GetRandAsync(), 2);
                 T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
-                List<T> newPath = await GenerateRandomPathAsync(branchStart, yieldTimer);
+                List<T> newPath = await GenerateRandomPathAsync(branchStart, taskContext);// yieldTimer);
 
                 if (newPath.Count == 0)
                     pathLengthZeroCount++;
@@ -277,7 +278,7 @@ namespace Eye.Maps.Templates
                     pathLengthZeroCount = 0;
 
                 allPathSteps.AddRange(newPath);
-                await yieldTimer.YieldOnTimeSlice();
+                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
         }
 
@@ -286,7 +287,7 @@ namespace Eye.Maps.Templates
         /// </summary>
         /// <param name="start">Starting tile for the path.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask<List<T>> GenerateRandomPathAsync(T start, YieldTimer yieldTimer)
+        private async UniTask<List<T>> GenerateRandomPathAsync(T start, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             List<T> path = new List<T>();
             Stack<T> stack = new Stack<T>();
@@ -310,7 +311,7 @@ namespace Eye.Maps.Templates
                     stack.Pop();
                 }
 
-                await yieldTimer.YieldOnTimeSlice();
+                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
             return path;

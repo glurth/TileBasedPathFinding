@@ -1,0 +1,103 @@
+using UnityEngine;
+using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using EyE.Threading;
+namespace Eye.Maps.Templates
+{
+    public class MazeMeshDrawTri : MazeMeshDrawGeneric<TriangularIndex2D>
+    {
+
+        protected override GenericMazeMap<TriangularIndex2D> CreateMazeMap()
+        {
+            MazeMapTri maze = new MazeMapTri(mazeSize);
+            maze.GenerateMaze();
+            return maze;
+        }
+        protected override async UniTask<GenericMazeMap<TriangularIndex2D>> CreateMazeMapAsync(TaskHandler taskContext)
+        {
+            MazeMapTri maze = new MazeMapTri(mazeSize);
+            await maze.GenerateMazeAsync(taskContext);
+            return maze;
+        }
+        protected override TriangularIndex2D DefaultMazeSize()
+        {
+            return new TriangularIndex2D(10, 10);
+        }
+        protected override Chunker<TriangularIndex2D> GetChunker()
+        {
+            return new TriChunker(mazeSize);
+        }
+
+        protected override WallMeshChunkComputerGeneric<TriangularIndex2D> GetNewMeshComputer()
+        {
+            return new WallMeshChunkComputerGeneric<TriangularIndex2D>();
+        }
+
+
+    }
+
+    public class TriChunker : Chunker<TriangularIndex2D>
+    {
+
+        public TriChunker(TriangularIndex2D size) : base(size) { }
+        protected override int NumberOfTilesInSize(TriangularIndex2D size)
+        {
+            return size.x * size.y;
+        }
+        /*protected override List<List<TriangularIndex2D>> GenerateChunks(int numChunks, TriangularIndex2D size)
+        {
+            return GenerateVector2IntChunks(
+                numChunks,
+                size,
+                h => new Vector2Int(h.x, h.y),
+                v => new TriangularIndex2D(v.x, v.y));
+        }*/
+        protected override async UniTask<List<List<TriangularIndex2D>>> GenerateChunksAsync(int numChunks, TriangularIndex2D size, TaskHandler taskContext)
+        {
+            return await GenerateVector2IntChunksAsync(
+                numChunks,
+                size,
+                h => new Vector2Int(h.x, h.y),
+                v => new TriangularIndex2D(v.x, v.y),
+                taskContext);
+        }
+        /*protected override List<List<TriangularIndex2D>> GenerateChunks(int numChunks, TriangularIndex2D size)
+        {
+            // determine grid of chunks
+            int chunksX = (int)Mathf.Ceil(Mathf.Sqrt(numChunks));
+            int chunksY = (int)Mathf.Ceil((float)numChunks / chunksX);
+
+            int chunkWidth = (int)Mathf.Ceil((float)size.x / chunksX);
+            int chunkHeight = (int)Mathf.Ceil((float)size.y / chunksY);
+
+            List<List<TriangularIndex2D>> coordinatesPerChunk = new List<List<TriangularIndex2D>>();
+            string logstr = "Generating Chunks num("+numChunks+"):["+chunksX+","+chunksY+"]: ";
+            for (int cy = 0; cy < chunksY; cy++)
+            {
+                for (int cx = 0; cx < chunksX; cx++)
+                {
+                    var cluster = new List<TriangularIndex2D>();
+                    int startX = cx * chunkWidth;
+                    int startY = cy * chunkHeight;
+                    int endX = Mathf.Min(size.x, startX + chunkWidth);
+                    int endY = Mathf.Min(size.y, startY + chunkHeight);
+                    logstr+="\n chunk coord["+cx+","+cy+ "]-  start coord:[" + startX + "," + startY + "] ending at (exclusive):[" + endX + "," + endY + "]";
+
+                    for (int x = startX; x < endX; x++)
+                    {
+                        for (int y = startY; y < endY; y++)
+                        {
+                            cluster.Add(new TriangularIndex2D(x, y));
+                        }
+                    }
+                    coordinatesPerChunk.Add(cluster);
+                }
+            }
+            Debug.Log(logstr);
+            return coordinatesPerChunk;
+        }
+        */
+    }
+
+   
+}

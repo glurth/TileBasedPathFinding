@@ -32,8 +32,8 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
         return new RectangularCoord[]
         {
             new RectangularCoord(new Vector2Int(x + 1, y)),
-            new RectangularCoord(new Vector2Int(x - 1, y)),
             new RectangularCoord(new Vector2Int(x, y + 1)),
+            new RectangularCoord(new Vector2Int(x - 1, y)),
             new RectangularCoord(new Vector2Int(x, y - 1))
         };
     }
