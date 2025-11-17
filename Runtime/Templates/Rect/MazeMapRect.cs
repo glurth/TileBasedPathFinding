@@ -37,7 +37,8 @@ namespace Eye.Maps.Templates
             return coord.x >= 0 && coord.y >= 0 && coord.x < size.x && coord.y < size.y;
         }
         //float[] neighborAngles = new float[] { 90, 270, 180, 0 }; //must match order of RectangularCoord.GetNeighbor
-        float[] neighborAngles = new float[] { 0, 90, 180, 270 }; //must match order of RectangularCoord.GetNeighbor
+        //float[] neighborAngles = new float[] { 0, 90, 180, 270 }; //must match order of RectangularCoord.GetNeighbor
+        float[] neighborAngles = new float[] { 90, 180, 270,0 }; //must match order of RectangularCoord.GetNeighbor
         public override Quaternion NeighborBorderOrientation(RectangularCoord coord, int neighborIndex)
         {
             return Quaternion.Euler(0, 0, neighborAngles[neighborIndex]);

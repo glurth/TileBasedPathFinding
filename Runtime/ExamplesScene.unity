@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028566, g: 0.22571658, b: 0.30692422, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -490,7 +490,7 @@ Transform:
   m_GameObject: {fileID: 87968157}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.01, y: 1.01, z: 1.01}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 513407223}
@@ -2111,7 +2111,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &513407220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2125,8 +2125,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeSize:
-    m_x: 6
-    m_y: 6
+    m_x: 3
+    m_y: 3
   tileScale: 1
   wallThicknessFraction: 0.1
   wallHeightFraction: 0.2
@@ -2138,6 +2138,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 1536615705}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  testOffset: 0
 --- !u!4 &513407223
 Transform:
   m_ObjectHideFlags: 0
@@ -4164,7 +4165,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeSize:
-    data: {x: 10, y: 10}
+    data: {x: 200, y: 200}
   tileScale: 1
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.2
@@ -4175,7 +4176,7 @@ MonoBehaviour:
   startHidden: 0
   wallChunkMeshFilterPrefab: {fileID: 670906312}
   createMazeOnEnable: 1
-  processingIndicator: {fileID: 0}
+  processingIndicator: {fileID: 1083129183}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4226,7 +4227,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1427024310
 Transform:
   m_ObjectHideFlags: 0

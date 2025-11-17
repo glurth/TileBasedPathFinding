@@ -1047,13 +1047,14 @@ namespace Eye.Maps.Templates
         }
 
         //internal storage
-        List<Corner> uniqueCorners = new List<Corner>();
+        protected List<Corner> uniqueCorners = new List<Corner>();
         List<int> oldToNewCornerIndex = new List<int>();
-        List<Edge> uniqueEdges = new List<Edge>();
-        List<List<Edge>> edgesByChunk = new List<List<Edge>>();
+        protected List<Edge> uniqueEdges = new List<Edge>();
+        protected List<List<Edge>> edgesByChunk = new List<List<Edge>>();
         Dictionary<T, int> chunckIndexByFaceCoord;
+        protected Dictionary<T, List<int>> cornerIndecesByCoordinate = new Dictionary<T, List<int>>();
         //internal structures
-        class Corner
+        protected class Corner
         {
             public Vector3 position;
           //  public List<int> edgeTo;  //indexes into the uniqueCorners list
@@ -1062,7 +1063,7 @@ namespace Eye.Maps.Templates
             public Vector3[] fanRing;
             public Vector3? tipVert;
         }
-        class Edge
+        protected class Edge
         {
             public int cornerA;
             public int cornerB;
@@ -1137,16 +1138,16 @@ namespace Eye.Maps.Templates
 
             float b = Vector3.Dot(d1, d2);
             float c = Vector3.Dot(d1, r);
-
-            float s = (b * f - c * e) / denom;
-            float t = (a * f - b * c) / denom;
+            float invDenom = 1f / denom;
+            float s = (b * f - c * e) * invDenom;
+            float t = (a * f - b * c) * invDenom;
 
             closestPointOnA = p1 + d1 * s;
             closestPointOnB = p2 + d2 * t;
             return true;
         }
 
-        Dictionary<T, List<int>> cornerIndecesByCoordinate = new Dictionary<T, List<int>>();
+ 
         void BuildUniqueCorners()
         {
             List<Vector3> uniqueCornerPositions = new List<Vector3>();
@@ -1191,55 +1192,44 @@ namespace Eye.Maps.Templates
                 return 0; // forces Equals check every time
             }
         }
-        struct QuantizedVec3 : IEquatable<QuantizedVec3>
-        {
-            public readonly int x, y, z;
-            readonly Vector3 vec;
-            const float invEps = 10000;
-            public QuantizedVec3(Vector3 v)
-            {
-                vec = v;
-                x = (int)(v.x * invEps);
-                y = (int)(v.y * invEps);
-                z = (int)(v.z * invEps);
-            }
 
-            public bool Equals(QuantizedVec3 other) => vec.Equals(other.vec);
-            public override int GetHashCode() => x * 73856093 ^ y * 19349663 ^ z * 83492791;
-        }
         /// <summary>
         /// populates cornerIndecesByCoordinate and uniqueCorners
         /// </summary>
         /// <param name="taskContext"></param>
         /// <returns></returns>
-        async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
+        protected virtual async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
         {
             List<Vector3> uniqueCornerPositions = new List<Vector3>();
-            Dictionary<QuantizedVec3, int> cornerIndexByKey = new Dictionary<QuantizedVec3, int>();
-
+            Dictionary<Vector3, int> cornerIndexByPosition = new Dictionary<Vector3, int>( new Vector3ApproxComparer(.0001f));
+            string logstr = "";
             foreach (T coord in map.allMapCoords)
             {
                 int neighborCount = coord.NumberOfNeighbors();
-                List<int> faceUniqueCornerIndeces = new List<int>();
-
+                List<int> tileUniqueCornerIndeces = new List<int>();
+                logstr += "\ncomputing corners of coord " + coord;
                 for (int n = 0; n < neighborCount; n++)
                 {
                     Vector3 cornerPos = ComputeCornerPos(coord, n);
-                    QuantizedVec3 qPos = new QuantizedVec3(cornerPos);
- 
-                    if (!cornerIndexByKey.TryGetValue(qPos, out int cornerIndex))
+                    logstr +="\n     neighbor "+n+" pos: "+cornerPos;
+                    if (!cornerIndexByPosition.TryGetValue(cornerPos, out int cornerIndex))
                     {
                         cornerIndex = uniqueCornerPositions.Count;
                         uniqueCornerPositions.Add(cornerPos);
-                        cornerIndexByKey.Add(qPos, cornerIndex);
+                        cornerIndexByPosition.Add(cornerPos, cornerIndex);
+                        logstr += " newIndex: " + cornerIndex;
                     }
-
-                    faceUniqueCornerIndeces.Add(cornerIndex);
+                    else
+                    {
+                        logstr += " foundIndex: " + cornerIndex;
+                    }
+                    tileUniqueCornerIndeces.Add(cornerIndex);
                 }
 
-                cornerIndecesByCoordinate.Add(coord, faceUniqueCornerIndeces);
+                cornerIndecesByCoordinate.Add(coord, tileUniqueCornerIndeces);
                 await taskContext.Yield();
                 taskContext.IncrementProgress(0.1f);
+
             }
 
             await taskContext.SetStageMessageAndYield("Finalizing corners.");
@@ -1247,6 +1237,9 @@ namespace Eye.Maps.Templates
             {
                 uniqueCorners.Add(new Corner { position = cornerVertex });
             }
+            await UniTask.SwitchToMainThread();
+            Debug.Log(logstr);
+            await UniTask.SwitchToThreadPool();
         }
 
 
@@ -1454,18 +1447,18 @@ namespace Eye.Maps.Templates
                         int edgeChunk = chunckIndexByFaceCoord[coord];
                         if (map.IsWithinBounds(neighborCoord))
                             edgeChunk = Mathf.Min(edgeChunk, chunckIndexByFaceCoord[neighborCoord]);
-                        logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
+                        //logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
 
                         if (!edgesByChunk[edgeChunk].Contains(edge))
                             edgesByChunk[edgeChunk].Add(edge);
-                        else
-                            logstr += "  DUPLICATE  edge";
-
+                        //else
+                          //  logstr += "  DUPLICATE  edge";
+                          /*
                         if (logstr.Length > 2048 * 4)
                         {
                             //Debug.Log(logstr);
                             logstr = "";
-                        }
+                        }*/
                     }//edgealready exists
                 }
                 taskContext.IncrementProgress(0.1f);
@@ -1672,7 +1665,7 @@ namespace Eye.Maps.Templates
             Debug.Log(logstr);
         }
 
-        async UniTask GenerateVertexPositionsAsync(TaskHandler taskContext)
+        async UniTask xxUnOptGenerateVertexPositionsAsync(TaskHandler taskContext)
         {
             // Step 4: Generate vertex positions (use new param- wallThickness to compute end-side points (front to back thickness) )
             // ----------------------------------------------------
@@ -1697,6 +1690,7 @@ namespace Eye.Maps.Templates
             {
                 Corner c = uniqueCorners[cIndex];
                 logstr += "\nComputing visible edges for unique corner[" + cIndex + "] at position:" + c.position + "  Total edges touching corner:" + c.edges.Count;
+                Vector3 cornerNormal = NormalAtModelSpacePosition(c.position);
 
                 if (c.edges.Count == 0) continue;
                 List<Edge> visibleEdges = new List<Edge>();//edges with walls that touch this corner
@@ -1716,13 +1710,13 @@ namespace Eye.Maps.Templates
                 {
                     //compute 2 fanRing verts- assign to single edge-end
                     Edge e = visibleEdges[0];
-                    Vector3 thicknessOffset = wallThickness * 0.5f * -Vector3.Cross(NormalAtModelSpacePosition(c.position), EdgeDirFrom(e, cIndex)); //assumes spheroid..  todo: change later to param
+                    Vector3 thicknessOffset = wallThickness * 0.5f * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex)); //assumes spheroid..  todo: change later to param
                     AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, Color.black);
                 }
                 else if (visibleEdges.Count > 1)
                 {
                     c.fanRing = new Vector3[visibleEdges.Count];
-                    Vector3 axis = NormalAtModelSpacePosition(c.position);//.normalized;// assumes spheroid-fixed
+                    Vector3 axis = cornerNormal;//.normalized;// assumes spheroid-fixed
                     Vector3 refDir;
                     if (Mathf.Abs(axis.z) < 0.99f)
                         refDir = Vector3.Cross(axis, Vector3.forward); // not parallel
@@ -1744,9 +1738,9 @@ namespace Eye.Maps.Templates
                         // get line in form of a point and a direction, for both edge's side and next edge's side
                         //compute points on each line where they closest (Ideally same point), and compute the avg position of them
 
-                        Vector3 edgeThicknessOffset = -wallThickness * 0.5f * Vector3.Cross(NormalAtModelSpacePosition(c.position), edgeDir);
+                        Vector3 edgeThicknessOffset = -wallThickness * 0.5f * Vector3.Cross(cornerNormal, edgeDir);
 
-                        Vector3 nextEdgethicknessOffset = -wallThickness * 0.5f * Vector3.Cross(NormalAtModelSpacePosition(c.position), nextEdgeDir);
+                        Vector3 nextEdgethicknessOffset = -wallThickness * 0.5f * Vector3.Cross(cornerNormal, nextEdgeDir);
                         Vector3 posOnEdgeSide = c.position + edgeThicknessOffset;
                         // we want the opposite side of the edge wall
                         Vector3 posOnNextEdgeSide = c.position - nextEdgethicknessOffset;
@@ -1792,6 +1786,110 @@ namespace Eye.Maps.Templates
 
             Debug.Log(logstr);
         }
+
+        async UniTask GenerateVertexPositionsAsync(TaskHandler taskContext)
+        {
+            string logstr = "";
+            float halfT = wallThickness * 0.5f;
+
+            for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
+            {
+                Corner c = uniqueCorners[cIndex];
+               // logstr += "\nComputing visible edges for unique corner[" + cIndex + "] at position:" + c.position + "  Total edges touching corner:" + c.edges.Count;
+                if (c.edges.Count == 0) continue;
+
+                Vector3 cornerNormal = NormalAtModelSpacePosition(c.position); // cache once per corner
+
+                List<Edge> visibleEdges = new List<Edge>();
+                foreach (int edgeIndex in c.sortedEdges)
+                {
+                    Edge e = uniqueEdges[c.edges[edgeIndex]];
+                    if (e.hasVisibleWall)
+                    {
+                        visibleEdges.Add(e);
+                    }
+                }
+
+                int visibleCount = visibleEdges.Count;
+                if (visibleCount == 1)
+                {
+                    Edge e = visibleEdges[0];
+                    Vector3 thicknessOffset = halfT * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex));
+                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, Color.black);
+                }
+                else if (visibleCount > 1)
+                {
+                    c.fanRing = new Vector3[visibleCount];
+
+                    Vector3 axis = cornerNormal;
+                    Vector3 refDir;
+                    if (Mathf.Abs(axis.z) < 0.99f)
+                        refDir = Vector3.Cross(axis, Vector3.forward);
+                    else
+                        refDir = Vector3.Cross(axis, Vector3.right);
+                    refDir.Normalize();
+
+                    Vector3 avgRingPos = Vector3.zero;
+
+                    for (int eCounter = 0; eCounter < visibleCount; eCounter++)
+                    {
+                        Edge e = visibleEdges[eCounter];
+                        Edge nextEdge = visibleEdges.RingIndex(eCounter + 1);
+
+                        Vector3 edgeDir = EdgeDirFrom(e, cIndex);
+                        Vector3 nextEdgeDir = EdgeDirFrom(nextEdge, cIndex);
+
+                        Vector3 edgeThicknessOffset = -halfT * Vector3.Cross(cornerNormal, edgeDir);
+                        Vector3 nextEdgethicknessOffset = -halfT * Vector3.Cross(cornerNormal, nextEdgeDir);
+
+                        Vector3 posOnEdgeSide = c.position + edgeThicknessOffset;
+                        Vector3 posOnNextEdgeSide = c.position - nextEdgethicknessOffset;
+
+                        Vector3 closestSidePoint;
+                        Vector3 diff = posOnEdgeSide - posOnNextEdgeSide;
+
+                        if (diff.sqrMagnitude > 0.0001f)
+                        {
+                            Ray side = new Ray(posOnEdgeSide, edgeDir);
+                            Ray nextSide = new Ray(posOnNextEdgeSide, nextEdgeDir);
+                            Vector3 closestNextSidePoint;
+                            if (!LineIntersection(side, nextSide, out closestSidePoint, out closestNextSidePoint))
+                            {
+                                closestSidePoint += closestNextSidePoint;
+                                closestSidePoint *= 0.5f;
+                            }
+                        }
+                        else
+                        {
+                            closestSidePoint = posOnEdgeSide;
+                        }
+
+                        c.fanRing[eCounter] = closestSidePoint;
+                        avgRingPos += closestSidePoint;
+                    }
+
+                    avgRingPos /= visibleCount;
+
+                    if (visibleCount > 2)
+                    {
+                        c.tipVert = avgRingPos;
+                    }
+
+                    for (int eCounter = 0; eCounter < visibleCount; eCounter++)
+                    {
+                        Edge e = visibleEdges[eCounter];
+                        Color color = Color.red * ((float)eCounter / visibleCount);
+                        AssignToEdge(e, cIndex, c.fanRing.RingIndex(eCounter), c.fanRing.RingIndex(eCounter - 1), c.tipVert, color);
+                    }
+                }// end more than one visible edge touching corner
+
+                taskContext.IncrementProgress(0.1f);
+                await taskContext.Yield();
+            }
+
+          //  Debug.Log(logstr);
+        }
+
 
         Mesh GenerateWallModel(List<Edge> edgesInChunk)
         {

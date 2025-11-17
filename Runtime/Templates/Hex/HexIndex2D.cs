@@ -234,15 +234,15 @@ namespace Eye.Maps.Templates
         }
 
         static public HexIndex2D[] neighborIndexOffsetsOddY = new HexIndex2D[]
-    {
-        new HexIndex2D(1, 0),
-        new HexIndex2D(1, -1),
-        new HexIndex2D(0, -1),
-        new HexIndex2D(-1, 0),
-        new HexIndex2D(0, +1),
-        new HexIndex2D(+1, +1),
+        {
+            new HexIndex2D(1, 0),
+            new HexIndex2D(1, -1),
+            new HexIndex2D(0, -1),
+            new HexIndex2D(-1, 0),
+            new HexIndex2D(0, +1),
+            new HexIndex2D(+1, +1),
 
-    };
+        };
         static public HexIndex2D[] neighborIndexOffsetsEvenY = new HexIndex2D[]
         {
         new HexIndex2D(1, 0),

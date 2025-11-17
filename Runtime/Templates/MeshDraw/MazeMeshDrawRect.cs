@@ -29,7 +29,10 @@ namespace Eye.Maps.Templates
         {
             return new RectChunker(mazeSize);
         }
-
+        protected override WallMeshChunkComputerGeneric<RectangularCoord> GetNewMeshComputer()
+        {
+            return new RectWallMeshComputer();//new WallMeshChunkComputerGeneric<RectangularCoord>();//  
+        }
     }
 
     public class RectChunker : Chunker<RectangularCoord>
@@ -93,5 +96,51 @@ namespace Eye.Maps.Templates
             return coordinatesPerChunk;
         }
         */
+    }
+
+    public class RectWallMeshComputer : WallMeshChunkComputerGeneric<RectangularCoord>
+    {
+        protected  override async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
+        {
+            int cornerCols = map.size.x + 1;
+            int cornerRows = map.size.y + 1;
+
+            Vector3 tileStep = map.SingleTileModelSpaceOffset();
+            Vector3 basePos = map.GetModelSpacePosition(new RectangularCoord(0, 0)) - new Vector3(0.5f, 0.5f, 0); ;
+
+            uniqueCorners.Clear();
+            uniqueCorners.Capacity = cornerCols * cornerRows;
+            Dictionary<(int, int), int> cornerIndexByXY = new Dictionary<(int, int), int>();
+
+            for (int y = 0; y < cornerRows; y++)
+            {
+                for (int x = 0; x < cornerCols; x++)
+                {
+                    int index = uniqueCorners.Count;
+                    cornerIndexByXY[(x, y)] = index;
+                    Vector3 pos = basePos + new Vector3(x * tileStep.x, y * tileStep.y, 0);
+                    uniqueCorners.Add(new Corner { position = pos });
+                }
+                await taskContext.Yield();
+            }
+
+            cornerIndecesByCoordinate.Clear();
+            foreach (RectangularCoord coord in map.allMapCoords)
+            {
+                int x = coord.x;
+                int y = coord.y;
+                List<int> tileCorners = new List<int>(4)
+                    {
+                        cornerIndexByXY[(x + 1, y    )], // n=0 east  ? bottom-right
+                        cornerIndexByXY[(x + 1, y + 1)], // n=1 north ? top-right
+                        cornerIndexByXY[(x,     y + 1)], // n=2 west  ? top-left
+                        cornerIndexByXY[(x,     y    )]  // n=3 south ? bottom-left
+                    };
+                                    cornerIndecesByCoordinate.Add(coord, tileCorners);
+                taskContext.IncrementProgress(0.1f);
+                await taskContext.Yield();
+            }
+        }
+
     }
 }
