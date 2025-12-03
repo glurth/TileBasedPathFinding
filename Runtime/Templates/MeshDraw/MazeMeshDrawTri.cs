@@ -30,7 +30,7 @@ namespace Eye.Maps.Templates
 
         protected override WallMeshChunkComputerGeneric<TriangularIndex2D> GetNewMeshComputer()
         {
-            return new WallMeshChunkComputerGeneric<TriangularIndex2D>();
+            return new WallMeshChunkComputerGeneric<TriangularIndex2D>();//TriWallMeshComputer();// 
         }
 
 
@@ -98,6 +98,88 @@ namespace Eye.Maps.Templates
         }
         */
     }
+    public class TriWallMeshComputer : WallMeshChunkComputerGeneric<TriangularIndex2D>
+    {
+        protected override async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
+        {
+            Dictionary<Vector2Int, int> cornerIndexByKey = new Dictionary<Vector2Int, int>();
+            await taskContext.SetStageMessageAndYield("Tri-Corners generation");
+            foreach (TriangularIndex2D coord in map.allMapCoords)
+            {
+                List<int> tileUniqueCornerIndeces = new List<int>(3);
+                int x = coord.x;
+                int y = coord.y;
+                // Determine corner lattice points for this triangle
+                Vector2Int[] corners;
+                if (!coord.IsPointingUp())
+                {
+                    // top, lower right, lower left
+                    corners = new Vector2Int[]
+                    {
+                        new Vector2Int(x, y),       // top
+                        new Vector2Int(x+1, y+1),   // right
+                        new Vector2Int(x, y+1)    // left
+                    };
+                }
+                else
+                {
+                    // bottom upper right,upper left, left, right
+                    corners = new Vector2Int[]
+                    {
+                        new Vector2Int(x,y+1),   // bottom
+                        new Vector2Int(x+1, y),   // left
+                        new Vector2Int(x,y)    // right
+                    };
+                }
 
-   
+                /*if (coord.IsPointingUp())
+                {
+                    // bottom, right, left
+                    corners = new Vector2Int[]
+                    {
+                        new Vector2Int(2 * coord.x + 1, 2 * coord.y),       // bottom
+                        new Vector2Int(2 * coord.x + 2, 2 * coord.y + 1),   // right
+                        new Vector2Int(2 * coord.x,     2 * coord.y + 1)    // left
+                    };
+                }
+                else
+                {
+                    // top, left, right
+                    corners = new Vector2Int[]
+                    {
+                        new Vector2Int(2 * coord.x + 1, 2 * coord.y + 2),   // top
+                        new Vector2Int(2 * coord.x,     2 * coord.y + 1),   // left
+                        new Vector2Int(2 * coord.x + 2, 2 * coord.y + 1)    // right
+                    };
+                }*/
+
+                for (int cornerNumber = 0; cornerNumber < 3; cornerNumber++)
+                {
+                    int n = (cornerNumber + 2) % 3;
+                    if (!cornerIndexByKey.TryGetValue(corners[n], out int cornerIndex))
+                    {
+                        cornerIndex = uniqueCorners.Count;// uniqueCornerPositions.Count;
+                        cornerIndexByKey.Add(corners[n], cornerIndex);
+
+                        // Convert lattice corner to world space
+                        Vector3 cornerPos = ComputeCornerPos(coord, n);//  new Vector3(corners[n].x, 0, corners[n].y);
+                        uniqueCorners.Add(new Corner { position = cornerPos });
+                    }
+
+                    tileUniqueCornerIndeces.Add(cornerIndex);
+                }
+
+                cornerIndecesByCoordinate.Add(coord, tileUniqueCornerIndeces);
+
+                await taskContext.Yield();
+                taskContext.IncrementProgress(0.1f);
+            }
+
+            await taskContext.SetStageMessageAndYield("Finalizing corners.");
+
+
+        }
+    }
+
+
 }

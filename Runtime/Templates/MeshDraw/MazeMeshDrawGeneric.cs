@@ -273,7 +273,9 @@ namespace Eye.Maps.Templates
         {
             taskContext?.OnGUIDebug();
         }
+
         WallMeshChunkComputerGeneric<T> meshComputer = null;
+        
         /// <summary>
         /// Creates a new <see cref="WallMeshChunkComputerGeneric{T}"/> instance.
         /// Override to provide a specialized mesh computer (e.g. different geometry rules).
@@ -282,6 +284,7 @@ namespace Eye.Maps.Templates
         {
             return new WallMeshChunkComputerGeneric<T>();
         }
+
         async UniTask GenerateWallChunkMeshesAsync(TaskHandler taskContext)
         {
             //   Debug.Log("Setting visiblity for all tiles to: " + !startHidden);
@@ -298,32 +301,52 @@ namespace Eye.Maps.Templates
             if (taskContext.IsCancellationRequested) return;
 
             await UniTask.SwitchToMainThread();
+            wallChunkMeshes = new List<Mesh>(chunkMeshes.Count);
             for (int i = 0; i < chunkMeshes.Count; i++)
             {
-                if (wallChunkMeshFilters.Count <= i)
+                /*if (wallChunkMeshFilters.Count <= i)
                     wallChunkMeshFilters.Add(Instantiate(wallChunkMeshFilterPrefab, transform));
                 wallChunkMeshFilters[i].gameObject.name = "WallChunk[" + i + "]";
-                wallChunkMeshFilters[i].sharedMesh = chunkMeshes[i].ToMesh();
+                wallChunkMeshFilters[i].sharedMesh = chunkMeshes[i].ToMesh();*/
+                wallChunkMeshes.Add(chunkMeshes[i].ToMesh());
             }
             for (int i = chunkMeshes.Count; i < wallChunkMeshFilters.Count; i++)
             {
                 Destroy(wallChunkMeshFilters[i].gameObject);
             }
-
-
         }
         
         void GenerateWallChunkMeshes()
         {
+            TaskHandler taskContext = new TaskHandler(false);
+
+            try
+            {
+                // 1. Call the async method, which returns a UniTask.
+                // 2. Call .Wait() to BLOCK the current thread until the UniTask completes.
+                GenerateWallChunkMeshesAsync(taskContext).GetAwaiter().GetResult();
+              
+              
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            return;
+
+
+
             Debug.Log("Setting visiblity for all tiles: " + !startHidden);
             foreach (T coord in maze.allMapCoords)
             {
                 SetTileVisibility(coord, !startHidden);
             }
 
-            //InitializeChunks();
             meshComputer = GetNewMeshComputer();
             List<Mesh> chunkMeshes = meshComputer.CreateWallsMeshChunks(maze, this, tileScale * wallThicknessFraction, tileScale * wallHeightFraction, chunkHandler.ChunkCoordinateLists());
+
+            wallChunkMeshes = chunkMeshes;
+            return;
          //   if (chunkMeshes.Count != numberOfChunks) throw new System.Exception("Failed to generate correct number of chunk meshes- aborting assignment.");
          //   if (wallChunkMeshFilters.Count != numberOfChunks) throw new System.Exception("Incorrect number of mesh filters to assign chunk meshes to, aborting assignment.");
             for (int i = 0; i < chunkMeshes.Count; i++)
@@ -340,6 +363,169 @@ namespace Eye.Maps.Templates
 
             //WallMeshComputer meshComputer = new  WallMeshComputer();
             //wallsMeshFilter.sharedMesh = meshComputer.CreateWallsMesh(facesAndNeighbors, this,tileScale* wallThicknessFraction, tileScale * wallHeightFraction); 
+        }
+
+
+        //opimize test- rather than instantiating 
+        private List<Mesh> wallChunkMeshes = new List<Mesh>();
+        public Material wallChunkMaterial;
+        private Matrix4x4 cachedWorldTransform; // Stores the last calculated matrix
+        //renders chunckmeshes to main camera using Graphics.DrawMesh
+        void LateUpdate()
+        {
+            // Check if we have meshes and material
+            if (wallChunkMeshes == null || wallChunkMaterial == null)
+            {
+                return;
+            }
+
+            // --- OPTIMIZATION STEP: Check if the transform moved ---
+            if (transform.hasChanged)
+            {
+                cachedWorldTransform = transform.localToWorldMatrix;
+                transform.hasChanged = false;
+            }
+
+            // If the transform hasn't changed, we draw using the old cachedWorldTransform.
+
+            const int WallLayer = 0;
+
+            Debug.Log("drawing chucnkmeshes now: " + wallChunkMeshes.Count);
+            // Issue a draw call for every single unique mesh
+            foreach (Mesh mesh in wallChunkMeshes)
+            {
+                if (mesh != null)
+                {
+                    Graphics.DrawMesh(
+                        mesh,
+                        cachedWorldTransform, // Draw with the cached matrix
+                        wallChunkMaterial,
+                        WallLayer,
+                        Camera.main,
+                        0,
+                        null,
+                        true,
+                        true
+                    );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Renders the current state of the wallChunkMeshes to a target RenderTexture 
+        /// using a dedicated orthographic top-down camera view, and cleans up all temporary objects.
+        /// </summary>
+        /// <param name="targetTexture">The RenderTexture to draw the map onto.</param>
+        public void BakeMapTexture(RenderTexture targetTexture)
+        {
+            if (wallChunkMeshes == null || wallChunkMeshes.Count == 0 || wallChunkMaterial == null)
+            {
+                Debug.LogError("Bake failed: Wall meshes or material not set.");
+                return;
+            }
+
+            // --- NESTED HELPER FUNCTIONS START ---
+
+            // Helper function to transform a local Bounds object into world space.
+            Bounds GetTransformedBounds(Bounds localBounds, Matrix4x4 transformMatrix)
+            {
+                Bounds newBounds = new Bounds();
+                Vector3 min = localBounds.min;
+                Vector3 max = localBounds.max;
+
+                // The 8 corners of the local AABB (Axis-Aligned Bounding Box)
+                Vector3[] corners = new Vector3[]
+                {
+            new Vector3(min.x, min.y, min.z),
+            new Vector3(max.x, min.y, min.z),
+            new Vector3(min.x, max.y, min.z),
+            new Vector3(min.x, min.y, max.z),
+            new Vector3(max.x, max.y, min.z),
+            new Vector3(max.x, min.y, max.z),
+            new Vector3(min.x, max.y, max.z),
+            new Vector3(max.x, max.y, max.z)
+                };
+
+                // Transform and encapsulate all 8 corners
+                foreach (Vector3 corner in corners)
+                {
+                    newBounds.Encapsulate(transformMatrix.MultiplyPoint(corner));
+                }
+                return newBounds;
+            }
+
+            // Calculates the total world-space bounding box that encompasses all wall geometry.
+            Bounds CalculateCombinedWorldBounds()
+            {
+                Matrix4x4 mazeWorldTransform = transform.localToWorldMatrix;
+
+                // Initialize the bounds with the first mesh, transformed to world space.
+                Bounds combinedBounds = GetTransformedBounds(wallChunkMeshes[0].bounds, mazeWorldTransform);
+
+                // Iterate over the rest of the meshes and encapsulate the bounds
+                for (int i = 1; i < wallChunkMeshes.Count; i++)
+                {
+                    Bounds localBounds = wallChunkMeshes[i].bounds;
+                    Bounds worldBounds = GetTransformedBounds(localBounds, mazeWorldTransform);
+                    combinedBounds.Encapsulate(worldBounds);
+                }
+
+                return combinedBounds;
+            }
+
+            // --- NESTED HELPER FUNCTIONS END ---
+
+
+            // --- BAKE LOGIC START ---
+
+            // 1. Calculate the Precise World Bounds
+            Bounds totalWorldBounds = CalculateCombinedWorldBounds();
+
+            // 2. Camera Setup (Create and Configure)
+            GameObject cameraGO = new GameObject("Temp_Map_Bake_Camera", typeof(Camera));
+            Camera bakeCameraInstance = cameraGO.GetComponent<Camera>();
+
+            const int BakeLayer = 30; // Dedicated layer for the bake process
+
+            // Set Target
+            bakeCameraInstance.targetTexture = targetTexture;
+
+            // View Setup
+            bakeCameraInstance.orthographic = true;
+            bakeCameraInstance.transform.position = totalWorldBounds.center + Vector3.up * 100f; // Position high above center
+            bakeCameraInstance.transform.rotation = Quaternion.Euler(90f, 0f, 0f);           // Look straight down
+
+            // Sizing
+            bakeCameraInstance.orthographicSize = Mathf.Max(totalWorldBounds.size.x, totalWorldBounds.size.z) / 2f;
+            bakeCameraInstance.nearClipPlane = 1f;
+            bakeCameraInstance.farClipPlane = 200f;
+
+            // Rendering Setup
+            bakeCameraInstance.cullingMask = 1 << BakeLayer; // Only see the wall geometry
+            bakeCameraInstance.clearFlags = CameraClearFlags.SolidColor;
+            bakeCameraInstance.backgroundColor = Color.black;
+
+            // 3. Prepare Geometry (Temporarily set layer)
+            int originalLayer = gameObject.layer;
+            gameObject.layer = BakeLayer;
+
+            // NOTE: This assumes your LateUpdate() logic or mesh combination logic 
+            // will be run and issue the Graphics.DrawMesh calls for this frame, 
+            // or that the single combined mesh is already assigned to this GameObject 
+            // and is placed on the BakeLayer.
+
+            // 4. Forced Render (The Rasterization Step)
+            bakeCameraInstance.Render();
+
+            // 5. Cleanup
+
+            // Reset the layer of the main object
+            gameObject.layer = originalLayer;
+
+            // Destroy the temporary camera and its GameObject
+            DestroyImmediate(cameraGO);
+
+            Debug.Log("Map Bake Complete. Output Resolution: " + targetTexture.width + "x" + targetTexture.height);
         }
 
         /// <summary>
@@ -1014,7 +1200,7 @@ namespace Eye.Maps.Templates
         /// <returns></returns>
         protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return Vector3.forward; }//  vector normalized for faces
         
-        protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)// use mesh verticies for faces
+        protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)
         {
             //compute corner using orientation.
             int neighborCount = coord.NumberOfNeighbors();
@@ -1395,12 +1581,14 @@ namespace Eye.Maps.Templates
             foreach (T coord in map.allMapCoords)
             {
                 int cornerCount = coord.NumberOfNeighbors();
+                List<int> cornerIndiciesForCurrentCoord = cornerIndecesByCoordinate[coord];
+                int edgeChunk = chunckIndexByFaceCoord[coord];
                 for (int i = 0; i < cornerCount; i++)
                 {
                     T neighborCoord = coord.GetNeighbor(i);
 
-                    int currentCornerA = cornerIndecesByCoordinate[coord][i];
-                    int currentCornerB = cornerIndecesByCoordinate[coord][(i + 1).RingIndex(cornerCount)];
+                    int currentCornerA = cornerIndiciesForCurrentCoord[i];
+                    int currentCornerB = cornerIndiciesForCurrentCoord[(i + 1).RingIndex(cornerCount)];
 
                     // see if an edge exists that uses these corners- if not create it
                   //  void swap(ref int a, ref int b) { int temp = a; a = b; b = temp; }
@@ -1437,19 +1625,19 @@ namespace Eye.Maps.Templates
 
                         //  we are only in here if a new edge created: no need to check if it exists in a list
                         int edgeIndex = currentEdgeIndex;// uniqueEdges.IndexOf(edge);
-                        if (!cornerAObj.edges.Contains(edgeIndex))
+                      //  if (!cornerAObj.edges.Contains(edgeIndex))
                             cornerAObj.edges.Add(edgeIndex);
-                        if (!cornerBObj.edges.Contains(edgeIndex))
+                     //   if (!cornerBObj.edges.Contains(edgeIndex))
                             cornerBObj.edges.Add(edgeIndex);
 
 
                         // addref to this edge to chunk lists  to do: separate for recompute
-                        int edgeChunk = chunckIndexByFaceCoord[coord];
+                       
                         if (map.IsWithinBounds(neighborCoord))
                             edgeChunk = Mathf.Min(edgeChunk, chunckIndexByFaceCoord[neighborCoord]);
                         //logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
 
-                        if (!edgesByChunk[edgeChunk].Contains(edge))
+                    //    if (!edgesByChunk[edgeChunk].Contains(edge))
                             edgesByChunk[edgeChunk].Add(edge);
                         //else
                           //  logstr += "  DUPLICATE  edge";

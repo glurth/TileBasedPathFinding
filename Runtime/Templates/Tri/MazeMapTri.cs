@@ -34,7 +34,7 @@ namespace Eye.Maps.Templates
             float worldX = coord.x * 0.5f;
             float worldY = coord.y * tileHeight;
 
-            if (!coord.IsPointingUp())
+            if (coord.IsPointingUp())
                 worldY += centroidOffset;
             else
                 worldY += tileHeight - centroidOffset;
@@ -54,12 +54,12 @@ namespace Eye.Maps.Templates
         //float[] neighborAnglesUp = new float[] { 0, 120 , 240  };
         //float[] neighborAnglesDown = new float[] { 180, 120+180, 240 + 180 };
 
-        float[] neighborAnglesUp = new float[] { 0, 240, 120 };
-        float[] neighborAnglesDown = new float[] { 180, 240 + 180, 120 + 180 };
+        float[] neighborAnglesDown = new float[] { 0, 240, 120 };
+        float[] neighborAnglesUp = new float[] { 180, 240 + 180, 120 + 180 };
 
         public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {
-            if (!coord.IsPointingUp())
+            if (coord.IsPointingUp())
                 return Quaternion.identity;
             else
                 return Quaternion.Euler(0, 0, 180);

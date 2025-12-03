@@ -1022,7 +1022,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &194830418
 Transform:
   m_ObjectHideFlags: 0
@@ -1530,6 +1530,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 1266882713}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 44bbd85b32a72ce40b535b59c6279360,
     type: 2}
 --- !u!4 &272009860
@@ -1636,7 +1637,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15, y: 15, z: -30.3}
+  m_LocalPosition: {x: 15, y: 15, z: -31.67}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1968,6 +1969,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 364243836}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 86b67ac3b64abc34ca9bc61dc4de2966,
     type: 2}
 --- !u!4 &419970633
@@ -2138,6 +2140,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 1536615705}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   testOffset: 0
 --- !u!4 &513407223
 Transform:
@@ -2998,6 +3001,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 1884426144}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: d59bfdb5f6428384ebb3862b01637756,
     type: 2}
 --- !u!4 &796440790
@@ -3430,6 +3434,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 1862221451}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 96722b6dc0fdd0d48a41fb05a5e7d89d,
     type: 2}
 --- !u!4 &957235582
@@ -4114,6 +4119,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 65149836}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 58933a1e2867f744ab78eb374ed478ed,
     type: 2}
 --- !u!4 &1313517988
@@ -4177,6 +4183,7 @@ MonoBehaviour:
   wallChunkMeshFilterPrefab: {fileID: 670906312}
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4898,7 +4905,8 @@ MonoBehaviour:
   startHidden: 0
   wallChunkMeshFilterPrefab: {fileID: 655544505}
   createMazeOnEnable: 1
-  processingIndicator: {fileID: 0}
+  processingIndicator: {fileID: 1083129183}
+  wallChunkMaterial: {fileID: 0}
 --- !u!4 &1650533671
 Transform:
   m_ObjectHideFlags: 0
