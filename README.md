@@ -4,7 +4,14 @@ This repository provides a generic path finding library for Unity, designed to w
 
 ## Installation
 
-In the unity editor, package manager, click to add a package from a git url:  https://github.com/glurth/UIPrefabGenerator.git
+You can install this package in Unity via GitHub using the Unity Package Manager.
+
+1. Open Unity and navigate to the **Package Manager** (Window > Package Manager).
+2. In the Package Manager window, click on the `+` button in the top-left corner.
+3. Select **Add package from Git URL...**.
+4. Paste the following GitHub URL into the dialog:
+ -  https://github.com/glurth/TileBasedPathFinding.git
+5. Click **Add**. The package will be installed into your Unity project.
 
 ## Project Structure
 

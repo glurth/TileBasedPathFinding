@@ -82,7 +82,14 @@ namespace Eye.Maps.Templates
         {
             this.tileVisibility = tileVisibility;
         }
-        
+
+        public void SetTileVisibility(T coord, bool val)
+        {
+            if (tileVisibility == null)
+                tileVisibility = new Dictionary<T, bool>();
+            tileVisibility[coord] = val;
+        }
+
         protected bool mazeGenerationRunning = false;// locks Update function
         /// <summary>
         /// Asynchronously assigns a maze and builds its mesh on a background thread.
