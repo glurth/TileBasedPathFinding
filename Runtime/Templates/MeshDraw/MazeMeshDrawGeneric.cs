@@ -122,8 +122,8 @@ namespace Eye.Maps.Templates
         public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
         public bool drawBorderWalls = true;        // Determines if border walls should be drawn
         public bool startHidden = false;
-        protected List<MeshFilter> wallChunkMeshFilters;
-        public MeshFilter wallChunkMeshFilterPrefab;
+    //    protected List<MeshFilter> wallChunkMeshFilters;
+    //    public MeshFilter wallChunkMeshFilterPrefab;
         //visibility stuff
         private Dictionary<T, bool> tileVisibility = new Dictionary<T, bool>();
 
@@ -139,7 +139,11 @@ namespace Eye.Maps.Templates
         /// <param name="chunkIndex">Index of the chunk to regenerate.</param>
         protected virtual void RegenChunkMesh(int chunkIndex)
         {
-            wallChunkMeshFilters[chunkIndex].sharedMesh = meshComputer.RebuildSingleChunk(chunkIndex);
+           // wallChunkMeshFilters[chunkIndex].sharedMesh = meshComputer.RebuildSingleChunk(chunkIndex);
+           Mesh newMesh = meshComputer.RebuildSingleChunk(chunkIndex);
+            if(wallChunkMeshes[chunkIndex]!=null)
+                Destroy(wallChunkMeshes[chunkIndex]);
+            wallChunkMeshes[chunkIndex] = newMesh;// meshComputer.RebuildSingleChunk(chunkIndex);
         }
         //refs
         private GameObject instantiatedStartPositionMarker;
@@ -270,9 +274,11 @@ namespace Eye.Maps.Templates
             chunkRegenByIndex.Clear();
         }
 
+        public bool showDebugGUI = false;
         void OnGUI()
         {
-            taskContext?.OnGUIDebug();
+            if(showDebugGUI)
+                taskContext?.OnGUIDebug();
         }
 
         WallMeshChunkComputerGeneric<T> meshComputer = null;
@@ -305,15 +311,7 @@ namespace Eye.Maps.Templates
             wallChunkMeshes = new List<Mesh>(chunkMeshes.Count);
             for (int i = 0; i < chunkMeshes.Count; i++)
             {
-                /*if (wallChunkMeshFilters.Count <= i)
-                    wallChunkMeshFilters.Add(Instantiate(wallChunkMeshFilterPrefab, transform));
-                wallChunkMeshFilters[i].gameObject.name = "WallChunk[" + i + "]";
-                wallChunkMeshFilters[i].sharedMesh = chunkMeshes[i].ToMesh();*/
                 wallChunkMeshes.Add(chunkMeshes[i].ToMesh());
-            }
-            for (int i = chunkMeshes.Count; i < wallChunkMeshFilters.Count; i++)
-            {
-                Destroy(wallChunkMeshFilters[i].gameObject);
             }
         }
         
@@ -334,36 +332,6 @@ namespace Eye.Maps.Templates
                 Debug.LogException(ex);
             }
             return;
-
-
-
-            Debug.Log("Setting visiblity for all tiles: " + !startHidden);
-            foreach (T coord in maze.allMapCoords)
-            {
-                SetTileVisibility(coord, !startHidden);
-            }
-
-            meshComputer = GetNewMeshComputer();
-            List<Mesh> chunkMeshes = meshComputer.CreateWallsMeshChunks(maze, this, tileScale * wallThicknessFraction, tileScale * wallHeightFraction, chunkHandler.ChunkCoordinateLists());
-
-            wallChunkMeshes = chunkMeshes;
-            return;
-         //   if (chunkMeshes.Count != numberOfChunks) throw new System.Exception("Failed to generate correct number of chunk meshes- aborting assignment.");
-         //   if (wallChunkMeshFilters.Count != numberOfChunks) throw new System.Exception("Incorrect number of mesh filters to assign chunk meshes to, aborting assignment.");
-            for (int i = 0; i < chunkMeshes.Count; i++)
-            {
-                if (wallChunkMeshFilters.Count <= i)
-                    wallChunkMeshFilters.Add(Instantiate(wallChunkMeshFilterPrefab, transform));
-                wallChunkMeshFilters[i].gameObject.name= "WallChunk["+i+"]";
-                wallChunkMeshFilters[i].sharedMesh = chunkMeshes[i];
-            }
-            for (int i = chunkMeshes.Count; i < wallChunkMeshFilters.Count; i++)
-            {
-                Destroy(wallChunkMeshFilters[i].gameObject);
-            }
-
-            //WallMeshComputer meshComputer = new  WallMeshComputer();
-            //wallsMeshFilter.sharedMesh = meshComputer.CreateWallsMesh(facesAndNeighbors, this,tileScale* wallThicknessFraction, tileScale * wallHeightFraction); 
         }
 
 
@@ -391,7 +359,7 @@ namespace Eye.Maps.Templates
 
             const int WallLayer = 0;
 
-            Debug.Log("drawing chucnkmeshes now: " + wallChunkMeshes.Count);
+          //  Debug.Log("drawing chucnkmeshes now: " + wallChunkMeshes.Count);
             // Issue a draw call for every single unique mesh
             foreach (Mesh mesh in wallChunkMeshes)
             {
@@ -726,6 +694,12 @@ namespace Eye.Maps.Templates
             }
         }
 
+        private void OnDestroy()
+        {
+            foreach (Mesh mesh in wallChunkMeshes)
+                if (mesh != null)
+                    Destroy(mesh);
+        }
     }
 
     /// <summary>
