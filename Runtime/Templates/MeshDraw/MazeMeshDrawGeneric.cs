@@ -93,6 +93,11 @@ namespace Eye.Maps.Templates
         /// <returns>Awaitable UniTask that completes when mesh generation finishes.</returns>
         public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
         {
+            if (this.taskContext != null && this.taskContext.IsRunning)
+            {
+                this.taskContext.DoCancel();
+            }
+            this.taskContext = taskContext;
             mazeGenerationRunning = true;
             //await UniTask.SwitchToThreadPool();
 
@@ -265,25 +270,29 @@ namespace Eye.Maps.Templates
         /// </remarks>
         protected virtual void Update()
         {
-            if (taskContext==null || !taskContext.IsComplete)
+            if (taskContext!=null && !taskContext.IsComplete)
             {
-                return;
+                return;//still processing- dont update yet
             }
             if (startPositionMarkerPrefab != null)
             {
                 if (instantiatedStartPositionMarker == null)
+                {
                     instantiatedStartPositionMarker = Instantiate(startPositionMarkerPrefab, this.transform);
-                instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
-                instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
-                instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
+                    instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
+                    instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
+                    instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
+                }
             }
             if (endPositionMarkerPrefab != null)
             {
                 if (instantiatedEndPositionMarker == null)
+                {
                     instantiatedEndPositionMarker = Instantiate(endPositionMarkerPrefab, this.transform);
-                instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
-                instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
-                instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
+                    instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
+                    instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
+                    instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
+                }
             }
 
             foreach (int chunkIndex in chunkRegenByIndex)
