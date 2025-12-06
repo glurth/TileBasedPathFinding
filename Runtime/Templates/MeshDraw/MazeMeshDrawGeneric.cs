@@ -199,7 +199,8 @@ namespace Eye.Maps.Templates
                     }
                 });
                 // taskContext.task = SetMazeAsync(newMaze, taskContext); //launch the async SetMazeFunction, and proceed with it running asynchronously
-                processingIndicator.SetContext(taskContext);//.SetActive(true);
+                if(processingIndicator!=null)
+                    processingIndicator.SetContext(taskContext);//.SetActive(true);
             }
             
         }
