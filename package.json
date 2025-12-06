@@ -1,8 +1,8 @@
 {
-  "name": "com.glurth.mappackage",
+  "name": "com.glurth.tilebasedpathfinding",
   "version": "1.0.0",
-  "displayName": "MapPackage",
-  "description": "MapPackage including coordinate classes and path finding tools",
+  "displayName": "Tile-based Path-finding",
+  "description": "Tile-based Path-finding including sample coordinate classes and maze examples",
   "unity": "2019.1",
   "dependencies": {},
   "author": {

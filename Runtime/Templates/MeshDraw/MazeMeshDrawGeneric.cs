@@ -93,11 +93,15 @@ namespace Eye.Maps.Templates
         /// <returns>Awaitable UniTask that completes when mesh generation finishes.</returns>
         public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
         {
-            if (this.taskContext != null && this.taskContext.IsRunning)
+            if (this.taskContext != taskContext)
             {
-                this.taskContext.DoCancel();
+                if (this.taskContext != null && this.taskContext.IsRunning)
+                {
+
+                    this.taskContext.DoCancel();
+                }
+                this.taskContext = taskContext;
             }
-            this.taskContext = taskContext;
             mazeGenerationRunning = true;
             //await UniTask.SwitchToThreadPool();
 
@@ -270,10 +274,11 @@ namespace Eye.Maps.Templates
         /// </remarks>
         protected virtual void Update()
         {
-            if (taskContext!=null && !taskContext.IsComplete)
+            if (taskContext==null || !taskContext.IsComplete)
             {
                 return;//still processing- dont update yet
             }
+            if (maze == null) return;
             if (startPositionMarkerPrefab != null)
             {
                 if (instantiatedStartPositionMarker == null)

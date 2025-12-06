@@ -4078,7 +4078,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1313517986
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4118,8 +4118,8 @@ MonoBehaviour:
   startHidden: 0
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
-  showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
+  showDebugGUI: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 58933a1e2867f744ab78eb374ed478ed,
     type: 2}
 --- !u!4 &1313517988
@@ -4157,7 +4157,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1408425213
 MonoBehaviour:
   m_ObjectHideFlags: 0
