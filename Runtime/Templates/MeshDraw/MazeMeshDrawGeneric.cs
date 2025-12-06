@@ -120,6 +120,10 @@ namespace Eye.Maps.Templates
         
         public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
         public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
+        //instance refs
+        private GameObject instantiatedStartPositionMarker;
+        private GameObject instantiatedEndPositionMarker;
+
         public bool drawBorderWalls = true;        // Determines if border walls should be drawn
         public bool startHidden = false;
     //    protected List<MeshFilter> wallChunkMeshFilters;
@@ -145,9 +149,7 @@ namespace Eye.Maps.Templates
                 Destroy(wallChunkMeshes[chunkIndex]);
             wallChunkMeshes[chunkIndex] = newMesh;// meshComputer.RebuildSingleChunk(chunkIndex);
         }
-        //refs
-        private GameObject instantiatedStartPositionMarker;
-        private GameObject instantiatedEndPositionMarker;
+
 
         private void Reset()
         {
@@ -267,6 +269,23 @@ namespace Eye.Maps.Templates
             {
                 return;
             }
+            if (startPositionMarkerPrefab != null)
+            {
+                if (instantiatedStartPositionMarker == null)
+                    instantiatedStartPositionMarker = Instantiate(startPositionMarkerPrefab, this.transform);
+                instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
+                instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
+                instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
+            }
+            if (endPositionMarkerPrefab != null)
+            {
+                if (instantiatedEndPositionMarker == null)
+                    instantiatedEndPositionMarker = Instantiate(endPositionMarkerPrefab, this.transform);
+                instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
+                instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
+                instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
+            }
+
             foreach (int chunkIndex in chunkRegenByIndex)
             {
                 RegenChunkMesh(chunkIndex);//to do- optimize to use redrawchunk
