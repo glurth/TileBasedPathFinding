@@ -1275,7 +1275,12 @@ namespace Eye.Maps.Templates
         {
             public int cornerA;
             public int cornerB;
-            public List<T> touchingCoords= new List<T>();
+           // public List<T> touchingCoords= new List<T>();
+            public T sideACoord;  //  to replace touching coords list
+            public int sideAEdgeNeighborIndex;  //  to replace touching coords list
+            public T sideBCoord;  //  to replace touching coords list
+            public int sideBEdgeNeighborIndex;  //  to replace touching coords list
+
             public bool hasVisibleWall;
             public Vector3[] wallEndAVerts;
             public Vector3[] wallEndATopVerts;
@@ -1358,30 +1363,8 @@ namespace Eye.Maps.Templates
  
         void BuildUniqueCorners()
         {
-            List<Vector3> uniqueCornerPositions = new List<Vector3>();
-           
-            foreach (T coord in map.allMapCoords)
-            {
-                int neighborCount= coord.NumberOfNeighbors();
-                List<int> faceUniqueCornerIndeces = new List<int>();
-                for (int n = 0; n < neighborCount; n++)
-                {
-                    int n1=(n + 1).RingIndex(neighborCount);
-                    Vector3 cornerPos = ComputeCornerPos(coord, n);
-                    int cornerIndex = uniqueCornerPositions.FindIndex((x)=> (x-cornerPos).sqrMagnitude<0.0001f);//approx ==
-                    if (cornerIndex == -1)
-                    {
-                        cornerIndex = uniqueCornerPositions.Count;
-                        uniqueCornerPositions.Add(cornerPos);
-                    }
-                    faceUniqueCornerIndeces.Add(cornerIndex);
-                }
-                cornerIndecesByCoordinate.Add(coord,faceUniqueCornerIndeces);
-            }
-            foreach (Vector3 cornerVertex in uniqueCornerPositions)
-            {
-                uniqueCorners.Add(new Corner { position = cornerVertex });
-            }
+            BuildUniqueCornersAsync(new TaskHandler(false)).GetAwaiter().GetResult();
+            return;
         }
 
 
@@ -1449,17 +1432,10 @@ namespace Eye.Maps.Templates
             Debug.Log(logstr);
             await UniTask.SwitchToThreadPool();
         }
-
-
-        bool CheckIsEdgeVisible(T coord, int neighborIndex)
-        {
-           
-            T neighborCoord = coord.GetNeighbor(neighborIndex);
-            return CheckIsEdgeVisible(coord, neighborIndex, neighborCoord);
-        }
-
+/*
         bool CheckIsEdgeVisible(T coord, T neighborCoord)
         {
+            //the map's walls are stored by neighbor index
             int neighborIndex = 0;
             while (neighborIndex < coord.NumberOfNeighbors())
             {
@@ -1477,102 +1453,13 @@ namespace Eye.Maps.Templates
                 hasWall = displayBorderWalls;
             return hasWall && (mazeDrawer.IsTileVisible(coord) || mazeDrawer.IsTileVisible(neighborCoord));
         }
-
+        */
 
         /*primary internal functions*/
         void BuildUniqueEdges() //to do: break into build unique, and build visible- build visible can be called  during chunk recompute without doing the whole maze
         {
-            // Step 2: Build Unique Edges and Wall Visibility
-            // ----------------------------------------------
-            // - Create List<Edge> uniqueEdges
-            // - For each FaceDetails F (index fIndex):
-            //     - Convert F.cornerVertexMeshIndices to unique corner indices using oldToUniqueCornerMap
-            //     - For each corner in face, record fIndex in the corner’s touchingFaces (if you're tracking per-corner data)
-            //     - For i = 0 to corner count - 1:
-            //         - cornerA = uniqueCornerIndices[i]
-            //         - cornerB = uniqueCornerIndices[(i + 1) % count]
-            //         - edge = TryGetOrCreateUniqueEdge(cornerA,cornerB);
-            //         - add face to edge.touchingfaces
-            //         - Set edge.hasVisibleWall = GetWallVisible(fIndex, neighborFaceIndex)
-            //         - add edge to cornerA/B.edges, if not present
-
-            uniqueEdges = new List<Edge>();
-            foreach (List<Edge> chuckEdges in edgesByChunk)
-                chuckEdges.Clear();
-
-            string logstr = "";
-            foreach (T coord in map.allMapCoords)
-            {
-                int cornerCount = coord.NumberOfNeighbors();
-                for (int i = 0; i < cornerCount; i++)
-                {
-                    T neighborCoord = coord.GetNeighbor(i);
-                 
-                    int currentCornerA = cornerIndecesByCoordinate[coord][i];
-                    int currentCornerB = cornerIndecesByCoordinate[coord][(i+1).RingIndex(cornerCount)];
-
-                    // see if an edge exists that uses these corners- if not create it
-                    int currentEdgeIndex = uniqueEdges.FindIndex(0, (Edge e) => (e.cornerA == currentCornerA && e.cornerB == currentCornerB) || (e.cornerA == currentCornerB && e.cornerB == currentCornerA));
-                    Edge edge;
-                    if (currentEdgeIndex == -1)// if not, create one
-                    {
-                        edge = new Edge() { cornerA = currentCornerA, cornerB = currentCornerB };
-                        edge.hasVisibleWall = false;//for now
-                        edge.touchingCoords.Add(coord);
-                        edge.touchingCoords.Add(neighborCoord);
-                        currentEdgeIndex = uniqueEdges.Count;
-                        uniqueEdges.Add(edge);
-
-
-
-                        /*bool hasWall = map.Walls[coord][i];
-                        if (!map.IsWithinBounds(neighborCoord))
-                            hasWall = true;//to replacewith showBorderWalls flag
-                        edge.hasVisibleWall =  hasWall && (mazeDrawer.IsTileVisible(coord) || mazeDrawer.IsTileVisible(neighborCoord));*/
-                        edge.hasVisibleWall = CheckIsEdgeVisible(coord, i, neighborCoord);
-
-                        logstr += ("\nedge between tiles " + coord + " and " + coord.GetNeighbor(i) + ", has visible wall: " + edge.hasVisibleWall + "  edge dir: " + EdgeDirFrom(edge, currentCornerA));
-                        //  logstr += ("\n    corners ["+ currentCornerA + "]: "+ uniqueCorners[currentCornerA].position + " And [" + currentCornerB + "]: " + uniqueCorners[currentCornerB].position);
-
-
-                        // Add edge index to corners' edge lists if not already present
-                        Corner cornerAObj = uniqueCorners[currentCornerA];
-                        Corner cornerBObj = uniqueCorners[currentCornerB];
-                        if (cornerAObj.edges == null)
-                            cornerAObj.edges = new List<int>();
-                        if (cornerBObj.edges == null)
-                            cornerBObj.edges = new List<int>();
-                       // cornerAObj.edges.Add(currentEdgeIndex);
-                       // cornerBObj.edges.Add(currentEdgeIndex);
-                        //  we are only in here if a new edge created: no need to check if it exists in a list
-                        int edgeIndex = currentEdgeIndex;// uniqueEdges.IndexOf(edge);
-                        if (!cornerAObj.edges.Contains(edgeIndex))
-                            cornerAObj.edges.Add(edgeIndex);
-                        if (!cornerBObj.edges.Contains(edgeIndex))
-                            cornerBObj.edges.Add(edgeIndex);
-                        
-
-                        // addref to this edge to chunk lists  to do: separate for recompute
-                        int edgeChunk = chunckIndexByFaceCoord[coord];
-                        if (map.IsWithinBounds(neighborCoord))
-                            edgeChunk = Mathf.Min(edgeChunk, chunckIndexByFaceCoord[neighborCoord]);
-                        logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
-
-                        if (!edgesByChunk[edgeChunk].Contains(edge))
-                            edgesByChunk[edgeChunk].Add(edge);
-                        else
-                            logstr += "  DUPLICATE  edge";
-
-                        if (logstr.Length > 2048 * 4)
-                        {
-                          //  Debug.Log(logstr);
-                            logstr = "";
-                        }
-                    }//edgealready exists
-                }
-            }
-
-         //  Debug.Log(logstr);
+            BuildUniqueEdgesAsync(new TaskHandler(false)).GetAwaiter().GetResult();
+            return;
         }
 
 
@@ -1622,16 +1509,31 @@ namespace Eye.Maps.Templates
 
                     //int currentEdgeIndex = uniqueEdges.FindIndex(0, (Edge e) => (e.cornerA == currentCornerA && e.cornerB == currentCornerB) || (e.cornerA == currentCornerB && e.cornerB == currentCornerA));
                     Edge edge;
+                    int GetNeighborIndex(T source, T neighbor)
+                    {
+                        int i = 0;
+                        foreach (T test in source.GetNeighbors())
+                        {
+                            if (test.Equals(neighbor))
+                                return i;
+                            i++;
+                        }
+                        throw new GeometryException("Tiles are not neighbors: ["+ source + "] , ["+ neighbor + "]");
+                    }
                     if (currentEdgeIndex == -1)// if not, create one
                     {
                         edge = new Edge() { cornerA = currentCornerA, cornerB = currentCornerB };
                         edge.hasVisibleWall = false;//for now
-                        edge.touchingCoords.Add(coord);
-                        edge.touchingCoords.Add(neighborCoord);
+                        edge.sideACoord = coord;
+                        edge.sideAEdgeNeighborIndex = i;
+                        edge.sideBCoord = neighborCoord;
+                        edge.sideBEdgeNeighborIndex = GetNeighborIndex(neighborCoord,coord);
+                       // edge.touchingCoords.Add(coord);
+                       // edge.touchingCoords.Add(neighborCoord);
                         currentEdgeIndex = uniqueEdges.Count;
                         uniqueEdges.Add(edge);
                         edgeLookup.Add(currentCornerA, currentCornerB, currentEdgeIndex);
-                        edge.hasVisibleWall = CheckIsEdgeVisible(coord, i, neighborCoord);
+                        edge.hasVisibleWall = CheckIsEdgeVisible(edge);// coord, i, neighborCoord);
 
                         //   logstr += ("\nedge between tiles " + coord + " and " + coord.GetNeighbor(i) + ", has visible wall: " + edge.hasVisibleWall + "  edge dir: " + EdgeDirFrom(edge, currentCornerA));
                         //   logstr += ("\n    corners ["+ currentCornerA + "]: "+ uniqueCorners[currentCornerA].position + " And [" + currentCornerB + "]: " + uniqueCorners[currentCornerB].position);
@@ -1681,36 +1583,8 @@ namespace Eye.Maps.Templates
 
         void SortCornerEdgesClockwise()
         {
-            //return;
-            // Step 3: Sort Edges Around Each Corner 
-            // -----------------------------------------------------------------------------
-            // - For each uniqueCorner:
-            //     - sort corners.edgelist by
-            //        - a float: compute edge's angle around normal axis
-            for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
-            {
-                int cornerIndex = cIndex;  // de-scope loop integer
-                Corner c = uniqueCorners[cornerIndex];
-                Vector3 axis = NormalAtModelSpacePosition(c.position);
-                // Choose an arbitrary, but consistent reference direction that is not the same as axis
-                Vector3 refDir;
-                refDir = EdgeDirFrom(uniqueEdges[c.edges[0]], cornerIndex);
-                c.sortedEdges = new List<int>();/// indexes into c.edges
-                for (int i = 0; i < c.edges.Count; i++) c.sortedEdges.Add(i);// fill with 0,1,2,... (unsorted indexes into edges array)
-                c.sortedEdges.Sort(Compare);
-                int Compare(int x, int y)
-                {
-                    Edge edgeX = uniqueEdges[c.edges[x]];
-                    Edge edgeY = uniqueEdges[c.edges[y]];
-                    Vector3 edgeDirX = EdgeDirFrom(edgeX, cornerIndex);
-                    Vector3 edgeDirY = EdgeDirFrom(edgeY, cornerIndex);
-                    float angleX = Vector3.SignedAngle(refDir, edgeDirX, axis);
-                    if (angleX < 0) angleX += 360f;// Mathf.PI * 2f;
-                    float angleY = Vector3.SignedAngle(refDir, edgeDirY, axis);
-                    if (angleY < 0) angleY += 360f;// Mathf.PI * 2f;
-                    return -angleX.CompareTo(angleY);
-                }
-            }
+            SortCornerEdgesClockwiseAsync(new TaskHandler(false)).GetAwaiter().GetResult();
+            return;
         }
 
         async UniTask SortCornerEdgesClockwiseAsync(TaskHandler taskContext)
@@ -1749,11 +1623,18 @@ namespace Eye.Maps.Templates
             }
         }
 
+        bool CheckIsEdgeVisible(Edge e)
+        {
+            if (map.Walls[e.sideACoord][e.sideAEdgeNeighborIndex])
+                return mazeDrawer.IsTileVisible(e.sideACoord) || mazeDrawer.IsTileVisible(e.sideBCoord);
+            return false;
+        }
         void UpdateEdgesVisibility()
         {
             foreach (Edge e in uniqueEdges)
             {
-                e.hasVisibleWall = CheckIsEdgeVisible(e.touchingCoords[0], e.touchingCoords[1]);
+                e.hasVisibleWall = CheckIsEdgeVisible(e);//.sideACoord, e.touchingCoords[1]);
+            //    e.hasVisibleWall = CheckIsEdgeVisible(e.touchingCoords[0], e.touchingCoords[1]);
             }
         }
 
@@ -1761,121 +1642,6 @@ namespace Eye.Maps.Templates
         {
             GenerateVertexPositionsAsync(new TaskHandler(false)).GetAwaiter().GetResult();
             return;
-
-            // Step 4: Generate vertex positions (use new param- wallThickness to compute end-side points (front to back thickness) )
-            // ----------------------------------------------------
-            // - For each uniqueCorner:
-            //      - If only one edge is visible:
-            //         - Compute two end-side points and store in edge.wallEndVerts[A or B][left and right]
-            //     - If multiple visible edges:
-            //          - For each visible pair of edges(A, B) at corner:
-            //              - Compute dirA and dirB (unit vectors away from corner)
-            //              - Compute bisector = normalize(dirA + dirB)
-            //              - Compute angle = angle between dirA and dirB
-            //              - Compute offset = wallThickness / sin(angle / 2)
-            //              - fanRing[i] = corner + bisector * offset
-            //          - Store N(number of visible edges) such points in clockwise order → corner.fanRing[]
-            //          - if MORE than 2 visible edges- compute the TIP point location
-            //          - duplicate, fanRing but extrude into:  fanRingTopVerts
-            //          - duplicate, Tip (if exists) but extrude into:  tipTopVert
-            //          - Each edge gets assigned edge.wallEndVerts[A or B][left and right]  (left = fanRing[i], right = fanRing[i+1], and the TIP Vector3 or null),
-            //                 -both top and bottom
-            string logstr = "";
-            for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
-            {
-                Corner c = uniqueCorners[cIndex];
-                logstr+="\nComputing visible edges for unique corner["+cIndex+"] at position:"+c.position+ "  Total edges touching corner:"+ c.edges.Count;
-
-                if (c.edges.Count == 0) continue;
-                List<Edge> visibleEdges = new List<Edge>();//edges with walls that touch this corner
-
-                foreach (int edgeIndex in c.sortedEdges)// we want the visible edge list in this order
-                {
-                    //Edge e = uniqueEdges[edgeIndex];
-                    Edge e = uniqueEdges[c.edges[edgeIndex]];
-                    if(e.hasVisibleWall)
-                    {
-                        visibleEdges.Add(e);
-                    }
-
-                }
-
-                if (visibleEdges.Count == 1)
-                {
-                    //compute 2 fanRing verts- assign to single edge-end
-                    Edge e = visibleEdges[0];
-                    Vector3 thicknessOffset = wallThickness * 0.5f * -Vector3.Cross(NormalAtModelSpacePosition(c.position), EdgeDirFrom(e, cIndex)); //assumes spheroid..  todo: change later to param
-                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, Color.black);
-                }
-                else if (visibleEdges.Count > 1)
-                {
-                    c.fanRing = new Vector3[visibleEdges.Count];
-                    Vector3 axis = NormalAtModelSpacePosition(c.position);//.normalized;// assumes spheroid-fixed
-                    Vector3 refDir;
-                    if (Mathf.Abs(axis.z) < 0.99f)
-                        refDir = Vector3.Cross(axis, Vector3.forward); // not parallel
-                    else
-                        refDir = Vector3.Cross(axis, Vector3.right);
-                    refDir.Normalize();
-
-                    Vector3 avgRingPos = Vector3.zero;
-                    //compute visibleCount fanRing verts
-                    for (int eCounter = 0; eCounter < visibleEdges.Count; eCounter++)
-                    {
-                        Edge e = visibleEdges[eCounter];
-                        Edge nextEdge = visibleEdges.RingIndex(eCounter + 1);
-                        //              - Compute dirA and dirB (unit vectors away from corner)
-                        Vector3 edgeDir = EdgeDirFrom(e, cIndex);
-                        Vector3 nextEdgeDir = EdgeDirFrom(nextEdge, cIndex);
-
-                        //bisector stuff working, but only sometimes. we'll try different methods
-                        // get line in form of a point and a direction, for both edge's side and next edge's side
-                        //compute points on each line where they closest (Ideally same point), and compute the avg position of them
-
-                        Vector3 edgeThicknessOffset = -wallThickness * 0.5f * Vector3.Cross(NormalAtModelSpacePosition(c.position), edgeDir); 
-
-                        Vector3 nextEdgethicknessOffset = -wallThickness * 0.5f * Vector3.Cross(NormalAtModelSpacePosition(c.position), nextEdgeDir); 
-                        Vector3 posOnEdgeSide = c.position + edgeThicknessOffset;
-                        // we want the opposite side of the edge wall
-                        Vector3 posOnNextEdgeSide = c.position - nextEdgethicknessOffset;
-                        Vector3 closestSidePoint;
-
-                        if ((posOnEdgeSide - posOnNextEdgeSide).sqrMagnitude > 0.0001f)
-                        {
-                            Ray side = new Ray(posOnEdgeSide, edgeDir);
-                            Ray nextSide = new Ray(posOnNextEdgeSide, nextEdgeDir);
-                            Vector3 closestNextSidePoint;
-                            if (!LineIntersection(side, nextSide, out closestSidePoint, out closestNextSidePoint))// no intersection get midpoint of closest
-                            {
-                                closestSidePoint += closestNextSidePoint;
-                                closestSidePoint *= 0.5f;
-                            }
-                        }
-                        else
-                            closestSidePoint = posOnEdgeSide;
-                        c.fanRing[eCounter] = closestSidePoint;
-                        //Debug.Log("FanRing-  setting for corner[" + cIndex + "].position:" + c.position + " fanRing[" + eCounter + "] to position" + closestSidePoint);
-                        avgRingPos += c.fanRing[eCounter];
-                    }
-                    avgRingPos /= visibleEdges.Count;
-
-                    if (visibleEdges.Count > 2) //add tip point fan common point
-                    {
-                        c.tipVert = avgRingPos;// c.position;// can it be this simple? I don't think so....possibly- we'll see how those offsets work.
-                    }
-                    //loopthough walls again, assign end verts from fan verts-  can be optiized into main loop, if needed
-                    for (int eCounter = 0; eCounter < visibleEdges.Count; eCounter++)
-                    {
-                        Edge e = visibleEdges[eCounter];
-                        Color color = Color.red * ((float)eCounter / (float)visibleEdges.Count);
-                        AssignToEdge(e, cIndex, c.fanRing.RingIndex(eCounter), c.fanRing.RingIndex(eCounter - 1), c.tipVert, color);
-                        //Vector3 thicknessOffset = wallThickness * 0.5f * Vector3.Cross(c.position.normalized, EdgeDir(e)); //assumes spheroid..  todo: change later to param
-                        //AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null);//works as test, just not what we want
-                    }
-                }// end - more than one edge here
-            }
-
-            Debug.Log(logstr);
         }
 
         async UniTask xxUnOptGenerateVertexPositionsAsync(TaskHandler taskContext)
@@ -2107,140 +1873,6 @@ namespace Eye.Maps.Templates
         Mesh GenerateWallModel(List<Edge> edgesInChunk)
         {
             return GenerateWallModelAsync(edgesInChunk,new TaskHandler(false)).GetAwaiter().GetResult().ToMesh();
-            // Step 5: Generate Wall Geometry
-            // ------------------------------
-            // - For each Edge in uniqueEdges:
-            //     - If edge.hasVisibleWall == false, skip
-            //     - Use edge.wallEndVerts[A and B][left and right] to emit a quad (bottom of wall)
-            //     - Use edge.wallEndTopVerts[A and B][left and right] to emit a quad (top of wall)
-            //     - use combos of top and bottom to generate front and back of wall
-            //     - for each end A and B
-            //         - if TIP point exists edge.wallEndVerts[A or B][tip]
-            //             - create triangle using edge.wallEndVerts[A or B][left and right and tip] (bottom of miter) // but wound properly
-            //             - create triangle using edge.wallEndTopVerts[A or B][left and right and tip] (top of miter)
-            //         - if no 3rd point
-            //             - create end-cap quad with combos of top bottom
-            List<Vector3> verts = new List<Vector3>();
-            List<int> tris = new List<int>();
-            List<Vector2> uvs = new List<Vector2>();
-            List<Color> colors = new List<Color>();
-            string logstr = "";
-            for (int edgeIndexInChunk = 0; edgeIndexInChunk < edgesInChunk.Count; edgeIndexInChunk++)
-            {
-                Edge e = edgesInChunk[edgeIndexInChunk];
-                logstr += "\nEdgeInChunk["+edgeIndexInChunk+"]:  corners["+e.cornerA+ "] , [" + e.cornerB + "]";
-                if (!e.hasVisibleWall) continue;
-                logstr += "\n     vert avg: " + (e.wallEndAVerts[0] + e.wallEndAVerts[1]) * 0.5f + " and " + (e.wallEndBVerts[0] + e.wallEndBVerts[1]) * 0.5f;
-                logstr += "\n     cornerPos: " + uniqueCorners[e.cornerA].position + " and " + uniqueCorners[e.cornerB].position;
-
-                // Convenience handles
-                var aBot = e.wallEndAVerts;
-                var aTop = e.wallEndATopVerts;
-                var aTip = e.wallEndATipVert;
-                var aTipTop = e.wallEndATopTipVert;
-                var aColor = e.wallEndADebugColor;
-
-                var bBot = e.wallEndBVerts;
-                var bTop = e.wallEndBTopVerts;
-                var bTip = e.wallEndBTipVert;
-                var bTipTop = e.wallEndBTopTipVert;
-                var bColor = e.wallEndBDebugColor;
-                // Bottom quad (A[0]→B[1], A[1]→B[0])
-                AddQuad(aBot[0], aBot[1], bBot[1], bBot[0], aColor, bColor, verts, tris, uvs, colors);
-                // Top quad
-                AddQuad(aTop[0], aTop[1], bTop[1], bTop[0], aColor, bColor, verts, tris, uvs, colors);
-
-                // Front face: A[0]→ATop[0]→BTop[1]→B[1]
-                AddQuad(aBot[1], aTop[0], bTop[0], bBot[1], aColor, bColor, verts, tris, uvs, colors);
-
-                // Back face: A[1]→ATop[1]→BTop[0]→B[0]
-                AddQuad(aTop[1], aBot[0], bBot[0], bTop[1], aColor, bColor, verts, tris, uvs, colors);
-
-                // End A
-                if (aTip.HasValue && aTipTop.HasValue)
-                {
-                    AddTri(aBot[1], aBot[0], aTip.Value, aColor, verts, tris, uvs, colors);
-                    AddTri(aTop[1], aTop[0], aTipTop.Value, aColor, verts, tris, uvs, colors);
-                }
-                else
-                {
-                    AddQuad(aBot[1], aBot[0], aTop[1], aTop[0], aColor, aColor, verts, tris, uvs, colors);
-                }
-
-                // End B
-                if (bTip.HasValue && bTipTop.HasValue)
-                {
-                    AddTri(bBot[0], bBot[1], bTip.Value, bColor, verts, tris, uvs, colors);
-                    AddTri(bTop[0], bTop[1], bTipTop.Value, bColor, verts, tris, uvs, colors);
-                }
-                else
-                {
-                    AddQuad(bBot[0], bBot[1], bTop[0], bTop[1], bColor, bColor, verts, tris, uvs, colors);
-                }
-            }
-           // Debug.Log(logstr);
-            Mesh mesh = new Mesh();
-            mesh.SetVertices(verts);
-            mesh.SetTriangles(tris, 0);
-            mesh.SetUVs(0, uvs);
-            mesh.SetColors(colors);
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            string chunkEdgeDetails = strext.Join<Edge>(edgesInChunk, (e) => e.cornerA.ToString() + "-" + e.cornerB.ToString(),"\n");
-           // Debug.Log("Created Mesh for chunk containing " + edgesInChunk.Count + " edges. Final vertex count: " + verts.Count + "\n" + chunkEdgeDetails);
-
-            return mesh;
-
-
-            void AddQuad(Vector3 bl, Vector3 tl, Vector3 tr, Vector3 br,
-                Color colorL, Color colorR,
-                List<Vector3> v, List<int> t, List<Vector2> uv, List<Color> col)
-            {
-                int start = v.Count;
-                v.Add(bl); v.Add(tl); v.Add(tr); v.Add(br);
-                t.Add(start + 0); t.Add(start + 1); t.Add(start + 2);
-                t.Add(start + 0); t.Add(start + 2); t.Add(start + 3);
-
-                uv.Add(new Vector2(0, 0)); // bl
-                uv.Add(new Vector2(0, 1)); // tl
-                uv.Add(new Vector2(1, 1)); // tr
-                uv.Add(new Vector2(1, 0)); // br
-
-                col.Add(colorL);
-                col.Add(colorL);
-                col.Add(colorR);
-                col.Add(colorR);
-
-
-            }
-
-            void AddTri(Vector3 a, Vector3 b, Vector3 tip, Color c,
-                List<Vector3> v, List<int> t, List<Vector2> uv, List<Color> col)
-            {
-                int start = v.Count;
-                v.Add(a); v.Add(b); v.Add(tip);
-                t.Add(start + 0); t.Add(start + 1); t.Add(start + 2);
-
-                // Assign base UVs
-                Vector2 uvA = new Vector2(0, 0);
-                Vector2 uvB = new Vector2(1, 0);
-
-                // Interpolate UV for tip using distance weighting
-                float da = Vector3.Distance(tip, a);
-                float db = Vector3.Distance(tip, b);
-                float total = da + db;
-                Vector2 uvTip = (db / total) * uvA + (da / total) * uvB;
-
-                uv.Add(uvA);
-                uv.Add(uvB);
-                uv.Add(uvTip);
-
-                col.Add(c);
-                col.Add(c);
-                col.Add(c);
-
-            }
         }
 
         async UniTask<MeshData> GenerateWallModelAsync(List<Edge> edgesInChunk, TaskHandler taskContext)
