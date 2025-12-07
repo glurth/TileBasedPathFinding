@@ -1759,6 +1759,9 @@ namespace Eye.Maps.Templates
 
         void GenerateVertexPositions()
         {
+            GenerateVertexPositionsAsync(new TaskHandler(true)).GetAwaiter().GetResult();
+            return;
+
             // Step 4: Generate vertex positions (use new param- wallThickness to compute end-side points (front to back thickness) )
             // ----------------------------------------------------
             // - For each uniqueCorner:
@@ -2103,6 +2106,7 @@ namespace Eye.Maps.Templates
 
         Mesh GenerateWallModel(List<Edge> edgesInChunk)
         {
+            return GenerateWallModelAsync(edgesInChunk,new TaskHandler(true)).GetAwaiter().GetResult().ToMesh();
             // Step 5: Generate Wall Geometry
             // ------------------------------
             // - For each Edge in uniqueEdges:
