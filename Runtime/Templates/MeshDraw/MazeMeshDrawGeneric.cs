@@ -57,7 +57,8 @@ namespace Eye.Maps.Templates
     /// </typeparam>
     public abstract class MazeMeshDrawGeneric<T> : MonoBehaviour, IMazeDrawer<T> where T : ITileCoordinate<T>
     {
-        public GenericMazeMap<T> _maze=null;
+        [SerializeField]//for debug
+        GenericMazeMap<T> _maze=null;
         public GenericMazeMap<T> maze
         {
             get => _maze;
@@ -120,7 +121,14 @@ namespace Eye.Maps.Templates
             chunkRegenByIndex.Clear();//ensure we dont regen right away
             
         }
-        public T mazeSize;
+        public T mazeSize
+        {
+            get
+            {
+                if (_maze != null) return _maze.size;
+                return DefaultMazeSize();
+            }
+        }
 
         public float tileScale = 1f;               // Size of the tiles
         public float wallThicknessFraction = 0.2f; // Thickness of the walls (fraction of tile size)
@@ -160,11 +168,10 @@ namespace Eye.Maps.Templates
         }
 
 
-        private void Reset()
-        {
-            mazeSize = DefaultMazeSize();
-        }
 
+        /// <summary>
+        /// mostly used for testing- automatically create a random maze upon enable.
+        /// </summary>
         public bool createMazeOnEnable = true;
 
 
@@ -547,6 +554,7 @@ namespace Eye.Maps.Templates
 
         protected abstract UniTask<GenericMazeMap<T>> CreateMazeMapAsync(TaskHandler taskContext);
 
+        public T editorDefinedCreateOnEnableSize;
         /// <summary>
         /// Provides the default maze size used by <see cref="Reset"/> and first-time initialization.
         /// </summary>
@@ -555,7 +563,7 @@ namespace Eye.Maps.Templates
         /// protected override GridCoord DefaultMazeSize() => new GridCoord(10, 10);
         /// </code>
         /// </example>
-        protected abstract T DefaultMazeSize();
+        protected virtual T DefaultMazeSize() { return editorDefinedCreateOnEnableSize; }
         struct CoordPair
         {
             public T a, b;

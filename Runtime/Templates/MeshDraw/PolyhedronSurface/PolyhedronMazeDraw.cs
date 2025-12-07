@@ -56,7 +56,6 @@ namespace Eye.Maps.Templates
 
         private void OnValidate()
         {
-            mazeSize = DefaultMazeSize();
          //   Debug.Log("mazeSize assigned: is null:" + (mazeSize == null).ToString());
         }
 
@@ -73,81 +72,7 @@ namespace Eye.Maps.Templates
         {
             return map.faceDetails.Count;
         }
-        /*
-        protected override List<List<FaceCoordinate>> GenerateChunks(int numChunks, FaceCoordinate ignored)
-        {
-            int faceCount = map.faceDetails.Count;
-            List<Vector3> normals = new List<Vector3>(faceCount);
-            for (int i = 0; i < faceCount; i++)
-                normals.Add(map.faceDetails[i].normal);
 
-            // K-means clustering on normals
-            List<Vector3> centroids = new List<Vector3>();
-            System.Random rand = new System.Random();
-            HashSet<int> used = new HashSet<int>();
-            // Initialize centroids randomly
-            while (centroids.Count < numChunks)
-            {
-                int pick = rand.Next(faceCount);
-                if (!used.Contains(pick))
-                {
-                    centroids.Add(normals[pick].normalized);
-                    used.Add(pick);
-                }
-            }
-
-            int maxIter = 25;
-            List<int>[] clusters = new List<int>[numChunks];
-            for (int i = 0; i < numChunks; i++)
-                clusters[i] = new List<int>();
-
-            for (int iter = 0; iter < maxIter; iter++)
-            {
-                // Clear clusters
-                for (int i = 0; i < numChunks; i++) clusters[i].Clear();
-
-                // Assign each face to the nearest centroid
-                for (int f = 0; f < faceCount; f++)
-                {
-                    float bestDot = -2f;
-                    int bestC = -1;
-                    for (int c = 0; c < numChunks; c++)
-                    {
-                        float dot = Vector3.Dot(normals[f].normalized, centroids[c]);
-                        if (dot > bestDot)
-                        {
-                            bestDot = dot;
-                            bestC = c;
-                        }
-                    }
-                    clusters[bestC].Add(f);
-                }
-
-                // Update centroids
-                for (int c = 0; c < numChunks; c++)
-                {
-                    if (clusters[c].Count == 0) continue; // Avoid divide by zero
-                    Vector3 avg = Vector3.zero;
-                    foreach (int f in clusters[c])
-                        avg += normals[f].normalized;
-                    avg.Normalize();
-                    centroids[c] = avg;
-                }
-            }
-
-            // Return the clusters as chunks
-            List<List<FaceCoordinate>> result = new List<List<FaceCoordinate>>(numChunks);
-            for (int i = 0; i < numChunks; i++)
-            {
-                List<int> clusterFaceIndexes = clusters[i];
-                List<FaceCoordinate> clusterFaces = new List<FaceCoordinate>();
-                foreach (int idx in clusterFaceIndexes)
-                    clusterFaces.Add(new FaceCoordinate(map, idx));
-                result.Add(clusterFaces);
-            }
-            return result;
-        }
-        */
         protected override async UniTask<List<List<FaceCoordinate>>> GenerateChunksAsync(int numChunks, FaceCoordinate ignored, TaskHandler taskContext)
         {
             int faceCount = map.faceDetails.Count;

@@ -21,10 +21,10 @@ namespace Eye.Maps.Templates
             return maze;
         }
 
-        protected override RectangularCoord DefaultMazeSize()
-        {
-            return new RectangularCoord(10, 10);
-        }
+//        protected override RectangularCoord DefaultMazeSize()
+//        {
+//            return new RectangularCoord(10, 10);
+ //       }
         protected override Chunker<RectangularCoord> GetChunker()
         {
             return new RectChunker(mazeSize);

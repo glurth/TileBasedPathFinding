@@ -2113,7 +2113,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &513407220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2126,9 +2126,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f8bdef2ccc54a64ab256f489ce04225, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeSize:
-    m_x: 3
-    m_y: 3
   tileScale: 1
   wallThicknessFraction: 0.1
   wallHeightFraction: 0.2
@@ -2141,6 +2138,9 @@ MonoBehaviour:
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  editorDefinedCreateOnEnableSize:
+    m_x: 30
+    m_y: 30
   testOffset: 0
 --- !u!4 &513407223
 Transform:
@@ -4078,7 +4078,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1313517986
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4170,8 +4170,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 238ab0e4b80a64d4683f155dad80064a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeSize:
-    data: {x: 200, y: 200}
   tileScale: 1
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.2
@@ -4184,6 +4182,8 @@ MonoBehaviour:
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  editorDefinedCreateOnEnableSize:
+    data: {x: 0, y: 0}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4892,9 +4892,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8922f7e942097c4981348add5588e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeSize:
-    m_x: 40
-    m_y: 20
   tileScale: 1
   wallThicknessFraction: 0.1
   wallHeightFraction: 0.2
@@ -4907,6 +4904,9 @@ MonoBehaviour:
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 0}
+  editorDefinedCreateOnEnableSize:
+    m_x: 0
+    m_y: 0
 --- !u!4 &1650533671
 Transform:
   m_ObjectHideFlags: 0

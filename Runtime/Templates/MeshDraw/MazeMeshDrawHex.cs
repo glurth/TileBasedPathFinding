@@ -19,10 +19,10 @@ namespace Eye.Maps.Templates
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }
-        protected override HexIndex2D DefaultMazeSize()
-        {
-            return new HexIndex2D(10, 10);
-        }
+  //      protected override HexIndex2D DefaultMazeSize()
+  //      {
+  //          return new HexIndex2D(10, 10);
+  //      }
         protected override Chunker<HexIndex2D> GetChunker()
         {
             return new HexChunker(mazeSize);

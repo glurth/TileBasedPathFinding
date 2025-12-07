@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using EyE.Threading;
-
-
+/*
+public interface ITaskHandlerDisplay
+{
+    void SetContext(TaskHandler context);
+}
+*/
 public class TaskContextDisplay : MonoBehaviour
 {
     public Text stageText;

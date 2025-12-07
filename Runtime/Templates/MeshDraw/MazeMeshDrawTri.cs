@@ -19,10 +19,10 @@ namespace Eye.Maps.Templates
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }
-        protected override TriangularIndex2D DefaultMazeSize()
-        {
-            return new TriangularIndex2D(10, 10);
-        }
+//        protected override TriangularIndex2D DefaultMazeSize()
+ //       {
+ //           return new TriangularIndex2D(10, 10);
+ //       }
         protected override Chunker<TriangularIndex2D> GetChunker()
         {
             return new TriChunker(mazeSize);
