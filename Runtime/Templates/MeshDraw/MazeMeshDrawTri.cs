@@ -23,7 +23,7 @@ namespace Eye.Maps.Templates
  //       {
  //           return new TriangularIndex2D(10, 10);
  //       }
-        protected override Chunker<TriangularIndex2D> GetChunker()
+        protected override Chunker<TriangularIndex2D> GetChunker(int idealTrisPerChunk = 1000)
         {
             return new TriChunker(mazeSize);
         }
@@ -39,7 +39,7 @@ namespace Eye.Maps.Templates
     public class TriChunker : Chunker<TriangularIndex2D>
     {
 
-        public TriChunker(TriangularIndex2D size) : base(size) { }
+        public TriChunker(TriangularIndex2D size, int idealTrisPerChunk = 1000) : base(size, idealTrisPerChunk ) { }
         protected override int NumberOfTilesInSize(TriangularIndex2D size)
         {
             return size.x * size.y;

@@ -25,7 +25,7 @@ namespace Eye.Maps.Templates
 //        {
 //            return new RectangularCoord(10, 10);
  //       }
-        protected override Chunker<RectangularCoord> GetChunker()
+        protected override Chunker<RectangularCoord> GetChunker(int idealTrisPerChunk = 1000)
         {
             return new RectChunker(mazeSize);
         }
@@ -38,7 +38,7 @@ namespace Eye.Maps.Templates
     public class RectChunker : Chunker<RectangularCoord>
     {
 
-        public RectChunker(RectangularCoord size) : base(size) { }
+        public RectChunker(RectangularCoord size, int idealTrisPerChunk = 1000) : base(size,idealTrisPerChunk) { }
         protected override int NumberOfTilesInSize(RectangularCoord size)
         {
             return size.x * size.y;

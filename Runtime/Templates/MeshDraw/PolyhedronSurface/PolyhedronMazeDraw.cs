@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿// Ignore Spelling: Chunker
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using EyE.UnityAssetTypes;
@@ -44,7 +46,7 @@ namespace Eye.Maps.Templates
             return new FaceCoordinate(facesAndNeighbors,facesAndNeighbors.faceDetails.Count);// facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].neighborIndices, facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].normal);
         }
 
-        protected override Chunker<FaceCoordinate> GetChunker()
+        protected override Chunker<FaceCoordinate> GetChunker(int idealTrisPerChunk = 1000)
         {
             return new FaceChunker(mazeSize, facesAndNeighbors);
         }
@@ -61,10 +63,13 @@ namespace Eye.Maps.Templates
 
     }
 
+    /// <summary>
+    /// Use to breakup a given set of <see cref="FaceCoordinate"/>s into a specified number of "chunks" based on surface position.
+    /// </summary>
     public class FaceChunker : Chunker<FaceCoordinate>
     {
         FacesAndNeighbors map;
-        public FaceChunker(FaceCoordinate size, FacesAndNeighbors map) : base(size)
+        public FaceChunker(FaceCoordinate size, FacesAndNeighbors map, int idealTrisPerChunk = 1000) : base(size, idealTrisPerChunk )
         {
             this.map = map;
         }

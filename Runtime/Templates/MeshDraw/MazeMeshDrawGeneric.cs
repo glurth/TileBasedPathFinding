@@ -236,7 +236,7 @@ namespace Eye.Maps.Templates
         void BuildChucks()
         {
            // Debug.Log("Allocating chunks");
-            chunkHandler = GetChunker();
+            chunkHandler = GetChunker(idealTrisPerChunk);
             chunkHandler.Build();
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -248,7 +248,7 @@ namespace Eye.Maps.Templates
         {
             //  Debug.Log("Allocating chunks");
             await taskContext.Yield();
-            chunkHandler = GetChunker();
+            chunkHandler = GetChunker(idealTrisPerChunk);
             await chunkHandler.BuildAsync(taskContext);
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -269,7 +269,9 @@ namespace Eye.Maps.Templates
         /// }
         /// </code>
         /// </example>
-        protected abstract Chunker<T> GetChunker();
+        protected abstract Chunker<T> GetChunker(int idealTrisPerChunk = 1000);
+        public int idealTrisPerChunk = 1000;
+
 
         public TaskContextDisplay processingIndicator;
         /// <summary>
