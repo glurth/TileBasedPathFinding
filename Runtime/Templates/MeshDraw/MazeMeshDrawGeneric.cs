@@ -160,11 +160,15 @@ namespace Eye.Maps.Templates
         /// <param name="chunkIndex">Index of the chunk to regenerate.</param>
         protected virtual void RegenChunkMesh(int chunkIndex)
         {
+            System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
            // wallChunkMeshFilters[chunkIndex].sharedMesh = meshComputer.RebuildSingleChunk(chunkIndex);
            Mesh newMesh = meshComputer.RebuildSingleChunk(chunkIndex);
             if(wallChunkMeshes[chunkIndex]!=null)
                 Destroy(wallChunkMeshes[chunkIndex]);
             wallChunkMeshes[chunkIndex] = newMesh;// meshComputer.RebuildSingleChunk(chunkIndex);
+            timer.Stop();
+            Debug.Log("Regen of chunk ["+chunkIndex+"] time: " + timer.Elapsed);
         }
 
 
@@ -311,7 +315,7 @@ namespace Eye.Maps.Templates
 
             foreach (int chunkIndex in chunkRegenByIndex)
             {
-                RegenChunkMesh(chunkIndex);//to do- optimize to use redrawchunk
+                RegenChunkMesh(chunkIndex);
             }
             chunkRegenByIndex.Clear();
         }
