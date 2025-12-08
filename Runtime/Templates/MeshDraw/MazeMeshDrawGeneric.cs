@@ -734,6 +734,7 @@ namespace Eye.Maps.Templates
         
         public virtual void SetTileVisibility(T coord, bool isVisible)
         {
+          //  if (!maze.IsWithinBounds(coord)) return;
             if (!tileVisibility.ContainsKey(coord) || tileVisibility[coord] != isVisible)
             {
                 tileVisibility[coord] = isVisible;
@@ -1625,9 +1626,21 @@ namespace Eye.Maps.Templates
 
         bool CheckIsEdgeVisible(Edge e)
         {
-            if (map.Walls[e.sideACoord][e.sideAEdgeNeighborIndex])
-                return mazeDrawer.IsTileVisible(e.sideACoord) || mazeDrawer.IsTileVisible(e.sideBCoord);
+            if (map.IsWithinBounds(e.sideACoord))//in bounds
+            {
+                if (map.Walls[e.sideACoord][e.sideAEdgeNeighborIndex])//wall on edge
+                    if (mazeDrawer.IsTileVisible(e.sideACoord))//tile visible
+                        return true;
+            }
+            if (map.IsWithinBounds(e.sideBCoord))
+            {
+                if (map.Walls[e.sideBCoord][e.sideBEdgeNeighborIndex])
+                    if (mazeDrawer.IsTileVisible(e.sideBCoord))
+                        return true;
+                
+            }
             return false;
+
         }
         void UpdateEdgesVisibility()
         {

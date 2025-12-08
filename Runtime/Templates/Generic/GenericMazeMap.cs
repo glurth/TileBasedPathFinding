@@ -162,6 +162,35 @@ namespace Eye.Maps.Templates
         }
         */
 
+
+        void SanityCheckWalls()
+        {
+            int GetNeighborIndex(T source, T neighor)
+            {
+                for (int n = 0; n < source.NumberOfNeighbors(); n++)
+                {
+                    if (source.GetNeighbor(n).Equals(neighor))
+                        return n;
+                }
+                throw new System.Exception("inavlid neighbor");
+            }
+
+            foreach (T tileCoord in allMapCoords)
+            {
+                for (int n = 0; n < tileCoord.NumberOfNeighbors(); n++)
+                {
+                    T neighborCoord = tileCoord.GetNeighbor(n);
+                    if (IsWithinBounds(neighborCoord))
+                    {
+                        int reverseNeighborIndex = GetNeighborIndex(neighborCoord, tileCoord);
+                        if (walls[tileCoord][n] != walls[neighborCoord][reverseNeighborIndex])
+                            Debug.LogWarning("Wall mismatch- [" + tileCoord + "],[" + neighborCoord + "]");
+                    }
+                }
+            }
+            Debug.Log("Wallcheck complete");
+        }
+
         /// <summary>
         /// Asynchronously generates a maze using time-sliced yielding.
         /// </summary>
@@ -200,7 +229,9 @@ namespace Eye.Maps.Templates
             }
 
             //if (progressRef != null)
-              //  progressRef.Value = 1f;
+            //  progressRef.Value = 1f;
+           
+            //SanityCheckWalls();
         }
 
         /// <summary>
