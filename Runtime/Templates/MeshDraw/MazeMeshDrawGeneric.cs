@@ -738,7 +738,18 @@ namespace Eye.Maps.Templates
             if (!tileVisibility.ContainsKey(coord) || tileVisibility[coord] != isVisible)
             {
                 tileVisibility[coord] = isVisible;
-                chunkRegenByIndex.Add(chunkHandler.ChunkID(coord)); 
+                int thisCoordChunk = chunkHandler.ChunkID(coord);
+                chunkRegenByIndex.Add(thisCoordChunk);
+                //add neighborchunks, incase on border
+                foreach (T neighbor in coord.GetNeighbors())
+                {
+                    if (maze.IsWithinBounds(neighbor))
+                    {
+                        int neighborChunk = chunkHandler.ChunkID(neighbor);
+                        if (neighborChunk != thisCoordChunk)
+                            chunkRegenByIndex.Add(neighborChunk); //hashset willjust skip if already present.
+                    }
+                }
             }
         }
 
