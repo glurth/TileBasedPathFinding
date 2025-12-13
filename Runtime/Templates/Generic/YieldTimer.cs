@@ -17,8 +17,8 @@ namespace EyE.Threading
     /// </summary>
     public class ProgressFloatRef
     {
-        private float value=0;
-        private string stageMessage="";
+        private float value = 0;
+        private string stageMessage = "";
         private readonly object lockObj = new object();
 
         public void Increment(float incrementAmount)
@@ -43,8 +43,9 @@ namespace EyE.Threading
     /// Wraps a <see cref="CancellationSource"/> and <see cref="ProgressFloatRef"/> for easy task management.
     /// Contains an internal YieldTimer and public yield function to use it and check for cancellation requests.
     /// </summary>
-    public class TaskHandler:System.IDisposable
+    public class TaskHandler : System.IDisposable
     {
+        #region construction
         /// <summary>
         /// Initializes a new instance of <see cref="TaskHandler"/>.
         /// </summary>
@@ -57,45 +58,92 @@ namespace EyE.Threading
             ownsCancellationSource = false;
             this.task = task;
             this.progress = progress;
-            IsAsynchrnousProcess = true;
+            isAsynchrnousProcess = true;
+            taskSet = true;
+        }
+        /// <summary>
+        /// Initializes a new instance of <see cref="TaskHandler"/>.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token to observe.</param>
+        /// <param name="progress">The progress reference to report progress.</param>
+        public TaskHandler(UniTask task, ProgressFloatRef progress)
+        {
+            CancellationSource = new CancellationTokenSource();
+            ownsCancellationSource = true;
+            this.task = task;
+            this.progress = progress;
+            isAsynchrnousProcess = true;
+            taskSet = true;
+        }
+        /// <summary>
+        /// Initializes a new instance of <see cref="TaskHandler"/>.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token to observe.</param>
+        /// <param name="progress">The progress reference to report progress.</param>
+        public TaskHandler(UniTask task)
+        {
+            CancellationSource = new CancellationTokenSource();
+            ownsCancellationSource = true;
+            this.task = task;
+            this.progress = new ProgressFloatRef();
+            isAsynchrnousProcess = true;
+            taskSet = true;
         }
         //with asAsync set to false, process will be run synchronously and never invoke internalYieldControl.Yield
         public TaskHandler(bool asAsync = true)
         {
-            IsAsynchrnousProcess = asAsync;
+            isAsynchrnousProcess = asAsync;
             CancellationSource = new CancellationTokenSource();
             ownsCancellationSource = true;
             this.progress = new ProgressFloatRef();
         }
+        #endregion
 
+        #region Disposal
         readonly bool ownsCancellationSource;
-        bool disposed;
+        private bool disposed;
+        void ThrowIfDisposed()
+        {
+            if (disposed) throw new ObjectDisposedException(nameof(TaskHandler));
+        }
+        public void Dispose()
+        {
+            UnityEngine.Debug.Log("Disposing CancelationSource now");
+            if (disposed) return;
+            disposed = true;
 
-        private readonly ProgressFloatRef progress;
+            if (ownsCancellationSource)
+                CancellationSource.Dispose();
+        }
+        #endregion
+
+        #region member variables
 
         /// <summary>
         /// Gets the cancellation token associated with this task context.
         /// </summary>
-        CancellationTokenSource CancellationSource { get; }
-
-        public UniTask task;
-        public bool IsAsynchrnousProcess = false;
-
-        YieldTimer internalYieldControl = new YieldTimer();
-
-        public async UniTask Yield()
-        {
-            if (!IsAsynchrnousProcess) return;
-            CancellationSource.Token.ThrowIfCancellationRequested();
-            await internalYieldControl.YieldOnTimeSlice();
-        }
-
-        private bool isComplete=false;
+        /// 
+        public bool IsAsynchrnousProcess { get { return isAsynchrnousProcess; } }
         public bool IsComplete => isComplete;
-        public void SetComplete(){ isComplete = true;  }
-
-        public bool IsRunning { get { return !IsComplete &&  task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded; } }
-
+        public bool IsRunning
+        {
+            get
+            {
+                if (!taskSet) return false;
+                return !IsComplete && task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded;
+            }
+        }
+        /// <summary>
+        /// Gets whether cancellation has been requested.
+        /// </summary>
+        public bool IsCancellationRequested
+        {
+            get
+            {
+                if (disposed) return false;
+                return CancellationSource.IsCancellationRequested;
+            }
+        }
         /// <summary>
         /// Gets or sets the progress value.
         /// </summary>
@@ -104,12 +152,6 @@ namespace EyE.Threading
             get => progress.Value;
             set => progress.Value = value;
         }
-
-        public void IncrementProgress(float incrementAmount)
-        {
-            progress.Increment(incrementAmount);
-        }
-        object lockObj = new object();
         /// <summary>
         /// Gets or sets the stage message.
         /// </summary>
@@ -118,6 +160,42 @@ namespace EyE.Threading
             get { lock (lockObj) return progress.StageMessage; }
             set { lock (lockObj) progress.StageMessage = value; }
         }
+        //private
+        readonly ProgressFloatRef progress;
+        CancellationTokenSource CancellationSource { get; }
+        UniTask task;
+        bool taskSet = false;
+        YieldTimer internalYieldControl = new YieldTimer();
+        bool isComplete = false;
+        readonly bool isAsynchrnousProcess = false;
+        object lockObj = new object();
+
+        #endregion
+
+        #region control functions
+        public void AssignRunningTask(UniTask tsk)
+        {
+            if (taskSet)
+              throw new System.Exception("You may not pass a task to a TaskHandler that has already been assigned one");
+            task = tsk;
+            taskSet = true;
+
+
+        }
+        public async UniTask Yield()
+        {
+            if (!IsAsynchrnousProcess) return;
+            ThrowIfDisposed();
+            CancellationSource.Token.ThrowIfCancellationRequested();
+            await internalYieldControl.YieldOnTimeSlice();
+        }
+        public void SetComplete(){ isComplete = true;  }
+
+        public void IncrementProgress(float incrementAmount)
+        {
+            progress.Increment(incrementAmount);
+        }
+
 
         public async UniTask SetStageMessageAndYield(string message)
         {
@@ -143,14 +221,14 @@ namespace EyE.Threading
         /// </summary>
         public void ThrowIfCancellationRequested()
         {
+            ThrowIfDisposed();
             CancellationSource.Token.ThrowIfCancellationRequested();
         }
 
-        /// <summary>
-        /// Gets whether cancellation has been requested.
-        /// </summary>
-        public bool IsCancellationRequested => CancellationSource.IsCancellationRequested;
-        public void DoCancel() { CancellationSource.Cancel(); }
+
+        public void DoCancel() { ThrowIfDisposed(); CancellationSource.Cancel(); }
+        #endregion
+
 
 
         public void OnGUIDebug()
@@ -173,37 +251,12 @@ namespace EyE.Threading
 
             UnityEngine.GUILayout.Label($"Progress: {ProgressValue:0.00}");
             UnityEngine.GUILayout.Label($"StageMessage: {StageMessage}");
-            // Detect if the CancellationTokenSource has been disposed.
-            // There is no public "IsDisposed" property, so the only safe way
-            // to check is to attempt accessing a property (here IsCancellationRequested)
-            // and catch ObjectDisposedException if it's disposed.
-            bool disposed = false;
 
-            try
-            {
-                CancellationSource.Token.ThrowIfCancellationRequested();
-            }
-            catch (System.ObjectDisposedException)
-            {
-                disposed = true;
-            }
-            catch (System.OperationCanceledException)
-            {
-                // Token was canceled normally, CTS is still valid
-            }
             UnityEngine.GUILayout.Label($"CancellationSource disposed: {disposed}");
             UnityEngine.GUILayout.EndVertical();
         }
 
-        public void Dispose()
-        {
-            UnityEngine.Debug.Log("Disposing CancelationSource on completion now");
-            if (disposed) return;
-            disposed = true;
 
-            if (ownsCancellationSource)
-                CancellationSource.Dispose();
-        }
     }
 
     /// <summary>

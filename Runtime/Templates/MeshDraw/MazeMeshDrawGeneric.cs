@@ -199,7 +199,7 @@ namespace Eye.Maps.Templates
                 // taskContext.task = UniTask.RunOnThreadPool(() => SetMazeAsync(newMaze, taskContext));
                 Debug.Log("Launching Maze Gen Process");
                 mazeGenerationRunning = true;
-                taskContext.task = UniTask.RunOnThreadPool(async () =>
+                taskContext.AssignRunningTask(UniTask.RunOnThreadPool(async () =>
                 {
                     try
                     {
@@ -223,7 +223,7 @@ namespace Eye.Maps.Templates
                         Debug.LogException(e);
                         throw;
                     }
-                });
+                }));
                 // taskContext.task = SetMazeAsync(newMaze, taskContext); //launch the async SetMazeFunction, and proceed with it running asynchronously
                 if(processingIndicator!=null)
                     processingIndicator.SetContext(taskContext);//.SetActive(true);
