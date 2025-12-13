@@ -4083,7 +4083,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1313517986
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4190,7 +4190,7 @@ MonoBehaviour:
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
-    data: {x: 0, y: 0}
+    data: {x: 10, y: 10}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4911,10 +4911,10 @@ MonoBehaviour:
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
-    m_x: 0
-    m_y: 0
+    m_x: 10
+    m_y: 10
 --- !u!4 &1650533671
 Transform:
   m_ObjectHideFlags: 0

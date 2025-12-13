@@ -94,15 +94,17 @@ namespace Eye.Maps.Templates
         /// <returns>Awaitable UniTask that completes when mesh generation finishes.</returns>
         public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
         {
-            if (this.taskContext != taskContext)
+            /*if (this.taskContext != taskContext)  // new task does not match old task
             {
-                if (this.taskContext != null && this.taskContext.IsRunning)
+                if (this.taskContext != null && this.taskContext.IsRunning)// if old task is not null, and still running, cancel it.
                 {
-
                     this.taskContext.DoCancel();
+                    this.taskContext.Dispose();
+                    Debug.LogWarning(GetType() + ".SetMazeAsync async provided a new TaskHandler, but it already has one that is still running. WARNING: canceling and disposing this old task."); 
                 }
                 this.taskContext = taskContext;
-            }
+            }*/
+            this.taskContext = taskContext;
             mazeGenerationRunning = true;
             //await UniTask.SwitchToThreadPool();
 
@@ -1405,7 +1407,8 @@ namespace Eye.Maps.Templates
         {
             List<Vector3> uniqueCornerPositions = new List<Vector3>();
             Dictionary<Vector3, int> cornerIndexByPosition = new Dictionary<Vector3, int>( new Vector3ApproxComparer(.0001f));
-            string logstr = "";
+            string logstr = "Building corner for map "+GetType();
+            int cCount = 0;
             foreach (T coord in map.allMapCoords)
             {
                 int neighborCount = coord.NumberOfNeighbors();
@@ -1432,7 +1435,7 @@ namespace Eye.Maps.Templates
                 cornerIndecesByCoordinate.Add(coord, tileUniqueCornerIndeces);
                 await taskContext.Yield();
                 taskContext.IncrementProgress(0.1f);
-
+                cCount++;
             }
 
             await taskContext.SetStageMessageAndYield("Finalizing corners.");
@@ -1440,6 +1443,7 @@ namespace Eye.Maps.Templates
             {
                 uniqueCorners.Add(new Corner { position = cornerVertex });
             }
+            logstr += "\n Total corners: " + cCount;
             await UniTask.SwitchToMainThread();
             Debug.Log(logstr);
             await UniTask.SwitchToThreadPool();
