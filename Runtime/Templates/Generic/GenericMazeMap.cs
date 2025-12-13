@@ -191,6 +191,46 @@ namespace Eye.Maps.Templates
             Debug.Log("Wallcheck complete");
         }
 
+        private float WeightAgainstCrowding(T candidate, Stack<T> currentPath)
+        {
+            int used = 0;
+            foreach (T n in candidate.GetNeighbors())
+            {
+                //if (visited.ContainsKey(n) && visited[n] && currentPath.Contains(n))
+                if (currentPath.Contains(n))
+                    used += 30;
+                else
+                {
+                    foreach (T m in n.GetNeighbors())
+                        if (currentPath.Contains(m))
+                            used += 10;
+                }
+            }
+            // more used neighbors → smaller weight
+            return 1f / (1f + used);
+        }
+        private T PickWeighted(List<T> list, Stack<T> path)
+        {
+            float total = 0f;
+            float[] w = new float[list.Count];
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                float weight = WeightAgainstCrowding(list[i], path);
+                w[i] = weight;
+                total += weight;
+            }
+
+            float r = (float)random.NextDouble() * total;
+            for (int i = 0; i < list.Count; i++)
+            {
+                r -= w[i];
+                if (r <= 0f)
+                    return list[i];
+            }
+            return list[list.Count - 1]; // fallback
+        }
+
         /// <summary>
         /// Asynchronously generates a maze using time-sliced yielding.
         /// </summary>
@@ -270,7 +310,13 @@ namespace Eye.Maps.Templates
 
                 if (neighbors.Count > 0)
                 {
-                    T next = neighbors[random.Next(neighbors.Count)];
+                    //T next = neighbors[random.Next(neighbors.Count)];
+                    T next = PickWeighted(neighbors, stack);
+                    //  while (DistFromPath(next) < 2 && ((random.Next()&0x01)==0))
+                    {
+                    //    next = neighbors[random.Next(neighbors.Count)];
+                    }
+
                     RemoveWall(current, next);
                     visited[next] = true;
                     stack.Push(next);
@@ -284,6 +330,17 @@ namespace Eye.Maps.Templates
             }
 
             return path;
+
+            float DistFromPath(T checkCoord,Stack<T> stack)
+            {
+                float min = float.PositiveInfinity;
+                foreach (T pathStep in stack)
+                {
+                    float dist =checkCoord.HeuristicDistanceTo(pathStep);
+                    if (dist < min) min = dist;
+                }
+                return min;
+            }
         }
 
         /// <summary>

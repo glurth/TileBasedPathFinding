@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Threading;
 
 namespace EyE.Threading
@@ -42,8 +43,34 @@ namespace EyE.Threading
     /// Wraps a <see cref="CancellationSource"/> and <see cref="ProgressFloatRef"/> for easy task management.
     /// Contains an internal YieldTimer and public yield function to use it and check for cancellation requests.
     /// </summary>
-    public class TaskHandler
+    public class TaskHandler:System.IDisposable
     {
+        /// <summary>
+        /// Initializes a new instance of <see cref="TaskHandler"/>.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token to observe.</param>
+        /// <param name="progress">The progress reference to report progress.</param>
+        public TaskHandler(UniTask task, CancellationTokenSource cancellationToken, ProgressFloatRef progress)
+        {
+
+            CancellationSource = cancellationToken;
+            ownsCancellationSource = false;
+            this.task = task;
+            this.progress = progress;
+            IsAsynchrnousProcess = true;
+        }
+        //with asAsync set to false, process will be run synchronously and never invoke internalYieldControl.Yield
+        public TaskHandler(bool asAsync = true)
+        {
+            IsAsynchrnousProcess = asAsync;
+            CancellationSource = new CancellationTokenSource();
+            ownsCancellationSource = true;
+            this.progress = new ProgressFloatRef();
+        }
+
+        readonly bool ownsCancellationSource;
+        bool disposed;
+
         private readonly ProgressFloatRef progress;
 
         /// <summary>
@@ -65,29 +92,10 @@ namespace EyE.Threading
 
         private bool isComplete=false;
         public bool IsComplete => isComplete;
-        public void SetComplete(){ isComplete = true; UnityEngine.Debug.Log("Disposing CancelationSource on completion now");   CancellationSource.Dispose(); }
+        public void SetComplete(){ isComplete = true;  }
 
         public bool IsRunning { get { return !IsComplete &&  task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded; } }
-        /// <summary>
-        /// Initializes a new instance of <see cref="TaskHandler"/>.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token to observe.</param>
-        /// <param name="progress">The progress reference to report progress.</param>
-        public TaskHandler(UniTask task,CancellationTokenSource cancellationToken, ProgressFloatRef progress)
-        {
 
-            CancellationSource = cancellationToken;
-            this.task = task;
-            this.progress = progress;
-            IsAsynchrnousProcess = true;
-        }
-        //with no task specified, will run syncronously
-        public TaskHandler(bool asAsync=true)
-        {
-            IsAsynchrnousProcess = asAsync;
-            CancellationSource = new CancellationTokenSource();
-            this.progress = new ProgressFloatRef();
-        }
         /// <summary>
         /// Gets or sets the progress value.
         /// </summary>
@@ -96,6 +104,7 @@ namespace EyE.Threading
             get => progress.Value;
             set => progress.Value = value;
         }
+
         public void IncrementProgress(float incrementAmount)
         {
             progress.Increment(incrementAmount);
@@ -184,6 +193,16 @@ namespace EyE.Threading
             }
             UnityEngine.GUILayout.Label($"CancellationSource disposed: {disposed}");
             UnityEngine.GUILayout.EndVertical();
+        }
+
+        public void Dispose()
+        {
+            UnityEngine.Debug.Log("Disposing CancelationSource on completion now");
+            if (disposed) return;
+            disposed = true;
+
+            if (ownsCancellationSource)
+                CancellationSource.Dispose();
         }
     }
 
