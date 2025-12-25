@@ -325,7 +325,7 @@ namespace Eye.Maps.Templates
                 {
                     stack.Pop();
                 }
-
+                taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
@@ -366,6 +366,7 @@ namespace Eye.Maps.Templates
                     pathLengthZeroCount = 0;
 
                 allPathSteps.AddRange(newPath);
+                taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
         }
@@ -398,7 +399,7 @@ namespace Eye.Maps.Templates
                 {
                     stack.Pop();
                 }
-
+                taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
