@@ -4,13 +4,6 @@ using System.Threading;
 
 namespace EyE.Threading
 {
-    /// <summary>
-    /// TODO: replace with TaskContext or CancelationSource/token  provide a way to reference a single/the same bool- stored in here- regardless of thread context
-    /// </summary>
-    public class OLDCancelBoolRef
-    {
-        public volatile bool doCancel = false;
-    }
 
     /// <summary>
     /// Thread-safe reference to a float value, for reporting progress across threads.
@@ -106,14 +99,43 @@ namespace EyE.Threading
         {
             if (disposed) throw new ObjectDisposedException(nameof(TaskHandler));
         }
+        /// <summary>
+        /// Not that Disposing a running task will NOT instantly stop the process.  Rather the process will be stopped, and the disposal will complete, only when the running task next invokes the Yield function.
+        /// </summary>
         public void Dispose()
         {
-            UnityEngine.Debug.Log("Disposing CancelationSource now");
+            
             if (disposed) return;
             disposed = true;
-
-            if (ownsCancellationSource)
-                CancellationSource.Dispose();
+            if (IsRunning)
+            {
+                CancellationSource.Cancel();
+                _ = CleanupAsync();
+            }
+            else
+            {
+                if (ownsCancellationSource)
+                {
+                   // UnityEngine.Debug.Log("Disposing CancelationSource now");
+                    CancellationSource.Dispose();
+                }
+            }
+        }
+        private async UniTaskVoid CleanupAsync()
+        {
+            try
+            {
+                await task;
+            }
+            catch (OperationCanceledException)
+            {
+                // expected
+            }
+            finally
+            {
+                if (ownsCancellationSource)
+                    CancellationSource.Dispose();
+            }
         }
         #endregion
 
@@ -129,18 +151,19 @@ namespace EyE.Threading
         {
             get
             {
-                if (!taskSet) return false;
-                return !IsComplete && task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded;
+                return taskSet && task.Status == UniTaskStatus.Pending;
+                //if (!taskSet) return false;
+                //return !IsComplete && task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded;
             }
         }
         /// <summary>
-        /// Gets whether cancellation has been requested.
+        /// Gets whether cancellation has been requested, or if the object has been disposed.
         /// </summary>
         public bool IsCancellationRequested
         {
             get
             {
-                if (disposed) return false;
+                if (disposed) return true;
                 return CancellationSource.IsCancellationRequested;
             }
         }
@@ -186,7 +209,6 @@ namespace EyE.Threading
         {
             if (!IsAsynchrnousProcess) return;
             CancellationSource.Token.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
             await internalYieldControl.YieldOnTimeSlice();
         }
         public void SetComplete(){ isComplete = true;  }
