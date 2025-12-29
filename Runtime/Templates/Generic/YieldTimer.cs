@@ -185,8 +185,8 @@ namespace EyE.Threading
         public async UniTask Yield()
         {
             if (!IsAsynchrnousProcess) return;
-            ThrowIfDisposed();
             CancellationSource.Token.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
             await internalYieldControl.YieldOnTimeSlice();
         }
         public void SetComplete(){ isComplete = true;  }
