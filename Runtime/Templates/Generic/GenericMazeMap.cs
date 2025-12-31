@@ -38,7 +38,8 @@ namespace Eye.Maps.Templates
         public IReadOnlyDictionary<T, bool[]> Walls { get { return walls; } }
 
         private Dictionary<T, bool> visited = new Dictionary<T, bool>();
-        private System.Random random = new System.Random();
+        private System.Random random;
+        public readonly int seed;
 
         public T size { get { return _size; } }
         public float worldScale { get; private set; }
@@ -54,114 +55,19 @@ namespace Eye.Maps.Templates
             int numWallDimensions = size.NumberOfNeighbors();
             this._size = size;
             this.worldScale = worldScale;
-
-
-            // Generate the maze
-            //GenerateMaze();
+            this.seed = System.Environment.TickCount;
+            this.random = new System.Random(seed);
         }
-        /*
-        public void GenerateMaze(bool testAllWalls = false)
+        public GenericMazeMap(T size, T start, T end, int seed, float worldScale = 1f)
         {
-            foreach (ITileCoordinate<T> tileCoord in allMapCoords)
-            {
-                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
-                for (int i = 0; i < size.NumberOfNeighbors(); i++)
-                    wallsArray[i] = true;
-                walls.Add(tileCoord.value, wallsArray);
-                visited.Add(tileCoord.value, false);
-            }
-            if (!testAllWalls)
-            {
-                List<T> mainPath = GenerateMainPath(start, end);
-                GenerateBranches(mainPath);
-            }
+            this.start = start;
+            this.end = end;
+            int numWallDimensions = size.NumberOfNeighbors();
+            this._size = size;
+            this.worldScale = worldScale;
+            this.seed = seed;
+            this.random = new System.Random(seed);
         }
-
-        private List<T> GenerateMainPath(T start, T end)
-        {
-            Stack<T> stack = new Stack<T>();
-            List<T> path = new List<T>();
-            stack.Push(start);
-            visited[start] = true;
-
-            while (stack.Count > 0)
-            {
-                T current = stack.Peek();
-                path.Add(current);
-
-                if (current.Equals(end))
-                {
-                    break;  // Main path to end generated
-                }
-
-                // Get available directions (randomized to introduce random turns)
-                List<T> neighbors = GetUnvisitedNeighbors(current);
-
-                if (neighbors.Count > 0)
-                {
-                    T next = neighbors[random.Next(neighbors.Count)];
-                    RemoveWall(current, next);
-                    visited[next] = true;
-                    stack.Push(next);
-                }
-                else
-                {
-                    stack.Pop();
-                }
-            }
-
-            return path;
-        }
-
-        private void GenerateBranches(List<T> mainPath)
-        {
-            List<T> allPathSteps = new List<T>(mainPath);
-            int maxZeros = 1000;
-            int pathLengthZeroCount = 0;
-            //for (int i = 0; i < branchCount; i++)
-            while (pathLengthZeroCount < maxZeros)
-            {
-                float curve = Mathf.Pow(Random.value, 2);
-                T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
-                List<T> newPath = GenerateRandomPath(branchStart);
-                if (newPath.Count == 0)
-                    pathLengthZeroCount++;
-                else
-                    pathLengthZeroCount = 0;
-                allPathSteps.AddRange(newPath);
-
-            }
-        }
-
-        private List<T> GenerateRandomPath(T start)
-        {
-            List<T> path = new List<T>();
-            //path.Add(start);
-            Stack<T> stack = new Stack<T>();
-            stack.Push(start);
-
-            while (stack.Count > 0)
-            {
-                T current = stack.Peek();
-                List<T> neighbors = GetUnvisitedNeighbors(current);
-
-                if (neighbors.Count > 0)
-                {
-                    T next = neighbors[random.Next(neighbors.Count)];
-                    RemoveWall(current, next);
-                    visited[next] = true;
-                    path.Add(next);
-                    stack.Push(next);
-                }
-                else
-                {
-                    stack.Pop();
-                }
-            }
-            return path;
-        }
-        */
-
 
         void SanityCheckWalls()
         {
@@ -268,9 +174,6 @@ namespace Eye.Maps.Templates
                 await GenerateBranchesAsync(mainPath, taskContext);
             }
 
-            //if (progressRef != null)
-            //  progressRef.Value = 1f;
-           
             //SanityCheckWalls();
         }
 
@@ -356,7 +259,7 @@ namespace Eye.Maps.Templates
 
             while (pathLengthZeroCount < maxZeros)
             {
-                float curve = Mathf.Pow( await ThreadRand.GetRandAsync(), 2);
+                float curve = Mathf.Pow((float)random.NextDouble(), 2);
                 T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
                 List<T> newPath = await GenerateRandomPathAsync(branchStart, taskContext);// yieldTimer);
 

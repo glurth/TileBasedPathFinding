@@ -6,7 +6,7 @@ namespace EyE.Threading
     /// Thread-safe source of Mathf.Pow(Random.value, 2) values usable in background threads.
     /// Lazily initializes on first access. UnityEngine.Random is used only on the main thread.
     /// </summary>
-    public static class ThreadRand
+    public static class XXXOLDThreadRand
     {
         static float[] _buffer;
         static int _index;
