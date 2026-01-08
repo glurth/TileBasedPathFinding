@@ -4,7 +4,7 @@ using Cysharp.Threading.Tasks;
 
 using EyE.Threading;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
 
     public struct LineSegment
@@ -479,3 +479,4 @@ namespace Eye.Maps.Templates
         abstract public Quaternion NeighborBorderOrientation(T coord, int neighborIndex);
     }
 }
+

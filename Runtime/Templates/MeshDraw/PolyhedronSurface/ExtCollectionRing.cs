@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     /// <summary>
     /// Provides ring-indexing extension methods for arrays and lists,

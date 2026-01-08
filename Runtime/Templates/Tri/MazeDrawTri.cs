@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeDrawTri : MazeDrawGeneric<TriangularIndex2D>
     {

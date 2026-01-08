@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 using System.Collections.Generic;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     static public class WallMeshGen
     {
@@ -131,12 +131,12 @@ namespace Eye.Maps.Templates
             Debug.Log("Saved mesh to: " + path);
         }
 #endif
-        static Dictionary<Eye.Maps.Templates.WallMeshVariantKey, Mesh> internalStorage;
+        static Dictionary<EyE.Maps.Templates.WallMeshVariantKey, Mesh> internalStorage;
         static WallMeshGen()
         {
           //  internalStorage = GenAllVariants();
         }
-        public static Dictionary<Eye.Maps.Templates.WallMeshVariantKey, Mesh> GetAllVariants()
+        public static Dictionary<EyE.Maps.Templates.WallMeshVariantKey, Mesh> GetAllVariants()
         {
             return internalStorage;
         }

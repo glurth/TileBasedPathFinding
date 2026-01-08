@@ -6,7 +6,7 @@ using UnityEngine;
 using EyE.UnityAssetTypes;
 using Cysharp.Threading.Tasks;
 using EyE.Threading;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class PolyhedronMazeDraw : MazeMeshDrawGeneric<FaceCoordinate>
     {

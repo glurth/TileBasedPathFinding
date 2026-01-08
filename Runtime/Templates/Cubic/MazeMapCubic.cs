@@ -1,14 +1,14 @@
 using UnityEngine;
 using System.Collections.Generic;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeMapCubic : GenericMazeMap<CubicCoord>
     {
-        public MazeMapCubic(CubicCoord size, float worldScale = 1) :
+        public MazeMapCubic(CubicCoord size, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new CubicCoord(Vector3Int.zero),
             end: new CubicCoord(new Vector3Int(size.x - 1, size.y - 1, size.z - 1)),
-            worldScale)
+            worldScale,  numSolutions )
         {
         }
 

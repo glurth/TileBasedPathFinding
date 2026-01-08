@@ -2135,7 +2135,7 @@ MonoBehaviour:
   startPositionMarkerPrefab: {fileID: 0}
   endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
-  startHidden: 1
+  startHidden: 0
   createMazeOnEnable: 1
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
@@ -4190,7 +4190,7 @@ MonoBehaviour:
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
-    data: {x: 10, y: 10}
+    data: {x: 20, y: 20}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0

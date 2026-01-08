@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeMapTri : GenericMazeMap<TriangularIndex2D>
     {
-        public MazeMapTri(TriangularIndex2D size, float worldScale = 1) :
+        public MazeMapTri(TriangularIndex2D size, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new TriangularIndex2D(0, 0),
             end: new TriangularIndex2D(size.x - 1, size.y - 1),
-            worldScale)
+            worldScale,  numSolutions)
         {
 
         }

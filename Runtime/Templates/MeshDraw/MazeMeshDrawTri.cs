@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using EyE.Threading;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeMeshDrawTri : MazeMeshDrawGeneric<TriangularIndex2D>
     {

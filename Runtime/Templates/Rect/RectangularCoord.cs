@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using Eye.Maps;
+using EyE.Maps;
 // RectangularCoord struct that wraps a Vector2Int
 [System.Serializable]
 public struct RectangularCoord : ITileCoordinate<RectangularCoord>

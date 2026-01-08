@@ -1,14 +1,14 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeMapRect : GenericMazeMap<RectangularCoord>
     {
-        public MazeMapRect(RectangularCoord size, float worldScale = 1) :
+        public MazeMapRect(RectangularCoord size, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new RectangularCoord(Vector2Int.zero),
             end: new RectangularCoord(new Vector2Int(size.x - 1, size.y - 1)),
-            worldScale)
+            worldScale, numSolutions)
         {
         }
 

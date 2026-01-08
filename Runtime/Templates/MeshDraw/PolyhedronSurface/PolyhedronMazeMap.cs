@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using EyE.UnityAssetTypes;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class FaceCoordinate : ITileCoordinate<FaceCoordinate>
     {
@@ -114,10 +114,10 @@ namespace Eye.Maps.Templates
         public int[] AsyncUsableTriangleList =>asyncUsableTriangleList;
         int[] asyncUsableTriangleList = null;
 
-        public FaceMazeMap(FacesAndNeighbors sourceMap):base(
+        public FaceMazeMap(FacesAndNeighbors sourceMap, int numSolutions = 1) :base(
             size: new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
             start:new FaceCoordinate(sourceMap, 0),
-            end:  new FaceCoordinate(sourceMap, sourceMap.faceDetails.Count - 1))
+            end:  new FaceCoordinate(sourceMap, sourceMap.faceDetails.Count - 1), 1f, numSolutions)
         {
             if(sourceMap==null) throw new ArgumentNullException("May not pass null to FaceMazeMap constructor");
             if (sourceMap.faceDetails == null || sourceMap.faceDetails.Count==0) throw new ArgumentNullException("May not pass FaceMazeMap with no faceDetails to FaceMazeMap constructor");

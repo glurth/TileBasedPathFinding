@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     static class CommonConstants
     {

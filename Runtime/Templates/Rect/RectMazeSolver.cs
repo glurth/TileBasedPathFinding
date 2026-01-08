@@ -1,4 +1,4 @@
-﻿namespace Eye.Maps.Templates
+﻿namespace EyE.Maps.Templates
 {
     public class RectMazeSolver : GenericMazeSolver<RectangularCoord>
     { }

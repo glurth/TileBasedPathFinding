@@ -2,7 +2,7 @@
 using UnityEngine;
 using System;
 
-namespace Eye.Maps
+namespace EyE.Maps
 {
     /// <summary>
     /// Represents a tile coordinate with methods for neighbor retrieval and heuristic distance calculation.

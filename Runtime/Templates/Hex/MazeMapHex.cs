@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     public class MazeMapHex : GenericMazeMap<HexIndex2D>
     {
-        public MazeMapHex(HexIndex2D size, float worldScale = 1) : base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1), worldScale)
+        public MazeMapHex(HexIndex2D size, float worldScale = 1, int numSolutions = 1) : base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1), worldScale, numSolutions)
         {
         }
 

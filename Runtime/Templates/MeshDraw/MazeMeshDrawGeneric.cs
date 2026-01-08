@@ -45,7 +45,7 @@ static public class strext
     }
 
 }
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     /// <summary>
     /// Base class for drawing a maze using mesh chunks.

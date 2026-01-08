@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
 
 public class MazeSolverPolygon : GenericMazeSolver<FaceCoordinate>

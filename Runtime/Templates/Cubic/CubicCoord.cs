@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
     // CubicCoord struct that wraps a Vector3Int
     [System.Serializable]

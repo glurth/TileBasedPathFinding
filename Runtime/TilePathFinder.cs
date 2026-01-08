@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-namespace Eye.Maps
+namespace EyE.Maps
 {
     /// <summary>
     /// Represents a tile on a path, used in pathfinding algorithms like A*.

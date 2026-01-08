@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using EyE.Threading;
 using Cysharp.Threading.Tasks;
 
-namespace Eye.Maps.Templates
+namespace EyE.Maps.Templates
 {
 
     public interface IMazeDrawer<T> where T : ITileCoordinate<T>
