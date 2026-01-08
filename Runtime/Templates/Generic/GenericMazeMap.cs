@@ -33,12 +33,12 @@ namespace Eye.Maps.Templates
         private T _size;
 
 
-        private Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
         public void SetWalls(Dictionary<T, bool[]> walls) { this.walls = walls; }
         public IReadOnlyDictionary<T, bool[]> Walls { get { return walls; } }
 
-        private Dictionary<T, bool> visited = new Dictionary<T, bool>();
-        private System.Random random;
+        protected Dictionary<T, bool> visited = new Dictionary<T, bool>();
+        protected System.Random random;
         public readonly int seed;
 
         public T size { get { return _size; } }
@@ -115,7 +115,7 @@ namespace Eye.Maps.Templates
             // more used neighbors → smaller weight
             return 1f / (1f + used);
         }
-        private T PickWeighted(List<T> list, Stack<T> path)
+        protected virtual T PickWeighted(List<T> list, Stack<T> path)
         {
             float total = 0f;
             float[] w = new float[list.Count];
@@ -194,7 +194,7 @@ namespace Eye.Maps.Templates
         /// <param name="start">The starting tile.</param>
         /// <param name="end">The target tile to reach.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
+        protected virtual async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             Stack<T> stack = new Stack<T>();
             List<T> path = new List<T>();
@@ -251,7 +251,7 @@ namespace Eye.Maps.Templates
         /// </summary>
         /// <param name="mainPath">The main path tiles to branch from.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask GenerateBranchesAsync(List<T> mainPath, TaskHandler taskContext)//YieldTimer yieldTimer)
+        protected virtual async UniTask GenerateBranchesAsync(List<T> mainPath, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             List<T> allPathSteps = new List<T>(mainPath);
             int maxZeros = 1000;
@@ -279,7 +279,7 @@ namespace Eye.Maps.Templates
         /// </summary>
         /// <param name="start">Starting tile for the path.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        private async UniTask<List<T>> GenerateRandomPathAsync(T start, TaskHandler taskContext)//YieldTimer yieldTimer)
+        protected virtual async UniTask<List<T>> GenerateRandomPathAsync(T start, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             List<T> path = new List<T>();
             Stack<T> stack = new Stack<T>();
@@ -313,7 +313,7 @@ namespace Eye.Maps.Templates
         /// Returns the list of unvisited neighboring tiles.
         /// </summary>
         /// <param name="tile">Current tile to check from.</param>
-        private List<T> GetUnvisitedNeighbors(T tile)
+        protected virtual List<T> GetUnvisitedNeighbors(T tile)
         {
             List<T> unVisitedneighbors = new List<T>();
 
@@ -327,7 +327,7 @@ namespace Eye.Maps.Templates
             return unVisitedneighbors;
         }
 
-        private int GetNeighborIndexOf(T current, T neighbor)
+        protected int GetNeighborIndexOf(T current, T neighbor)
         {
             int neighborIndexCounter = 0;
             foreach (T n in current.GetNeighbors())
@@ -359,7 +359,7 @@ namespace Eye.Maps.Templates
         }
 
         // Get move cost between neighboring tiles, -1 means impassable
-        public float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
+        public virtual float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
         {
             T coord = coordT.value;
             if (!IsWithinBounds(coord)) return -1;
