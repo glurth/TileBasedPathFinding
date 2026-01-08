@@ -48,7 +48,7 @@ namespace Eye.Maps.Templates
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
         
-        public GenericMazeMap(T size, T start, T end, float worldScale = 1f)
+        public GenericMazeMap(T size, T start, T end, float worldScale = 1f, int numSolutions = 1)
         {
             this.start = start;
             this.end = end;
@@ -57,8 +57,9 @@ namespace Eye.Maps.Templates
             this.worldScale = worldScale;
             this.seed = System.Environment.TickCount;
             this.random = new System.Random(seed);
+            this.numSolutionsCounter = numSolutions;
         }
-        public GenericMazeMap(T size, T start, T end, int seed, float worldScale = 1f)
+        public GenericMazeMap(T size, T start, T end, int seed, float worldScale = 1f, int numSolutions = 1)
         {
             this.start = start;
             this.end = end;
@@ -67,6 +68,7 @@ namespace Eye.Maps.Templates
             this.worldScale = worldScale;
             this.seed = seed;
             this.random = new System.Random(seed);
+            this.numSolutionsCounter = numSolutions;
         }
 
         void SanityCheckWalls()
@@ -246,6 +248,7 @@ namespace Eye.Maps.Templates
             }
         }
 
+        int numSolutionsCounter=1;
         /// <summary>
         /// Asynchronously generates branching paths off the main path.
         /// </summary>
@@ -263,15 +266,49 @@ namespace Eye.Maps.Templates
                 T branchStart = allPathSteps[(int)(curve * allPathSteps.Count)];
                 List<T> newPath = await GenerateRandomPathAsync(branchStart, taskContext);// yieldTimer);
 
-                if (newPath.Count == 0)
+                if (newPath.Count == 0)  //No path steps generated
                     pathLengthZeroCount++;
                 else
+                {
                     pathLengthZeroCount = 0;
+                    if (numSolutionsCounter > 2)// do we need to create a hole to main path?
+                    {
+                        if (TryFindRandomCoordOnPathNeighoringMainPath(mainPath, newPath, out T mainPathCoord, out T pathCoord))
+                        {
+                            RemoveWall(mainPathCoord, pathCoord);
+                            numSolutionsCounter--;
+                        }
+                    }
+                            
+                }
 
                 allPathSteps.AddRange(newPath);
                 taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
+        }
+
+        bool TryFindRandomCoordOnPathNeighoringMainPath(List<T> mainPath, List<T> pathToCheck, out T mainPathCoord,out T pathCoord)
+        {
+            //start at end of mainPath
+            for (int i = mainPath.Count - 1; i >= 0; i--)
+            {
+                T currentMainPathCoord = mainPath[i];
+                //start at end of checkPath
+                for (int j = pathToCheck.Count - 1; j >= 0; j--)
+                {
+                    T currentPathCoord = pathToCheck[j];
+                    if (currentMainPathCoord.HeuristicDistanceTo(currentPathCoord) == 1)
+                    {
+                        mainPathCoord = currentMainPathCoord;
+                        pathCoord = currentPathCoord;
+                        return true;
+                    }
+                }
+            }
+            mainPathCoord = default(T);
+            pathCoord = default(T);
+            return false;
         }
 
         /// <summary>
@@ -341,9 +378,6 @@ namespace Eye.Maps.Templates
         }
         private void RemoveWall(T current, T next)
         {
-
-
-
             int nieghborIndex = GetNeighborIndexOf(current, next);
             int reverseNeighborIndex = GetNeighborIndexOf(next, current);
             walls[current][nieghborIndex] = false;
