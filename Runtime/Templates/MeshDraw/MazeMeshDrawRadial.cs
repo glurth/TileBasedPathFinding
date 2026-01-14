@@ -191,13 +191,17 @@ namespace EyE.Maps.Templates
 
                     int wallIndex = map.GetNeighborIndexOf(tile, neighbor);
                     bool hasWall = (!inBounds) || map.Walls[tile][wallIndex];
+                    /*if (tile.sector == 0 || neighbor.sector == 0)
+                    {
+                        int testThisTileneighborIndex = map.GetNeighborIndexOf(neighbor, tile);
+                        if(inBounds)
+                            Debug.Log("has wall: ("+hasWall+") at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "] +  double check reverse: wall exists-" + map.Walls[neighbor][testThisTileneighborIndex]);
+                        else
+                            Debug.Log("has wall: (" + hasWall + ") at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "] +  neighbor is out of bounds");
+                    }*/
                     if (!hasWall)
                     {
-                        /*if (tile.sector == 0 || neighbor.sector == 0)
-                        {
-                            int testThisTileneighborIndex = map.GetNeighborIndexOf(neighbor, tile);
-                            Debug.Log("No wall at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "] +  double check reverse: wall exists-" + map.Walls[neighbor][testThisTileneighborIndex]);
-                        }  */ 
+
                         continue;
                     }
 
@@ -264,7 +268,16 @@ namespace EyE.Maps.Templates
         // Radial wall: along the straight line from inner to outer radius
         void GenerateRadialWall(MeshData mesh, RadialCoord tile, RadialCoord neighbor)
         {
-            float angleInTurns = (tile.AngleInTurns + neighbor.AngleInTurns) * 0.5f;
+            //handle wrapping around ring 
+            float tileAngle = tile.AngleInTurns;
+            float neighborAngle = neighbor.AngleInTurns;
+            if (Mathf.Abs(tileAngle - neighborAngle) > 0.5f)
+            {
+                if (tileAngle < neighborAngle) tileAngle += 1f;
+                else neighborAngle += 1f;
+            }
+            float angleInTurns = (tileAngle + neighborAngle) * 0.5f;
+            if (angleInTurns > 1f) angleInTurns -= 1f;
            // Debug.Log("GenerateRadialWall-  angleInTurns:" + angleInTurns + "  from-["+ tile + "] tile.AngleInTurns:" + tile.AngleInTurns + "  ["+ neighbor + "]neighbor.AngleInTurns:" + neighbor.AngleInTurns);
             float radiusInner = radialMap.RingInnerRadius(tile.ring);//(tile.ring) * radialDrawer.radialSpacing;
             float radiusOuter = radialMap.RingOuterRadius(tile.ring);// (tile.ring+1) * radialDrawer.radialSpacing;
