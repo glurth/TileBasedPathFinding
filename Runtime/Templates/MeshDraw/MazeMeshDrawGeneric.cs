@@ -1091,7 +1091,7 @@ namespace EyE.Maps.Templates
         /// <param name="coordsPerChuck">Number of coordinate each chunk/mesh will represent</param>
         /// <param name="displayBorderWalls"></param>
         /// <returns></returns>
-        public List<Mesh> CreateWallsMeshChunks(
+        public virtual List<Mesh> CreateWallsMeshChunks(
                 GenericMazeMap<T> data,
                 MazeMeshDrawGeneric<T> mazeDrawer,
                 float wallThickness,
@@ -1144,7 +1144,7 @@ namespace EyE.Maps.Templates
         /// <param name="coordsPerChuck">Number of coordinate each chunk/mesh will represent</param>
         /// <param name="displayBorderWalls"></param>
         /// <returns></returns>
-        async public UniTask<List<MeshData>> CreateWallsMeshChunksAsync(
+        async public virtual UniTask<List<MeshData>> CreateWallsMeshChunksAsync(
                 GenericMazeMap<T> data,
                 MazeMeshDrawGeneric<T> mazeDrawer,
                 float wallThickness,
@@ -1253,7 +1253,7 @@ namespace EyE.Maps.Templates
             
         }
 
-        public Mesh RebuildSingleChunk(int chunk)
+        public virtual Mesh RebuildSingleChunk(int chunk)
         {
             // BuildUniqueEdges();
             // SortCornerEdgesClockwise();

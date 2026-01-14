@@ -52,7 +52,7 @@ namespace EyE.Maps.Templates
         {
             this.start = start;
             this.end = end;
-            int numWallDimensions = size.NumberOfNeighbors();
+            //int numWallDimensions = size.NumberOfNeighbors();
             this._size = size;
             this.worldScale = worldScale;
             this.seed = System.Environment.TickCount;
@@ -63,7 +63,7 @@ namespace EyE.Maps.Templates
         {
             this.start = start;
             this.end = end;
-            int numWallDimensions = size.NumberOfNeighbors();
+            //int numWallDimensions = size.NumberOfNeighbors();
             this._size = size;
             this.worldScale = worldScale;
             this.seed = seed;
@@ -155,8 +155,8 @@ namespace EyE.Maps.Templates
 
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
-                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
-                for (int i = 0; i < size.NumberOfNeighbors(); i++)
+                bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
+                for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
                     wallsArray[i] = true;
 
                 walls[tileCoord.value] = wallsArray;
@@ -173,6 +173,7 @@ namespace EyE.Maps.Templates
             if (!testAllWalls)
             {
                 List<T> mainPath = await GenerateMainPathAsync(start, end, taskContext);//.Yield yieldTimer);
+                Debug.Log("Main path generated: " + string.Join(",", mainPath));
                 await GenerateBranchesAsync(mainPath, taskContext);
             }
 
@@ -357,23 +358,27 @@ namespace EyE.Maps.Templates
             foreach (T neighbor in tile.GetNeighbors())
             {
                 if (IsWithinBounds(neighbor))
+                {
+                   // Debug.Log(" checking neighbor for visited-  current: " + tile + "  neighbor: " + neighbor);
                     if (!visited[neighbor])
                         unVisitedneighbors.Add(neighbor);
+                }
             }
 
             return unVisitedneighbors;
         }
 
-        protected int GetNeighborIndexOf(T current, T neighbor)
+        public int GetNeighborIndexOf(T current, T neighbor)
         {
             int neighborIndexCounter = 0;
             foreach (T n in current.GetNeighbors())
             {
                 if (n.Equals(neighbor))
                     return neighborIndexCounter;
+                //Debug.Log("Found neighbor-  current: " + current + "  neighbor: " + n);
                 neighborIndexCounter++;
             }
-            // Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+             Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
             return -1;
         }
         private void RemoveWall(T current, T next)
