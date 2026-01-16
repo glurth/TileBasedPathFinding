@@ -26,12 +26,12 @@ namespace EyE.Maps.Templates
        // public int numOfRingsToDoubleSectors=3;
       //  MazeMapRadial radialMaze;
        // public override GenericMazeMap<RadialCoord> maze => radialMaze;
-
+       /*
         public void SetTileVisibility(RadialCoord coord, bool isVisible)
         {
            //throw new NotImplementedException();
         }
-
+        */
         protected override GenericMazeMap<RadialCoord> CreateMazeMap()
         {
             MazeMapRadial  radialMaze = new MazeMapRadial(mazeSize.ring,mazeSize.sector);
@@ -201,13 +201,12 @@ namespace EyE.Maps.Templates
                     }*/
                     if (!hasWall)
                     {
-
                         continue;
                     }
-
+                    if (!isTileVisible(tile) && ((!inBounds&& displayBorderWalls) || !isTileVisible(neighbor))) continue;
                     // skip invisible tiles unless drawing borders
-                    if (!displayBorderWalls)
-                        if (!isTileVisible(tile) && (inBounds && !isTileVisible(neighbor))) continue;
+                    //if (!displayBorderWalls)
+                      //  if (!isTileVisible(tile) && (inBounds && !isTileVisible(neighbor))) continue;
 
                     if (tile.ring == neighbor.ring)
                     {
