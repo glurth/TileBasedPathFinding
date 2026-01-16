@@ -22,8 +22,8 @@ namespace EyE.Maps.Templates
         internal int baseSectors;
 
 
-        public MazeMapRadial(int rings, int baseSectors = 6, float worldScale = 1f)
-            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), worldScale)
+        public MazeMapRadial(int rings, int baseSectors = 6, float worldScale = 1f, int numSolutions = 1)
+            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), worldScale, numSolutions)
         {
 
             this.rings = Mathf.Max(1, rings);
