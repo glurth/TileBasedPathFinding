@@ -130,7 +130,7 @@ namespace EyE.Maps.Templates
         override public Bounds GetModelSpaceBounds()
         {
             Bounds bounds;
-            float r = RingOuterRadius(rings);
+            float r = RingOuterRadius(rings-1) * 2f;
             bounds = new Bounds(Vector3.zero, new Vector3(r,r,0));
             return bounds;
         }
