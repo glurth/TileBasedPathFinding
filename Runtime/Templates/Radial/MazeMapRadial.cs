@@ -126,5 +126,13 @@ namespace EyE.Maps.Templates
             return Quaternion.Euler(0, 0,  coord.AngleInTurns * 360);
         }
 
+
+        override public Bounds GetModelSpaceBounds()
+        {
+            Bounds bounds;
+            float r = RingOuterRadius(rings);
+            bounds = new Bounds(Vector3.zero, new Vector3(r,r,0));
+            return bounds;
+        }
     }
 }
