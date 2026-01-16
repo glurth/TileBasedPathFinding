@@ -39,12 +39,13 @@ namespace EyE.Maps.Templates
             float r1 = worldScale;
             float r = ringIndex * worldScale;
 
-            int doublings = (int)Mathf.Floor(Mathf.Log(r / r1, 2.0f));
+            int increases = (int)Mathf.Floor(Mathf.Log(r / r1, 2.0f));
 
-            if (doublings < 0)
-                doublings = 0;
-
-            return baseSectors << doublings;
+            if (increases < 0)
+                increases = 0;
+            
+           // return (int)(baseSectors * Mathf.Pow(RadialCoord.sectorIncreaseFactor, increases));
+            return baseSectors << increases;
         }
 
         public override IEnumerable<RadialCoord> allMapCoords

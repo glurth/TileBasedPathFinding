@@ -5355,8 +5355,8 @@ MonoBehaviour:
   showDebugGUI: 0
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
-    m_ring: 12
-    m_sector: 10
+    m_ring: 20
+    m_sector: 12
 --- !u!4 &1686376027
 Transform:
   m_ObjectHideFlags: 0

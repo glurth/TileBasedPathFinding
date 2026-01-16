@@ -29,6 +29,7 @@ namespace EyE.Maps.Templates
         [SerializeField] int m_sector;
         public static MazeMapRadial mapRef;
 
+
         public RadialCoord(int ring, int sector)
         {
             m_ring = ring;

@@ -378,7 +378,7 @@ namespace EyE.Maps.Templates
                 //Debug.Log("Found neighbor-  current: " + current + "  neighbor: " + n);
                 neighborIndexCounter++;
             }
-             Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+           //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
             return -1;
         }
         private void RemoveWall(T current, T next)
