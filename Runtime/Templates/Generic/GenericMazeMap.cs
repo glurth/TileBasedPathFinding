@@ -381,6 +381,11 @@ namespace EyE.Maps.Templates
            //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
             return -1;
         }
+        /// <summary>
+        /// Does not performa ny checks, will throw index exceptions for out of bounds coordinates
+        /// </summary>
+        /// <param name="current"></param>
+        /// <param name="next"></param>
         private void RemoveWall(T current, T next)
         {
             int nieghborIndex = GetNeighborIndexOf(current, next);

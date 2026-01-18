@@ -4,11 +4,20 @@ using System;
 
 namespace EyE.Maps
 {
+    //test creation of base interface
+    public interface ITileCoordinateBase {
+        /// <summary>
+        /// Returns the number of neighboring tiles for this tile.
+        /// </summary>
+        /// <returns>The number of neighbors.</returns>
+        public int NumberOfNeighbors();
+    }
+
     /// <summary>
     /// Represents a tile coordinate with methods for neighbor retrieval and heuristic distance calculation.
     /// </summary>
     /// <typeparam name="T">The type that implements the TileCoordinate interface.</typeparam>
-    public interface ITileCoordinate<T> : IEquatable<T> where T : ITileCoordinate<T>
+    public interface ITileCoordinate<T> : IEquatable<T>, ITileCoordinateBase where T : ITileCoordinate<T>
     {
         /// <summary>
         /// The current value of the tile coordinate.
@@ -19,7 +28,7 @@ namespace EyE.Maps
         /// Returns the number of neighboring tiles for this tile.
         /// </summary>
         /// <returns>The number of neighbors.</returns>
-        public int NumberOfNeighbors();
+        //public int NumberOfNeighbors();
 
         /// <summary>
         /// Returns an array of neighboring tile coordinates.

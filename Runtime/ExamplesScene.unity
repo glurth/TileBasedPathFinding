@@ -5348,7 +5348,7 @@ MonoBehaviour:
   startPositionMarkerPrefab: {fileID: 525890849}
   endPositionMarkerPrefab: {fileID: 525890849}
   drawBorderWalls: 1
-  startHidden: 0
+  startHidden: 1
   createMazeOnEnable: 1
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
