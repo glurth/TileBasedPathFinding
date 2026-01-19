@@ -42,6 +42,10 @@ namespace EyE.Maps.Templates
             };
         }
 
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        {
+            return GetNeighbor(neighborIndex);
+        }
         public CubicCoord GetNeighbor(int neighborIndex)
         {
             var neighbors = GetNeighbors();

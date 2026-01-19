@@ -37,6 +37,10 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
             new RectangularCoord(new Vector2Int(x, y - 1))
         };
     }
+    public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+    {
+        return GetNeighbor(neighborIndex);
+    }
 
     public RectangularCoord GetNeighbor(int neighborIndex)
     {

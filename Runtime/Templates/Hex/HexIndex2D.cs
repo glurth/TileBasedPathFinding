@@ -307,6 +307,11 @@ namespace EyE.Maps.Templates
         {
             return GetAllNeighbors();
         }
+
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        {
+            return GetNeighbor(neighborIndex);
+        }
         public HexIndex2D GetNeighbor(int edge)//edge zero based 0-5
         {
             HexIndex2D oddEvenOffet = neighborIndexOffsets[edge];

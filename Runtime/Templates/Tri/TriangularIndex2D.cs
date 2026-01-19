@@ -78,6 +78,10 @@ namespace EyE.Maps.Templates
             }
             return neighbors;
         }
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        {
+            return GetNeighbor(neighborIndex);
+        }
 
         public TriangularIndex2D GetNeighbor(int neighborIndex)
         {

@@ -11,6 +11,13 @@ namespace EyE.Maps
         /// </summary>
         /// <returns>The number of neighbors.</returns>
         public int NumberOfNeighbors();
+
+        /// <summary>
+        /// Returns the neighboring tile at the specified index.
+        /// </summary>
+        /// <param name="neighborIndex">The index of the neighbor.</param>
+        /// <returns>The neighboring tile coordinate.</returns>
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex);
     }
 
     /// <summary>

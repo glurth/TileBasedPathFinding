@@ -58,6 +58,10 @@ namespace EyE.Maps.Templates
             return n;
         }
 
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        {
+            return GetNeighbor(neighborIndex);
+        }
 
         public RadialCoord GetNeighbor(int neighborIndex)
         {

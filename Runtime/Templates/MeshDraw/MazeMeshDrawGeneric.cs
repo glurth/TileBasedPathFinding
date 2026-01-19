@@ -854,7 +854,7 @@ namespace EyE.Maps.Templates
             chunkIDbyCoordinate = new Dictionary<T, int>();
             await taskContext.SetStageMessageAndYield("Chunks generated, create reverse lookup");
 
-            string logstr = "";
+            //string logstr = "";
             for (int chunkCounter = 0; chunkCounter < numChunks; chunkCounter++)
             {
                 List<T> coordList = chunkCoordinateLists[chunkCounter];
@@ -1502,7 +1502,7 @@ namespace EyE.Maps.Templates
             foreach (List<Edge> chuckEdges in edgesByChunk)
                 chuckEdges.Clear();
 
-            string logstr = "";
+            //string logstr = "";
             foreach (T coord in map.allMapCoords)
             {
                 int cornerCount = coord.NumberOfNeighbors();
@@ -1796,7 +1796,7 @@ namespace EyE.Maps.Templates
 
         async UniTask GenerateVertexPositionsAsync(TaskHandler taskContext)
         {
-            string logstr = "";
+            //string logstr = "";
             float halfT = wallThickness * 0.5f;
 
             for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)

@@ -60,6 +60,10 @@ namespace EyE.Maps.Templates
                 return hash;
             }
         }
+        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        {
+            return GetNeighbor(neighborIndex);
+        }
 
         public FaceCoordinate GetNeighbor(int neighborIndex)
         {

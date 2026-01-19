@@ -153,7 +153,7 @@ namespace EyE.Maps.Templates
            // Dictionary<HexIndex2D, int> cornerLookup = new Dictionary<HexIndex2D, int>();
             Dictionary<Vector3Int, int> cornerLookup = new Dictionary<Vector3Int, int>();
 
-            string logStr = "";
+           // string logStr = "";
             for (int y = 0; y < map.size.y; y++)
             {
                 for (int x = 0; x < map.size.x; x++)
