@@ -23,6 +23,7 @@ namespace EyE.Maps.Templates
         abstract public UniTask GenerateMazeAsync(TaskHandler taskContext, bool testAllWalls = false);
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
+        abstract public Vector3 GetModelSpacePosition(ITileCoordinateBase coordBase);
         abstract public Bounds GetModelSpaceBounds();
         abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
     }
@@ -438,6 +439,11 @@ namespace EyE.Maps.Templates
             return bounds;
         }
 
+        override public Vector3 GetModelSpacePosition(ITileCoordinateBase coordBase)
+        {
+            T coord = (T)coordBase;
+            return GetModelSpacePosition(coord);
+        }
         abstract public Vector3 GetModelSpacePosition(T coord);
 
         virtual public LineSegment GetModelSpaceEdge(T coord, int neighborIndex)
