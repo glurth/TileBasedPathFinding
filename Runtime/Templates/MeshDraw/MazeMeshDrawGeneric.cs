@@ -1234,7 +1234,7 @@ namespace EyE.Maps.Templates
         /// </summary>
         /// <param name="pos"></param>
         /// <returns></returns>
-        protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return Vector3.forward; }//  vector normalized for faces
+        protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return -Vector3.forward; }//  vector normalized for faces
         
         protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)
         {
