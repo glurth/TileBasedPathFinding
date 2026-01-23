@@ -9,13 +9,13 @@ namespace EyE.Maps.Templates
 
         protected override GenericMazeMap<HexIndex2D> CreateMazeMap()
         {
-            MazeMapHex maze = new MazeMapHex(mazeSize);
+            MazeMapHex maze = new MazeMapHex(mazeSize, mazeNormal);
             maze.GenerateMaze();
             return maze;
         }
         protected override async UniTask<GenericMazeMap<HexIndex2D>> CreateMazeMapAsync(TaskHandler taskContext)
         {
-            MazeMapHex maze = new MazeMapHex(mazeSize);
+            MazeMapHex maze = new MazeMapHex(mazeSize,mazeNormal);
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }

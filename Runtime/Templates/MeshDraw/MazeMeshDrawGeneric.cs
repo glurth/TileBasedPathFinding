@@ -45,6 +45,9 @@ static public class strext
     }
 
 }
+
+
+
 namespace EyE.Maps.Templates
 {
     /// <summary>
@@ -57,6 +60,8 @@ namespace EyE.Maps.Templates
     /// </typeparam>
     public abstract class MazeMeshDrawGeneric<T> : MonoBehaviour, IMazeDrawer<T> where T : ITileCoordinate<T>
     {
+        public Vector3 mazeNormal = Vector3.up;//-Vector3.forward;
+
         [SerializeField]//for debug
         GenericMazeMap<T> _maze=null;
         public GenericMazeMap<T> maze
@@ -166,7 +171,8 @@ namespace EyE.Maps.Templates
             timer.Start();
            // wallChunkMeshFilters[chunkIndex].sharedMesh = meshComputer.RebuildSingleChunk(chunkIndex);
            Mesh newMesh = meshComputer.RebuildSingleChunk(chunkIndex);
-            if(wallChunkMeshes[chunkIndex]!=null)
+        
+            if (wallChunkMeshes[chunkIndex]!=null)
                 Destroy(wallChunkMeshes[chunkIndex]);
             wallChunkMeshes[chunkIndex] = newMesh;// meshComputer.RebuildSingleChunk(chunkIndex);
             timer.Stop();
@@ -1227,16 +1233,30 @@ namespace EyE.Maps.Templates
         }
 
 
-        // protected virtual Vector3 NormalAtCoord(T coord) { return Vector3.forward; }// coord.modelspace positon, normalized for faces
-
         /// <summary>
-        /// returns the direction of the wall's height.  the base version is suitable for 2d mazes that face forward. 
+        /// returns the direction of the wall's height.  the base version is suitable for 2d mazes. 
         /// </summary>
         /// <param name="pos"></param>
         /// <returns></returns>
-        protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return -Vector3.forward; }//  vector normalized for faces
-        
+        protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return mazeDrawer.mazeNormal; }//  vector normalized for faces
+
         protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)
+        {
+            Vector3 tilePosition = map.GetModelSpacePosition(coord);
+            Vector3 neighborPosition = map.GetModelSpacePosition(coord.GetNeighbor(neighborIndex));
+
+            Vector3 wallPosition = (tilePosition + neighborPosition) * 0.5f;
+
+            Vector3 edgeDir = (neighborPosition - tilePosition).normalized;
+            Vector3 normal = NormalAtModelSpacePosition(tilePosition);
+            Vector3 right = Vector3.Cross(normal, edgeDir).normalized;
+
+            float neighborDist = Vector3.Distance(tilePosition, neighborPosition);
+            float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / coord.NumberOfNeighbors());
+
+            return wallPosition + right * (computedEdgeLength * 0.5f);
+        }
+        protected virtual Vector3 OLDComputeCornerPos(T coord, int neighborIndex)
         {
             //compute corner using orientation.
             int neighborCount = coord.NumberOfNeighbors();
@@ -1405,6 +1425,7 @@ namespace EyE.Maps.Templates
         /// <returns></returns>
         protected virtual async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
         {
+
             List<Vector3> uniqueCornerPositions = new List<Vector3>();
             Dictionary<Vector3, int> cornerIndexByPosition = new Dictionary<Vector3, int>( new Vector3ApproxComparer(.0001f));
             string logstr = "Building corner for map "+GetType();
@@ -1448,28 +1469,7 @@ namespace EyE.Maps.Templates
             Debug.Log(logstr);
             await UniTask.SwitchToThreadPool();
         }
-/*
-        bool CheckIsEdgeVisible(T coord, T neighborCoord)
-        {
-            //the map's walls are stored by neighbor index
-            int neighborIndex = 0;
-            while (neighborIndex < coord.NumberOfNeighbors())
-            {
-                if (coord.GetNeighbor(neighborIndex).Equals(neighborCoord))
-                    return CheckIsEdgeVisible(coord, neighborIndex, neighborCoord);
-                neighborIndex++;
-            }
-            throw new System.Exception("invalid coordinates passed to CheckIsEdgeVisible ("+coord+ ") is not a neighbor of (" + neighborCoord + ")");
-        }
 
-        bool CheckIsEdgeVisible(T coord, int neighborIndex, T neighborCoord)
-        {
-            bool hasWall = map.Walls[coord][neighborIndex];
-            if (!map.IsWithinBounds(neighborCoord.value))
-                hasWall = displayBorderWalls;
-            return hasWall && (mazeDrawer.IsTileVisible(coord) || mazeDrawer.IsTileVisible(neighborCoord));
-        }
-        */
 
         /*primary internal functions*/
         void BuildUniqueEdges() //to do: break into build unique, and build visible- build visible can be called  during chunk recompute without doing the whole maze
@@ -1724,13 +1724,13 @@ namespace EyE.Maps.Templates
                 {
                     c.fanRing = new Vector3[visibleEdges.Count];
                     Vector3 axis = cornerNormal;//.normalized;// assumes spheroid-fixed
-                    Vector3 refDir;
+                    /*Vector3 refDir;
                     if (Mathf.Abs(axis.z) < 0.99f)
                         refDir = Vector3.Cross(axis, Vector3.forward); // not parallel
                     else
                         refDir = Vector3.Cross(axis, Vector3.right);
                     refDir.Normalize();
-
+                    */
                     Vector3 avgRingPos = Vector3.zero;
                     //compute visibleCount fanRing verts
                     for (int eCounter = 0; eCounter < visibleEdges.Count; eCounter++)
@@ -1829,13 +1829,13 @@ namespace EyE.Maps.Templates
                     c.fanRing = new Vector3[visibleCount];
 
                     Vector3 axis = cornerNormal;
-                    Vector3 refDir;
+                    /*Vector3 refDir;
                     if (Mathf.Abs(axis.z) < 0.99f)
                         refDir = Vector3.Cross(axis, Vector3.forward);
                     else
                         refDir = Vector3.Cross(axis, Vector3.right);
                     refDir.Normalize();
-
+                    */
                     Vector3 avgRingPos = Vector3.zero;
 
                     for (int eCounter = 0; eCounter < visibleCount; eCounter++)

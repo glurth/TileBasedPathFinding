@@ -3,8 +3,20 @@ using UnityEngine;
 
 namespace EyE.Maps.Templates
 {
-    public class MazeMapTri : GenericMazeMap<TriangularIndex2D>
+    public class MazeMapTri : MazeMap2D<TriangularIndex2D> 
     {
+        
+        public MazeMapTri(TriangularIndex2D size,Vector3 mazeNormal, float worldScale = 1, int numSolutions = 1) :
+            base(size,
+            start: new TriangularIndex2D(0, 0),
+            end: new TriangularIndex2D(size.x - 1, size.y - 1),
+            mazeNormal,worldScale, numSolutions)
+        {
+
+        }
+        
+       
+
         public MazeMapTri(TriangularIndex2D size, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new TriangularIndex2D(0, 0),
@@ -28,18 +40,17 @@ namespace EyE.Maps.Templates
 //        private static float tileWidth = 2f / Mathf.Sqrt(3f);
         private static readonly float tileHeight = Mathf.Sqrt(3f) / 2f;
         private static readonly float centroidOffset = tileHeight / 3f;
+        private static readonly float pointingDownOffset = tileHeight - 2 * centroidOffset;
 
         public override Vector3 GetModelSpacePosition(TriangularIndex2D coord)
         {
-            float worldX = coord.x * 0.5f;
-            float worldY = coord.y * tileHeight;
+            float planarX = coord.x * 0.5f;
+            float planarY = coord.y * tileHeight;
 
-            if (coord.IsPointingUp())
-                worldY += centroidOffset;
-            else
-                worldY += tileHeight - centroidOffset;
-            return new Vector3(worldX, worldY, 0);
+            if (!coord.IsPointingUp())
+                planarY += pointingDownOffset;
 
+            return mapPlaneUp * planarY + mapPlaneRight * planarX;
         }
         public override Vector3 SingleTileModelSpaceOffset()
         {
@@ -51,28 +62,27 @@ namespace EyE.Maps.Templates
         {
             return coord.x >= 0 && coord.y >= 0 && coord.x < size.x && coord.y < size.y;
         }
-        //float[] neighborAnglesUp = new float[] { 0, 120 , 240  };
-        //float[] neighborAnglesDown = new float[] { 180, 120+180, 240 + 180 };
 
         float[] neighborAnglesDown = new float[] { 0, 240, 120 };
         float[] neighborAnglesUp = new float[] { 180, 240 + 180, 120 + 180 };
-
+        
         public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {
             if (coord.IsPointingUp())
-                return Quaternion.identity;
+                return mazeOrientation;
             else
-                return Quaternion.Euler(0, 0, 180);
+                return mazeOrientation * Quaternion.Euler(0, 0, 180);
         }
-
+        
         public override Quaternion NeighborBorderOrientation(TriangularIndex2D coord, int neighborIndex)
         {
+
             float rot;
             if (coord.IsPointingUp())
                 rot = neighborAnglesUp[neighborIndex];
             else
                 rot = neighborAnglesDown[neighborIndex];
-            return Quaternion.Euler(0, 0, rot);
+            return  (mazeOrientation) * (Quaternion.Euler(0, 0, rot));
         }
     }
 

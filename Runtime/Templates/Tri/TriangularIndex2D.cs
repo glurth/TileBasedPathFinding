@@ -43,15 +43,17 @@ namespace EyE.Maps.Templates
         private static readonly TriangularIndex2D[] downNeighborOffsets = new TriangularIndex2D[]
 
         {
-            new TriangularIndex2D(0, 1),
+            //new TriangularIndex2D(0, 1),
             new TriangularIndex2D(1,0),
+            new TriangularIndex2D(0, 1),
             new TriangularIndex2D(-1,0 )
         };
 
         private static readonly TriangularIndex2D[] upNeighborOffsets = new TriangularIndex2D[]
         {
-            new TriangularIndex2D(0, -1),
+            //new TriangularIndex2D(0, -1),
             new TriangularIndex2D(-1, 0),
+            new TriangularIndex2D(0, -1),
             new TriangularIndex2D(1, 0)
         };
 

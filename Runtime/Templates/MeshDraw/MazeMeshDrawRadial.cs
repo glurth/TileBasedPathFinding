@@ -349,44 +349,50 @@ namespace EyE.Maps.Templates
                 Vector3 b0o = bottomVerts[i] - normal2D0 * wallThickness * 0.5f;
                 Vector3 b1o = bottomVerts[i + 1] - normal2D1 * wallThickness * 0.5f;
 
-                Vector3 t0i = b0i + Vector3.forward * wallHeight;
-                Vector3 t1i = b1i + Vector3.forward * wallHeight;
-                Vector3 t0o = b0o + Vector3.forward * wallHeight;
-                Vector3 t1o = b1o + Vector3.forward * wallHeight;
+                Vector3 t0i = b0i + mazeDrawer.mazeNormal * wallHeight;
+                Vector3 t1i = b1i + mazeDrawer.mazeNormal * wallHeight;
+                Vector3 t0o = b0o + mazeDrawer.mazeNormal * wallHeight;
+                Vector3 t1o = b1o + mazeDrawer.mazeNormal * wallHeight;
 
                 int start = verts.Count;
 
                 // FRONT (inner)
                 verts.AddRange(new[] { b0i, b1i, t1i, t0i });
-                tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
                 start += 4;
 
                 // BACK (outer)
                 verts.AddRange(new[] { b1o, b0o, t0o, t1o });
-                tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
                 start += 4;
                 if (i == 0)
                 {
                     // LEFT
                     verts.AddRange(new[] { b0o, b0i, t0i, t0o });
-                    tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                    //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                    tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
                     start += 4;
                 }
                 if (i == n - 2)
                 {
                     // RIGHT
                     verts.AddRange(new[] { b1i, b1o, t1o, t1i });
-                    tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                    //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                    tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
                     start += 4;
                 }
                 // TOP
                 verts.AddRange(new[] { t0i, t1i, t1o, t0o });
-                tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
                 start += 4;
 
                 // BOTTOM
                 verts.AddRange(new[] { b0o, b1o, b1i, b0i });
-                tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+                tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
             }
 
             mesh.SetVertices(verts);

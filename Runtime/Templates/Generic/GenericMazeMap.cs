@@ -72,6 +72,8 @@ namespace EyE.Maps.Templates
             this.numSolutionsCounter = numSolutions;
         }
 
+
+
         void SanityCheckWalls()
         {
             int GetNeighborIndex(T source, T neighor)
@@ -446,7 +448,7 @@ namespace EyE.Maps.Templates
         }
         abstract public Vector3 GetModelSpacePosition(T coord);
 
-        virtual public LineSegment GetModelSpaceEdge(T coord, int neighborIndex)
+        /*virtual public LineSegment GetModelSpaceEdge(T coord, int neighborIndex)
         {
             // the below fails for curved surface mazes because the distance from the origin is based on face centers, not model verticies
             Vector3 tilePosition = GetModelSpacePosition(coord);
@@ -462,7 +464,7 @@ namespace EyE.Maps.Templates
             Vector3 wallLength =  wallRotation * Vector3.right * computedEdgeLength*0.5f;
             return new LineSegment(wallPosition + wallLength, wallPosition - wallLength);
         }
-
+        */
 
         virtual public Quaternion GetModelSpaceOrientation(T coord)
         {

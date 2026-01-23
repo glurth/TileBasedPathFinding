@@ -235,23 +235,25 @@ namespace EyE.Maps.Templates
 
         static public HexIndex2D[] neighborIndexOffsetsOddY = new HexIndex2D[]
         {
-            new HexIndex2D(1, 0),
-            new HexIndex2D(1, -1),
-            new HexIndex2D(0, -1),
-            new HexIndex2D(-1, 0),
-            new HexIndex2D(0, +1),
             new HexIndex2D(+1, +1),
-
+            new HexIndex2D(0, +1),
+            new HexIndex2D(-1, 0),
+            new HexIndex2D(0, -1),
+            new HexIndex2D(1, -1),
+            new HexIndex2D(1, 0),
         };
         static public HexIndex2D[] neighborIndexOffsetsEvenY = new HexIndex2D[]
         {
-        new HexIndex2D(1, 0),
-        new HexIndex2D(0, -1),
-        new HexIndex2D(-1, -1),
-        new HexIndex2D(-1, 0),
-        new HexIndex2D(-1, 1),
-        new HexIndex2D(0, 1),
+            new HexIndex2D(0, 1),
+            new HexIndex2D(-1, 1),
+            new HexIndex2D(-1, 0),
+            new HexIndex2D(-1, -1),
+            new HexIndex2D(0, -1),
+            new HexIndex2D(1, 0),
         };
+
+
+
         static public Vector3Int[] cubedNeighborCoords = new Vector3Int[]
         {
         new HexIndex2D(1, 0).ToCubedCoords(),

@@ -9,20 +9,17 @@ namespace EyE.Maps.Templates
 
         protected override GenericMazeMap<TriangularIndex2D> CreateMazeMap()
         {
-            MazeMapTri maze = new MazeMapTri(mazeSize);
+            MazeMapTri maze = new MazeMapTri(mazeSize,mazeNormal);
             maze.GenerateMaze();
             return maze;
         }
         protected override async UniTask<GenericMazeMap<TriangularIndex2D>> CreateMazeMapAsync(TaskHandler taskContext)
         {
-            MazeMapTri maze = new MazeMapTri(mazeSize);
+            MazeMapTri maze = new MazeMapTri(mazeSize, mazeNormal);
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }
-//        protected override TriangularIndex2D DefaultMazeSize()
- //       {
- //           return new TriangularIndex2D(10, 10);
- //       }
+
         protected override Chunker<TriangularIndex2D> GetChunker(int idealTrisPerChunk = 1000)
         {
             return new TriChunker(mazeSize);
@@ -100,7 +97,7 @@ namespace EyE.Maps.Templates
     }
     public class TriWallMeshComputer : WallMeshChunkComputerGeneric<TriangularIndex2D>
     {
-        protected override async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
+        protected /*override*/ async UniTask TestRemoveBuildUniqueCornersAsync(TaskHandler taskContext)
         {
             Dictionary<Vector2Int, int> cornerIndexByKey = new Dictionary<Vector2Int, int>();
             await taskContext.SetStageMessageAndYield("Tri-Corners generation");
@@ -132,26 +129,6 @@ namespace EyE.Maps.Templates
                     };
                 }
 
-                /*if (coord.IsPointingUp())
-                {
-                    // bottom, right, left
-                    corners = new Vector2Int[]
-                    {
-                        new Vector2Int(2 * coord.x + 1, 2 * coord.y),       // bottom
-                        new Vector2Int(2 * coord.x + 2, 2 * coord.y + 1),   // right
-                        new Vector2Int(2 * coord.x,     2 * coord.y + 1)    // left
-                    };
-                }
-                else
-                {
-                    // top, left, right
-                    corners = new Vector2Int[]
-                    {
-                        new Vector2Int(2 * coord.x + 1, 2 * coord.y + 2),   // top
-                        new Vector2Int(2 * coord.x,     2 * coord.y + 1),   // left
-                        new Vector2Int(2 * coord.x + 2, 2 * coord.y + 1)    // right
-                    };
-                }*/
 
                 for (int cornerNumber = 0; cornerNumber < 3; cornerNumber++)
                 {
