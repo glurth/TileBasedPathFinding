@@ -1240,7 +1240,7 @@ namespace EyE.Maps.Templates
         /// <returns></returns>
         protected virtual Vector3 NormalAtModelSpacePosition(Vector3 pos) { return mazeDrawer.mazeNormal; }//  vector normalized for faces
 
-        protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)
+        protected virtual Vector3 GeneralLocalComputeCornerPos(T coord, int neighborIndex)
         {
             Vector3 tilePosition = map.GetModelSpacePosition(coord);
             Vector3 neighborPosition = map.GetModelSpacePosition(coord.GetNeighbor(neighborIndex));
@@ -1256,7 +1256,7 @@ namespace EyE.Maps.Templates
 
             return wallPosition + right * (computedEdgeLength * 0.5f);
         }
-        protected virtual Vector3 OLDComputeCornerPos(T coord, int neighborIndex)
+        protected virtual Vector3 ComputeCornerPos(T coord, int neighborIndex)
         {
             //compute corner using orientation.
             int neighborCount = coord.NumberOfNeighbors();
@@ -1268,7 +1268,7 @@ namespace EyE.Maps.Templates
             Quaternion wallRotation = map.NeighborBorderOrientation(coord, neighborIndex);
             float neighborDist = (tilePosition - neighborPosition).magnitude;
             float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
-            Vector3 C1 = wallPosition + wallRotation * (computedEdgeLength * 0.5f * Vector3.left);
+            Vector3 C1 = wallPosition + wallRotation * (computedEdgeLength * 0.5f * Vector3.forward);//.left);
             return C1;
             
         }

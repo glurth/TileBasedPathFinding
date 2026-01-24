@@ -97,7 +97,7 @@ namespace EyE.Maps.Templates
     }
     public class TriWallMeshComputer : WallMeshChunkComputerGeneric<TriangularIndex2D>
     {
-        protected /*override*/ async UniTask TestRemoveBuildUniqueCornersAsync(TaskHandler taskContext)
+        protected override async UniTask BuildUniqueCornersAsync(TaskHandler taskContext)
         {
             Dictionary<Vector2Int, int> cornerIndexByKey = new Dictionary<Vector2Int, int>();
             await taskContext.SetStageMessageAndYield("Tri-Corners generation");

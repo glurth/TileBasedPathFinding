@@ -63,9 +63,10 @@ namespace EyE.Maps.Templates
             return coord.x >= 0 && coord.y >= 0 && coord.x < size.x && coord.y < size.y;
         }
 
-        float[] neighborAnglesDown = new float[] { 0, 240, 120 };
-        float[] neighborAnglesUp = new float[] { 180, 240 + 180, 120 + 180 };
-        
+        //float[] neighborAnglesDown = new float[] { 0, 240, 120 };
+        //float[] neighborAnglesUp = new float[] { 180, 240 + 180, 120 + 180 };
+        float[] neighborAnglesDown = new float[] { 240,0, 120 };
+        float[] neighborAnglesUp = new float[] { 240 + 180, 180, 120 + 180 };
         public override Quaternion GetModelSpaceOrientation(TriangularIndex2D coord)
         {
             if (coord.IsPointingUp())
@@ -73,17 +74,22 @@ namespace EyE.Maps.Templates
             else
                 return mazeOrientation * Quaternion.Euler(0, 0, 180);
         }
-        
+        /*
         public override Quaternion NeighborBorderOrientation(TriangularIndex2D coord, int neighborIndex)
         {
-
+            Quaternion gen =  base.NeighborBorderOrientation(coord, neighborIndex);
             float rot;
             if (coord.IsPointingUp())
-                rot = neighborAnglesUp[neighborIndex];
+                rot = neighborAnglesUp[2-neighborIndex];
             else
-                rot = neighborAnglesDown[neighborIndex];
+                rot = neighborAnglesDown[2-neighborIndex];
+
+            //Debug.Log("gen eulers: " + gen.eulerAngles + " array eulers" + ((mazeOrientation) * (Quaternion.Euler(0, 0, rot))).eulerAngles);
+
+
+
             return  (mazeOrientation) * (Quaternion.Euler(0, 0, rot));
-        }
+        }*/
     }
 
 }

@@ -49,7 +49,8 @@ namespace EyE.Maps.Templates
 
         public override Quaternion NeighborBorderOrientation(HexIndex2D coord, int neighborIndex)
         {
-            return mazeOrientation * Quaternion.Euler(0, 0, neighborAngles[neighborIndex]);
+
+            return mazeOrientation * Quaternion.Euler(0, 0, 30);// neighborAngles[5-neighborIndex]);
         }
     }
 }
