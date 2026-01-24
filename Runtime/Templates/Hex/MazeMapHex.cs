@@ -46,11 +46,11 @@ namespace EyE.Maps.Templates
             return coord.x >= 0 && coord.y >= 0 && coord.x < size.x && coord.y < size.y;
         }
         float[] neighborAngles = new float[] { 270, 210, 150, 90, 30, 330 };
-
+        /*
         public override Quaternion NeighborBorderOrientation(HexIndex2D coord, int neighborIndex)
         {
 
-            return mazeOrientation * Quaternion.Euler(0, 0, 30);// neighborAngles[5-neighborIndex]);
-        }
+            return mazeOrientation * Quaternion.Euler(0, 0, neighborAngles[neighborIndex]);
+        }*/
     }
 }
