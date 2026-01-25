@@ -32,6 +32,11 @@ namespace EyE.Maps.Templates
             Vector3 dir = Vector3.Cross(mazeNormal, diff.normalized);
             return Quaternion.LookRotation(dir, mazeNormal);
         }
+
+        override public Quaternion GetModelSpaceOrientation(T coord)
+        {
+            return mazeOrientation;
+        }
     }
 
 
