@@ -13,13 +13,15 @@ namespace EyE.Maps.Templates
             InitOrientationMembers(mazeNormal);
         }
         protected Quaternion mazeOrientation;
+        public Quaternion MazeOrientation { get => mazeOrientation; }
         protected Vector3 mazeNormal;
         protected Vector3 mapPlaneUp;
         protected Vector3 mapPlaneRight;
         void InitOrientationMembers(Vector3 mazeNormal)
         {
             this.mazeNormal = mazeNormal;
-            mazeOrientation = Quaternion.LookRotation(-mazeNormal);
+            Vector3 worldUp = (Mathf.Abs(mazeNormal.y) > 0.9f) ? Vector3.forward : Vector3.up;
+            mazeOrientation = Quaternion.LookRotation(-mazeNormal,worldUp);//negative normal here means the coords we use will act properly (e.g. x+ to the right), when looking AT the maze.
             mapPlaneUp = mazeOrientation * Vector3.up;
             mapPlaneRight = mazeOrientation * Vector3.right;
         }

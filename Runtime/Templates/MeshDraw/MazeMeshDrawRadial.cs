@@ -7,49 +7,23 @@ using EyE.Geometry;
 
 namespace EyE.Maps.Templates
 {
-    public static class Vector2Extensions
-    {
-        /// <summary>
-        /// Gets normal vector for angle, in radians, about origin.
-        /// </summary>
-        /// <param name="angle">angle in Radius</param>
-        /// <returns></returns>
-        static public Vector2 NormalFromAngle(float angle)
-        {
-            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-        }
-    }
-
     public class MazeMeshDrawRadial : MazeMeshDrawGeneric<RadialCoord>,IMazeDrawer<RadialCoord>
     {
-       // public float radialSpacing=1;
-       // public int numOfRingsToDoubleSectors=3;
-      //  MazeMapRadial radialMaze;
-       // public override GenericMazeMap<RadialCoord> maze => radialMaze;
-       /*
-        public void SetTileVisibility(RadialCoord coord, bool isVisible)
-        {
-           //throw new NotImplementedException();
-        }
-        */
+
         protected override GenericMazeMap<RadialCoord> CreateMazeMap()
         {
-            MazeMapRadial  radialMaze = new MazeMapRadial(mazeSize.ring,mazeSize.sector);
+            MazeMapRadial  radialMaze = new MazeMapRadial(mazeSize.ring,mazeSize.sector, mazeNormal);
             radialMaze.GenerateMaze();
             return radialMaze;
         }
 
         protected override async UniTask<GenericMazeMap<RadialCoord>> CreateMazeMapAsync(TaskHandler taskContext)
         {
-            MazeMapRadial radialMaze = new MazeMapRadial(mazeSize.ring, mazeSize.sector);
+            MazeMapRadial radialMaze = new MazeMapRadial(mazeSize.ring, mazeSize.sector, mazeNormal);
             await radialMaze.GenerateMazeAsync(taskContext);
             return radialMaze;
         }
 
-        /*protected override RadialCoord DefaultMazeSize()
-        {
-            return new RadialCoord(5, 10);
-        }*/
         protected override Chunker<RadialCoord> GetChunker(int idealTrisPerChunk = 1000)
         {
             return new RadialChunker(mazeSize, maze as  MazeMapRadial,idealTrisPerChunk);
@@ -176,6 +150,9 @@ namespace EyE.Maps.Templates
         async public UniTask<MeshData> GenerateChunkMesh(IReadOnlyList<RadialCoord> chunkTiles,TaskHandler taskContext)
         {
             MeshData mesh = new MeshData();
+            MazeMap2D<RadialCoord> mazeMap2D = mazeDrawer.maze as MazeMap2D<RadialCoord>;
+            Vector3 right = mazeMap2D.MazeOrientation * Vector3.right;
+            Vector3 up =mazeMap2D.MazeOrientation * Vector3.up;
 
             foreach (var tile in chunkTiles)
             {
@@ -191,45 +168,36 @@ namespace EyE.Maps.Templates
 
                     int wallIndex = map.GetNeighborIndexOf(tile, neighbor);
                     bool hasWall = (!inBounds) || map.Walls[tile][wallIndex];
-                    /*if (tile.sector == 0 || neighbor.sector == 0)
-                    {
-                        int testThisTileneighborIndex = map.GetNeighborIndexOf(neighbor, tile);
-                        if(inBounds)
-                            Debug.Log("has wall: ("+hasWall+") at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "] +  double check reverse: wall exists-" + map.Walls[neighbor][testThisTileneighborIndex]);
-                        else
-                            Debug.Log("has wall: (" + hasWall + ") at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "] +  neighbor is out of bounds");
-                    }*/
+
                     if (!hasWall)
                     {
                         continue;
                     }
                     if (!isTileVisible(tile) && ((!inBounds&& displayBorderWalls) || !isTileVisible(neighbor))) continue;
-                    // skip invisible tiles unless drawing borders
-                    //if (!displayBorderWalls)
-                      //  if (!isTileVisible(tile) && (inBounds && !isTileVisible(neighbor))) continue;
 
                     if (tile.ring == neighbor.ring)
                     {
                         // Radial wall between sectors in the same ring
-                        GenerateRadialWall(mesh, tile, neighbor);
+                        GenerateRadialWall(mesh, tile, neighbor, up, right, mazeDrawer.mazeNormal);
                     }
                     else
                     {
                         // Ring wall between rings (arc)
                        // Debug.Log("Drawing Ring wall at tile: [" + tile + "] neighborIndex: [" + wallIndex + "] at coord:[" + neighbor + "]");
-                        GenerateRingWall(mesh, tile, neighbor);
+                        GenerateRingWall(mesh, tile, neighbor, up, right, mazeDrawer.mazeNormal);
                     }
                 }
                 taskContext.IncrementProgress(1f);
                 await taskContext.Yield();
             }
+            //ReorientAllVerts(mesh, mazeMap2D.MazeOrientation);//
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
             return mesh;
         }
 
         // Ring wall: along the circular arc between tile and neighbor
-        void GenerateRingWall(MeshData mesh, RadialCoord tile, RadialCoord neighbor)
+        void GenerateRingWall(MeshData mesh, RadialCoord tile, RadialCoord neighbor, Vector3 planeUp, Vector3 planeRight, Vector3 planeNormal)
         {
             List<float> angles;
             RadialCoord innerTile = tile;
@@ -242,30 +210,25 @@ namespace EyE.Maps.Templates
             bool outerRingDoubles = (radialMap.SectorsAtRing(innerTile.ring) < radialMap.SectorsAtRing(outerTile.ring));
 
             if (innerTile.ring==0|| outerRingDoubles)
-                angles = GetWallSegmentAngles(outerTile, curvy);
+                angles = GetWallSegmentAnglesInTurns(outerTile, curvy);
             else
-                angles = GetWallSegmentAngles(innerTile, curvy);
+                angles = GetWallSegmentAnglesInTurns(innerTile, curvy);
 
             List<Vector3> bottomVerts = new List<Vector3>();
-            List<Vector3> topVerts = new List<Vector3>();
-
             float radius = radialMap.RingOuterRadius(innerTile.ring);// (tile.ring + 1) * radialDrawer.radialSpacing;// map.worldScale;
          //   Debug.Log("GenerateRingWall-  from-[" + tile + "]-angleTurns:"+tile.AngleInTurns+"    to Neighbor:  [" + neighbor + "] radius: "+radius+ "-angleTurns:" + tile.AngleInTurns);
             foreach (float a in angles)
             {
-                Vector2 pos = PolarToCartesian(a, radius);
+                Vector2 pos = RadialCoord.GetRadialDirection(a) * radius;
                // Debug.Log("     vert-[" + pos + "]   mag: " + pos.magnitude );
-                bottomVerts.Add(new Vector3(pos.x,  pos.y,0f));
+                bottomVerts.Add(planeUp * pos.y + planeRight * pos.x);// new Vector3(pos.x,  pos.y,0f));
             }
-
-            foreach (var v in bottomVerts)
-                topVerts.Add(new Vector3(v.x, v.y, wallHeight));
-            
-            AddWallQuads(mesh, bottomVerts, topVerts,true);
+           
+            AddWallQuads(mesh, bottomVerts, planeNormal, true);
         }
 
         // Radial wall: along the straight line from inner to outer radius
-        void GenerateRadialWall(MeshData mesh, RadialCoord tile, RadialCoord neighbor)
+        void GenerateRadialWall(MeshData mesh, RadialCoord tile, RadialCoord neighbor, Vector3 planeUp, Vector3 planeRight, Vector3 planeNormal)
         {
             //handle wrapping around ring 
             float tileAngle = tile.AngleInTurns;
@@ -285,46 +248,37 @@ namespace EyE.Maps.Templates
 
 
             // Radial line from inner to outer radius at tile's angle
-            float angle = angleInTurns * 2f * Mathf.PI;
-            Vector2 innerPos = PolarToCartesian(angle, radiusInner);
-            Vector2 outerPos = PolarToCartesian(angle, radiusOuter);
+            Vector2 angleDir = RadialCoord.GetRadialDirection(angleInTurns);
+            Vector2 innerPos = angleDir * radiusInner;// PolarToCartesian(angle, radiusInner);
+            Vector2 outerPos = angleDir * radiusOuter;// PolarToCartesian(angle, radiusOuter);
 
-            Vector3 bottomStart = new Vector3(innerPos.x, innerPos.y,0f);
-            Vector3 bottomEnd = new Vector3(outerPos.x, outerPos.y,0f);
-            Vector3 topStart = new Vector3(innerPos.x, innerPos.y, wallHeight);
-            Vector3 topEnd = new Vector3(outerPos.x, outerPos.y, wallHeight);
+            Vector3 bottomStart = planeUp * innerPos.y + planeRight * innerPos.x;
+            Vector3 bottomEnd = planeUp * outerPos.y + planeRight * outerPos.x;
 
             AddWallQuads(mesh,
-                new List<Vector3> { bottomStart, bottomEnd },
-                new List<Vector3> { topStart, topEnd });
+                    new List<Vector3> { bottomStart, bottomEnd },planeNormal);
+
         }
 
-        List<float> GetWallSegmentAngles(RadialCoord tile, int curvy)
+        List<float> GetWallSegmentAnglesInTurns(RadialCoord tile, int curvy)
         {
             float segementAngleLengthInTurns = .5f / radialMap.SectorsAtRing(tile.ring);
             segementAngleLengthInTurns *= mazeDrawer.wallWidthFraction;
-            float startAngle = (tile.AngleInTurns - segementAngleLengthInTurns) * 2f * Mathf.PI;
-            float endAngle =   (tile.AngleInTurns + segementAngleLengthInTurns) * 2f * Mathf.PI;
+            float startAngle = (tile.AngleInTurns - segementAngleLengthInTurns);// * 2f * Mathf.PI;
+            float endAngle = (tile.AngleInTurns + segementAngleLengthInTurns);// * 2f * Mathf.PI;
 
             // handle wrap around 0
-            if (endAngle < startAngle) endAngle += 2f * Mathf.PI;
+            if (endAngle < startAngle) endAngle += 1f;// 2f * Mathf.PI;
 
             List<float> angles = new List<float>();
+            float frac = 1f / (float)curvy;
             for (int i = 0; i <= curvy; i++)
-                angles.Add(Mathf.Lerp(startAngle, endAngle, i / (float)curvy));
+                angles.Add(Mathf.Lerp(startAngle, endAngle, i * frac));
 
             return angles;
         }
 
-
-
-        Vector2 PolarToCartesian(float angle, float radius)
-        {
-            return Vector2Extensions.NormalFromAngle(angle) * radius;
-            //return new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
-        }
-
-        void AddWallQuads(MeshData mesh, List<Vector3> bottomVerts, List<Vector3> topVerts, bool useNormalizePositionForNormal=false)
+        void AddWallQuads(MeshData mesh, List<Vector3> bottomVerts, Vector3 heightDir, bool useNormalizePositionForNormal=false)
         {
             int n = bottomVerts.Count;
             if (n < 2) return;
@@ -335,24 +289,24 @@ namespace EyE.Maps.Templates
             for (int i = 0; i < n - 1; i++)
             {
                 Vector3 dir = (bottomVerts[i + 1] - bottomVerts[i]).normalized;
-                Vector3 normal2D = new Vector3(-dir.y, dir.x, 0f);
-                Vector3 normal2D0 = -bottomVerts[i].normalized;
-                Vector3 normal2D1 = -bottomVerts[i+1].normalized;
+                Vector3 perpendicular2D = -Vector3.Cross(dir, heightDir).normalized;
+                Vector3 perpendicular2D0 = bottomVerts[i].normalized;
+                Vector3 perpendicular2D1 = bottomVerts[i+1].normalized;
                 if (!useNormalizePositionForNormal)
                 {
-                    normal2D0 = normal2D;
-                    normal2D1 = normal2D;
+                    perpendicular2D0 = perpendicular2D;
+                    perpendicular2D1 = perpendicular2D;
                 }
 
-                Vector3 b0i = bottomVerts[i] + normal2D0 * wallThickness * 0.5f;
-                Vector3 b1i = bottomVerts[i + 1] + normal2D1 * wallThickness * 0.5f;
-                Vector3 b0o = bottomVerts[i] - normal2D0 * wallThickness * 0.5f;
-                Vector3 b1o = bottomVerts[i + 1] - normal2D1 * wallThickness * 0.5f;
+                Vector3 b0i = bottomVerts[i] - perpendicular2D0 * wallThickness * 0.5f;
+                Vector3 b1i = bottomVerts[i + 1] - perpendicular2D1 * wallThickness * 0.5f;
+                Vector3 b0o = bottomVerts[i] + perpendicular2D0 * wallThickness * 0.5f;
+                Vector3 b1o = bottomVerts[i + 1] + perpendicular2D1 * wallThickness * 0.5f;
 
-                Vector3 t0i = b0i + mazeDrawer.mazeNormal * wallHeight;
-                Vector3 t1i = b1i + mazeDrawer.mazeNormal * wallHeight;
-                Vector3 t0o = b0o + mazeDrawer.mazeNormal * wallHeight;
-                Vector3 t1o = b1o + mazeDrawer.mazeNormal * wallHeight;
+                Vector3 t0i = b0i + heightDir * wallHeight;
+                Vector3 t1i = b1i + heightDir * wallHeight;
+                Vector3 t0o = b0o + heightDir * wallHeight;
+                Vector3 t1o = b1o + heightDir * wallHeight;
 
                 int start = verts.Count;
 
@@ -397,6 +351,17 @@ namespace EyE.Maps.Templates
 
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris);
+        }
+
+        void ReorientAllVerts(MeshData mesh, Quaternion orientataion)
+        {
+            for (int i = 0; i < mesh.vertexCount; i++)
+            {
+
+                Vector3 vert = mesh.vertices[i];
+                vert = orientataion * vert;
+                mesh.vertices[i] = vert;
+            }
         }
     }
 

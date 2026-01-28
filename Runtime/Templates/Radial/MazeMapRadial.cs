@@ -16,12 +16,18 @@ namespace EyE.Maps.Templates
     /// This map will configure RadialCoord static parameters on construction so
     /// RadialCoord.GetNeighbor/heuristic/mapping behave consistently for the map.
     /// </summary>
-    public class MazeMapRadial : GenericMazeMap<RadialCoord>
+    public class MazeMapRadial : MazeMap2D<RadialCoord>//GenericMazeMap<RadialCoord>
     {
         private int rings;
         internal int baseSectors;
 
-
+        public MazeMapRadial(int rings, int baseSectors, Vector3 mazeNormal,  float worldScale = 1f, int numSolutions = 1)
+            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), mazeNormal, worldScale, numSolutions)
+        {
+            this.rings = Mathf.Max(1, rings);
+            this.baseSectors = Mathf.Max(1, baseSectors);
+            RadialCoord.mapRef = this;
+        }
         public MazeMapRadial(int rings, int baseSectors = 6, float worldScale = 1f, int numSolutions = 1)
             : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), worldScale, numSolutions)
         {
@@ -85,7 +91,8 @@ namespace EyE.Maps.Templates
             
            // float angle = coord.AngleInTurns * Mathf.PI * 2f;
             Vector2 posOnPlane = coord.radialDirection*radius;// Vector2Extensions.NormalFromAngle(angle)* radius;
-            return new Vector3(posOnPlane.x, posOnPlane.y,0);
+            return mapPlaneUp * posOnPlane.y + mapPlaneRight * posOnPlane.x;
+            //return new Vector3(posOnPlane.x, posOnPlane.y,0);
         }
 
         public override Vector3 SingleTileModelSpaceOffset()
@@ -108,22 +115,23 @@ namespace EyE.Maps.Templates
         // Orientation for a border between coord and neighborIndex: rotate so +X points across the edge
         public override Quaternion NeighborBorderOrientation(RadialCoord coord, int neighborIndex)
         {
+
             // Find neighbor and use the midpoint angle between the two tile centers to orient the wall
             RadialCoord neighbor = coord.GetNeighbor(neighborIndex);
 
 
             Vector3 a = GetModelSpacePosition(coord);
             Vector3 b = GetModelSpacePosition(neighbor);
-            if (neighbor.ring == coord.ring)
+            if (neighbor.ring == coord.ring)//same ring- this a radial wall
             {
-                float avgTurns = (coord.AngleInTurns + neighbor.AngleInTurns)*0.5f;
-                return Quaternion.Euler(0, 0,90+ avgTurns * 360);
+                float avgTurns = (coord.AngleInTurns + neighbor.AngleInTurns)*0.5f;// edge between them
+                return UnityEngine.Quaternion.AngleAxis(avgTurns * 360,mazeNormal);//  mazeOrientation * Quaternion.Euler(0, 0,90+ avgTurns * 360);
             }
             //if we get here we are on different rings.
             //we will use the OUTER ring's coordinate to compute wall angle.
             if (neighbor.ring > coord.ring)
-                return Quaternion.Euler(0, 0,90 + neighbor.AngleInTurns * 360);
-            return Quaternion.Euler(0, 0,  coord.AngleInTurns * 360);
+                return UnityEngine.Quaternion.AngleAxis(-90+(neighbor.AngleInTurns * 360), mazeNormal);//mazeOrientation * Quaternion.Euler(0, 0,90 + neighbor.AngleInTurns * 360);
+            return UnityEngine.Quaternion.AngleAxis(-90+(coord.AngleInTurns * 360), mazeNormal);//mazeOrientation * Quaternion.Euler(0, 0,  coord.AngleInTurns * 360);
         }
 
 
@@ -131,7 +139,7 @@ namespace EyE.Maps.Templates
         {
             Bounds bounds;
             float r = RingOuterRadius(rings-1) * 2f;
-            bounds = new Bounds(Vector3.zero, new Vector3(r,r,0));
+            bounds = new Bounds(Vector3.zero, new Vector3(r,r,r));
             return bounds;
         }
     }

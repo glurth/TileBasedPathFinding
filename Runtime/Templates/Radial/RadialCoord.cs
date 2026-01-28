@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using EyE.Maps;
 
@@ -28,7 +29,6 @@ namespace EyE.Maps.Templates
         [SerializeField] int m_ring;
         [SerializeField] int m_sector;
         public static MazeMapRadial mapRef;
-
 
         public RadialCoord(int ring, int sector)
         {
@@ -125,6 +125,8 @@ namespace EyE.Maps.Templates
             RadialCoord b = end.value;
             int rDiff = Mathf.Abs(a.ring - b.ring);
             int aDiff = Mathf.Abs(a.sector - b.sector);
+            int ringSectors = mapRef.SectorsAtRing(this.ring);
+            aDiff = Mathf.Min(aDiff, ringSectors - aDiff);
             return rDiff + aDiff;
         }
 
@@ -133,11 +135,14 @@ namespace EyE.Maps.Templates
         {
             get
             {
-                float angleRad = AngleInTurns * 2f * Mathf.PI;
-                return Vector2Extensions.NormalFromAngle(angleRad);
+                return GetRadialDirection(AngleInTurns);
             }
         }
-
+        static public Vector2 GetRadialDirection(float angleInTurns)
+        {
+                float angleRad = angleInTurns * 2f * Mathf.PI;
+                return new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+        }
         public static RadialCoord invalid => new RadialCoord(-1, -1);
 
         public static bool operator ==(RadialCoord a, RadialCoord b) => (a.ring == b.ring && a.sector == b.sector);

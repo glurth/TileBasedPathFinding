@@ -5362,7 +5362,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1650533669
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5442,7 +5442,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1686376025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5457,13 +5457,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
   tileScale: 1
-  wallThicknessFraction: 0.1
+  wallThicknessFraction: 0.2
   wallHeightFraction: 1
   wallWidthFraction: 1
   startPositionMarkerPrefab: {fileID: 525890849}
   endPositionMarkerPrefab: {fileID: 525890849}
   drawBorderWalls: 1
-  startHidden: 1
+  startHidden: 0
   createMazeOnEnable: 1
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}

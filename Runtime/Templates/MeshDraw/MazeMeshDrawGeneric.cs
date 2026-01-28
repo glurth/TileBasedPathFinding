@@ -730,7 +730,7 @@ namespace EyE.Maps.Templates
         private async UniTask GenerateMazeVisualsAsync(TaskHandler taskContext)
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = Mathf.Max(tileOffset.x, tileOffset.y, tileOffset.z);
+            tileScale = Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             await GenerateWallChunkMeshesAsync(taskContext);
             return;
         }
