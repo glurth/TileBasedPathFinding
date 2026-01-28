@@ -139,7 +139,7 @@ namespace EyE.Maps.Templates
         {
             Bounds bounds;
             float r = RingOuterRadius(rings-1) * 2f;
-            bounds = new Bounds(Vector3.zero, new Vector3(r,r,r));
+            bounds = new Bounds(Vector3.zero, mazeOrientation* new Vector3(r,r,0));
             return bounds;
         }
     }
