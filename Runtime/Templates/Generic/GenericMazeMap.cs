@@ -24,6 +24,7 @@ namespace EyE.Maps.Templates
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
         abstract public Vector3 GetModelSpacePosition(ITileCoordinateBase coordBase);
+        abstract public Quaternion GetModelSpaceOrientation(ITileCoordinateBase coordBase);
         abstract public Bounds GetModelSpaceBounds();
         abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
     }
@@ -48,7 +49,7 @@ namespace EyE.Maps.Templates
         public T start;
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
-        
+
         public GenericMazeMap(T size, T start, T end, float worldScale = 1f, int numSolutions = 1)
         {
             this.start = start;
@@ -223,7 +224,7 @@ namespace EyE.Maps.Templates
                     T next = PickWeighted(neighbors, stack);
                     //  while (DistFromPath(next) < 2 && ((random.Next()&0x01)==0))
                     {
-                    //    next = neighbors[random.Next(neighbors.Count)];
+                        //    next = neighbors[random.Next(neighbors.Count)];
                     }
 
                     RemoveWall(current, next);
@@ -240,19 +241,19 @@ namespace EyE.Maps.Templates
 
             return path;
 
-            float DistFromPath(T checkCoord,Stack<T> stack)
+            float DistFromPath(T checkCoord, Stack<T> stack)
             {
                 float min = float.PositiveInfinity;
                 foreach (T pathStep in stack)
                 {
-                    float dist =checkCoord.HeuristicDistanceTo(pathStep);
+                    float dist = checkCoord.HeuristicDistanceTo(pathStep);
                     if (dist < min) min = dist;
                 }
                 return min;
             }
         }
 
-        int numSolutionsCounter=1;
+        int numSolutionsCounter = 1;
         /// <summary>
         /// Asynchronously generates branching paths off the main path.
         /// </summary>
@@ -283,7 +284,7 @@ namespace EyE.Maps.Templates
                             numSolutionsCounter--;
                         }
                     }
-                            
+
                 }
 
                 allPathSteps.AddRange(newPath);
@@ -292,7 +293,7 @@ namespace EyE.Maps.Templates
             }
         }
 
-        bool TryFindRandomCoordOnPathNeighoringMainPath(List<T> mainPath, List<T> pathToCheck, out T mainPathCoord,out T pathCoord)
+        bool TryFindRandomCoordOnPathNeighoringMainPath(List<T> mainPath, List<T> pathToCheck, out T mainPathCoord, out T pathCoord)
         {
             //start at end of mainPath
             for (int i = mainPath.Count - 1; i >= 0; i--)
@@ -362,7 +363,7 @@ namespace EyE.Maps.Templates
             {
                 if (IsWithinBounds(neighbor))
                 {
-                   // Debug.Log(" checking neighbor for visited-  current: " + tile + "  neighbor: " + neighbor);
+                    // Debug.Log(" checking neighbor for visited-  current: " + tile + "  neighbor: " + neighbor);
                     if (!visited[neighbor])
                         unVisitedneighbors.Add(neighbor);
                 }
@@ -381,7 +382,7 @@ namespace EyE.Maps.Templates
                 //Debug.Log("Found neighbor-  current: " + current + "  neighbor: " + n);
                 neighborIndexCounter++;
             }
-           //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+            //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
             return -1;
         }
         /// <summary>
@@ -465,7 +466,11 @@ namespace EyE.Maps.Templates
             return new LineSegment(wallPosition + wallLength, wallPosition - wallLength);
         }
         */
-
+        override public Quaternion GetModelSpaceOrientation(ITileCoordinateBase coordBase)
+        {
+            T coord = (T)coordBase;
+            return GetModelSpaceOrientation(coord);
+        }
         virtual public Quaternion GetModelSpaceOrientation(T coord)
         {
             return Quaternion.identity;
