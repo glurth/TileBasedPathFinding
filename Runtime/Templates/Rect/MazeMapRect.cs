@@ -35,6 +35,11 @@ namespace EyE.Maps.Templates
             return Quaternion.LookRotation(dir, mazeNormal);
         }
 
+        /// <summary>
+        /// An orientation that looks outward from the maze in the direction of -mazeNormal, with "up" being +z axis (unless that is the normal direction, in which case the "up" will be +x)
+        /// </summary>
+        /// <param name="coord"></param>
+        /// <returns>the maze orientation as (possibly) affected by tile rotation</returns>
         override public Quaternion GetModelSpaceOrientation(T coord)
         {
             return mazeOrientation;

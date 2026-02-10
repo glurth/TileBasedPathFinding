@@ -1518,21 +1518,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 0.022
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.3
   wallWidthFraction: 1
+  drawBorderWalls: 0
+  startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
-  drawBorderWalls: 0
-  startHidden: 0
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 44bbd85b32a72ce40b535b59c6279360,
     type: 2}
 --- !u!4 &272009860
@@ -2064,21 +2064,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 0.022
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.3
   wallWidthFraction: 1
+  drawBorderWalls: 0
+  startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
-  drawBorderWalls: 0
-  startHidden: 0
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 86b67ac3b64abc34ca9bc61dc4de2966,
     type: 2}
 --- !u!4 &419970633
@@ -2342,20 +2342,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f8bdef2ccc54a64ab256f489ce04225, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 1
-  wallThicknessFraction: 0.1
+  mazeNormal: {x: -0, y: 1, z: 0}
+  wallDimensionsAsFractionOfTileScale: 0
+  wallThicknessFraction: 0.2
   wallHeightFraction: 0.2
   wallWidthFraction: 1
-  startPositionMarkerPrefab: {fileID: 0}
-  endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   startHidden: 0
+  startPositionMarkerPrefab: {fileID: 0}
+  endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
     m_x: 20
     m_y: 20
@@ -3239,21 +3239,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 0.022
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.3
   wallWidthFraction: 1
+  drawBorderWalls: 0
+  startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
-  drawBorderWalls: 0
-  startHidden: 0
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: d59bfdb5f6428384ebb3862b01637756,
     type: 2}
 --- !u!4 &796440790
@@ -3674,21 +3674,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 0.022
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.05
   wallHeightFraction: 0.1
   wallWidthFraction: 1
+  drawBorderWalls: 0
+  startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
-  drawBorderWalls: 0
-  startHidden: 0
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 0}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 96722b6dc0fdd0d48a41fb05a5e7d89d,
     type: 2}
 --- !u!4 &957235582
@@ -4601,21 +4601,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 0.022
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.3
   wallWidthFraction: 1
+  drawBorderWalls: 0
+  startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
-  drawBorderWalls: 0
-  startHidden: 0
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 58933a1e2867f744ab78eb374ed478ed,
     type: 2}
 --- !u!4 &1313517988
@@ -4667,19 +4667,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: 0, z: -1}
-  tileScale: 1
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.2
   wallWidthFraction: 1
-  startPositionMarkerPrefab: {fileID: 0}
-  endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   startHidden: 0
+  startPositionMarkerPrefab: {fileID: 0}
+  endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
     data: {x: 20, y: 20}
 --- !u!114 &1408425214
@@ -5391,19 +5391,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: 0, z: -1}
-  tileScale: 1
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 0.5
   wallWidthFraction: 1
-  startPositionMarkerPrefab: {fileID: 0}
-  endPositionMarkerPrefab: {fileID: 0}
   drawBorderWalls: 1
   startHidden: 0
+  startPositionMarkerPrefab: {fileID: 0}
+  endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
     m_x: 10
     m_y: 10
@@ -5442,7 +5442,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1686376025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5456,19 +5456,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mazeNormal: {x: -0, y: -0, z: -1}
-  tileScale: 1
+  wallDimensionsAsFractionOfTileScale: 0
   wallThicknessFraction: 0.2
   wallHeightFraction: 1
   wallWidthFraction: 1
-  startPositionMarkerPrefab: {fileID: 525890849}
-  endPositionMarkerPrefab: {fileID: 525890849}
   drawBorderWalls: 1
   startHidden: 0
+  startPositionMarkerPrefab: {fileID: 525890849}
+  endPositionMarkerPrefab: {fileID: 525890849}
   createMazeOnEnable: 1
+  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
   editorDefinedCreateOnEnableSize:
     m_ring: 20
     m_sector: 12

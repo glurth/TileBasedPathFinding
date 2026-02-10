@@ -50,6 +50,40 @@ static public class strext
 
 namespace EyE.Maps.Templates
 {
+
+    public abstract class MazeMeshDrawBase : MonoBehaviour
+    {
+        // ================================
+        // Map Abstraction (non-generic)
+        // ================================
+
+        public abstract GenericMazeMapBase mazeBase { get; }
+        public abstract UniTask SetMazeAsync<T>(GenericMazeMap<T> toValue, TaskHandler taskContext) where T : ITileCoordinate<T>;
+        public abstract UniTask SetMazeAsync(GenericMazeMapBase toValue, TaskHandler taskContext);
+
+        public Vector3 mazeNormal = Vector3.up;
+        public float TileScale { get => tileScale; }
+        protected float tileScale = 1f;
+        public bool wallDimensionsAsFractionOfTileScale=false;
+        public float wallThicknessFraction = 0.2f;
+        public float wallHeightFraction = 0.2f;
+        public float wallWidthFraction = 1f;
+        public bool drawBorderWalls = true;        // Determines if border walls should be drawn
+        public bool startHidden = false;
+
+        public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
+        public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
+        /// <summary>
+        /// mostly used for testing- automatically create a random maze upon enable.
+        /// </summary>
+        public bool createMazeOnEnable = true;
+        public Material wallChunkMaterial;
+
+      //  public abstract void BakeMapTexture(RenderTexture targetTexture);
+        public abstract bool IsTileVisible(ITileCoordinateBase coord);
+        public abstract void SetTileVisibility(ITileCoordinateBase coord, bool isVisible);
+    }
+
     /// <summary>
     /// Base class for drawing a maze using mesh chunks.
     /// Handles maze assignment, visibility, and asynchronous mesh generation.
@@ -58,17 +92,29 @@ namespace EyE.Maps.Templates
     /// <typeparam name="T">
     /// Coordinate type implementing <see cref="ITileCoordinate{T}"/> used to index maze tiles.
     /// </typeparam>
-    public abstract class MazeMeshDrawGeneric<T> : MonoBehaviour, IMazeDrawer<T> where T : ITileCoordinate<T>
+    public abstract class MazeMeshDrawGeneric<T> : MazeMeshDrawBase, IMazeDrawer<T> where T : ITileCoordinate<T>
     {
-        public Vector3 mazeNormal = Vector3.up;//-Vector3.forward;
+       // public Vector3 mazeNormal = Vector3.up;//-Vector3.forward;
 
-        [SerializeField]//for debug
-        GenericMazeMap<T> _maze=null;
-        public GenericMazeMap<T> maze
+        public override GenericMazeMapBase mazeBase{get => _maze;}
+        public override UniTask SetMazeAsync(GenericMazeMapBase toValue, TaskHandler taskContext)
         {
-            get => _maze;
+            return SetMazeAsync<T>((GenericMazeMap<T>)toValue, taskContext);
+        }
+        public override void SetTileVisibility(ITileCoordinateBase coord, bool isVisible)
+        {
+            SetTileVisibility((T)coord, isVisible);
+        }
+        public override bool IsTileVisible(ITileCoordinateBase coord)
+        {
+            return IsTileVisible((T)coord);
         }
 
+        [SerializeField]//for debug
+        GenericMazeMap<T> _maze = null;
+        public GenericMazeMap<T> maze{get => _maze;}
+
+        /*
         /// <summary>
         /// Assigns a maze map and immediately generates its mesh representation.
         /// </summary>
@@ -78,8 +124,8 @@ namespace EyE.Maps.Templates
             _maze = toValue;
             BuildChucks();
             GenerateMazeVisuals();
-            chunkRegenByIndex.Clear(); //test??
-        }
+            chunkRegenByIndex.Clear(); 
+        }*/
         /// <summary>
         /// Sets an external visibility dictionary reference for per-tile visibility control.
         /// </summary>
@@ -90,6 +136,7 @@ namespace EyE.Maps.Templates
         }
 
         protected bool mazeGenerationRunning = false;// locks Update function
+
         /// <summary>
         /// Asynchronously assigns a maze and builds its mesh on a background thread.
         /// </summary>
@@ -97,26 +144,25 @@ namespace EyE.Maps.Templates
         /// <param name="cancelRef">Optional cancellation flag reference.</param>
         /// <param name="progressRef">Optional progress tracking reference (0–1).</param>
         /// <returns>Awaitable UniTask that completes when mesh generation finishes.</returns>
-        public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
+        public override async UniTask SetMazeAsync<TCoord>(GenericMazeMap<TCoord> toValue, TaskHandler taskContext) 
+        // public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
         {
-            /*if (this.taskContext != taskContext)  // new task does not match old task
-            {
-                if (this.taskContext != null && this.taskContext.IsRunning)// if old task is not null, and still running, cancel it.
-                {
-                    this.taskContext.DoCancel();
-                    this.taskContext.Dispose();
-                    Debug.LogWarning(GetType() + ".SetMazeAsync async provided a new TaskHandler, but it already has one that is still running. WARNING: canceling and disposing this old task."); 
-                }
-                this.taskContext = taskContext;
-            }*/
+
             this.taskContext = taskContext;
             mazeGenerationRunning = true;
             //await UniTask.SwitchToThreadPool();
 
             await taskContext.SetStageMessageAndYield("Starting Tasks");
-            
-            
-            _maze = toValue;
+
+            if (toValue is GenericMazeMap<T> typedMaze)
+            {
+                _maze = typedMaze;
+            }
+            else
+            {
+                throw new ArgumentException("Maze object passed to " + GetType() + ".SetMazeAsync(), is not the correct type of maze: " + toValue.GetType());
+            }
+            //_maze = toValue;
             await taskContext.SetStageMessageAndYield("Building Chunks");
             await BuildChucksAsync(taskContext);
             await taskContext.SetStageMessageAndYield("Building Maze Visuals");
@@ -128,6 +174,7 @@ namespace EyE.Maps.Templates
             chunkRegenByIndex.Clear();//ensure we dont regen right away
             
         }
+        
         public T mazeSize
         {
             get
@@ -136,7 +183,7 @@ namespace EyE.Maps.Templates
                 return DefaultMazeSize();
             }
         }
-
+        /* moved to base
         public float tileScale = 1f;               // Size of the tiles
         public float wallThicknessFraction = 0.2f; // Thickness of the walls (fraction of tile size)
         public float wallHeightFraction = 0.2f; // Thickness of the walls (fraction of tile size)
@@ -144,12 +191,20 @@ namespace EyE.Maps.Templates
         
         public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
         public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
+
+        public bool drawBorderWalls = true;        // Determines if border walls should be drawn
+        public bool startHidden = false;
+                /// <summary>
+        /// mostly used for testing- automatically create a random maze upon enable.
+        /// </summary>
+        public bool createMazeOnEnable = true;
+        */
+
         //instance refs
         private GameObject instantiatedStartPositionMarker;
         private GameObject instantiatedEndPositionMarker;
 
-        public bool drawBorderWalls = true;        // Determines if border walls should be drawn
-        public bool startHidden = false;
+        
     //    protected List<MeshFilter> wallChunkMeshFilters;
     //    public MeshFilter wallChunkMeshFilterPrefab;
         //visibility stuff
@@ -178,14 +233,6 @@ namespace EyE.Maps.Templates
             timer.Stop();
             Debug.Log("Regen of chunk ["+chunkIndex+"] time: " + timer.Elapsed);
         }
-
-
-
-        /// <summary>
-        /// mostly used for testing- automatically create a random maze upon enable.
-        /// </summary>
-        public bool createMazeOnEnable = true;
-
 
         private TaskHandler taskContext;// = new TaskContext();
         /// <summary>
@@ -238,8 +285,6 @@ namespace EyE.Maps.Templates
             }
             
         }
-
-
 
         /// <summary>
         /// Called internally to (re)allocate and initialize maze chunks.
@@ -356,8 +401,9 @@ namespace EyE.Maps.Templates
             }
 
             meshComputer = GetNewMeshComputer();
-            
-            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, tileScale * wallThicknessFraction, tileScale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext);
+            float scale = 1f;
+            if (wallDimensionsAsFractionOfTileScale) scale = tileScale;
+            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, scale * wallThicknessFraction, scale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext);
 
             if (taskContext.IsCancellationRequested) return;
 
@@ -389,9 +435,8 @@ namespace EyE.Maps.Templates
         }
 
 
-        //opimize test- rather than instantiating 
+
         private List<Mesh> wallChunkMeshes = new List<Mesh>();
-        public Material wallChunkMaterial;
         private Matrix4x4 cachedWorldTransform; // Stores the last calculated matrix
         //renders chunckmeshes to main camera using Graphics.DrawMesh
         void LateUpdate()
@@ -722,7 +767,7 @@ namespace EyE.Maps.Templates
         private void GenerateMazeVisuals()
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = Mathf.Max(tileOffset.x, tileOffset.y, tileOffset.z);
+            tileScale = Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             GenerateWallChunkMeshes();
             return;
         }
@@ -735,11 +780,13 @@ namespace EyE.Maps.Templates
             return;
         }
 
+
         public bool IsTileVisible(T coord)
         {
             return tileVisibility.ContainsKey(coord) && tileVisibility[coord];
         }
-        
+
+
         public virtual void SetTileVisibility(T coord, bool isVisible)
         {
           //  if (!maze.IsWithinBounds(coord)) return;
