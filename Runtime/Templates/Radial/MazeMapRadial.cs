@@ -98,8 +98,8 @@ namespace EyE.Maps.Templates
         public override Vector3 SingleTileModelSpaceOffset()
         {
             // approximate offset between tile (0,0) and (1,0) (i.e., radial increment)
-            Vector3 a = GetModelSpacePosition(new RadialCoord(0, 0));
-            Vector3 b = GetModelSpacePosition(new RadialCoord(1, 0));
+            Vector3 a = GetModelSpacePosition(new RadialCoord(1, 0));
+            Vector3 b = GetModelSpacePosition(new RadialCoord(1, 1));
             return b - a;
         }
 
