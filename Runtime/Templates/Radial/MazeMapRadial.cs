@@ -102,7 +102,10 @@ namespace EyE.Maps.Templates
             Vector3 b = GetModelSpacePosition(new RadialCoord(1, 1));
             return b - a;
         }
-
+        public override Quaternion GetModelSpaceOrientation(RadialCoord coord)
+        {
+            return mazeOrientation *  Quaternion.Euler(0, 0, coord.AngleInTurns * 360);
+        }
         // simple bounds check
         public override bool IsWithinBounds(RadialCoord coord)
         {

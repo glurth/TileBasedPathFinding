@@ -42,6 +42,7 @@ namespace EyE.Maps.Templates
         /// <returns>the maze orientation as (possibly) affected by tile rotation</returns>
         override public Quaternion GetModelSpaceOrientation(T coord)
         {
+
             return mazeOrientation;
         }
     }
