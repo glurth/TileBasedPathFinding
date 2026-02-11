@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 namespace EyE.Maps.Templates
 {
-    public abstract class MazeMap2D<T> : GenericMazeMap<T> where T: ITileCoordinate<T>
+    public interface MazeMap2DCommon
+    {
+        Rect Compute2DBounds();
+    }
+    public abstract class MazeMap2D<T> : GenericMazeMap<T>, MazeMap2DCommon where T: ITileCoordinate<T>
     {
         public MazeMap2D(T size, T start, T end, float worldScale = 1f, int numSolutions = 1) : base(size, start, end, worldScale, numSolutions)
         {
@@ -43,6 +47,55 @@ namespace EyE.Maps.Templates
         override public Quaternion GetModelSpaceOrientation(T coord)
         {
             return mazeOrientation;
+        }
+        public Rect Compute2DBounds()
+        {
+            return ProjectBoundsToPlaneRect(GetModelSpaceBounds(), mazeOrientation, Vector3.zero);
+        }
+        Rect ProjectBoundsToPlaneRect(Bounds bounds, Quaternion planeRotation, Vector3 planePoint)
+        {
+            Vector3 normal = planeRotation * Vector3.forward;
+            Vector3 right = planeRotation * Vector3.right;
+            Vector3 up = planeRotation * Vector3.up;
+
+            Vector3 center = bounds.center;
+            Vector3 ext = bounds.extents;
+
+            Vector3[] corners = new Vector3[8];
+
+            corners[0] = center + new Vector3(-ext.x, -ext.y, -ext.z);
+            corners[1] = center + new Vector3(ext.x, -ext.y, -ext.z);
+            corners[2] = center + new Vector3(-ext.x, ext.y, -ext.z);
+            corners[3] = center + new Vector3(ext.x, ext.y, -ext.z);
+            corners[4] = center + new Vector3(-ext.x, -ext.y, ext.z);
+            corners[5] = center + new Vector3(ext.x, -ext.y, ext.z);
+            corners[6] = center + new Vector3(-ext.x, ext.y, ext.z);
+            corners[7] = center + new Vector3(ext.x, ext.y, ext.z);
+
+            float minX = float.PositiveInfinity;
+            float minY = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float maxY = float.NegativeInfinity;
+
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 toPoint = corners[i] - planePoint;
+
+                float distance = Vector3.Dot(toPoint, normal);
+                Vector3 projected = corners[i] - normal * distance;
+
+                Vector3 local = projected - planePoint;
+
+                float x = Vector3.Dot(local, right);
+                float y = Vector3.Dot(local, up);
+
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
         }
     }
 
