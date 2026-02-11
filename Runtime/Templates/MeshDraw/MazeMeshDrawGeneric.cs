@@ -767,7 +767,7 @@ namespace EyE.Maps.Templates
         private void GenerateMazeVisuals()
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
+            tileScale = tileOffset.magnitude;//   Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             GenerateWallChunkMeshes();
             return;
         }
@@ -775,7 +775,7 @@ namespace EyE.Maps.Templates
         private async UniTask GenerateMazeVisualsAsync(TaskHandler taskContext)
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
+            tileScale = tileOffset.magnitude;// Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             await GenerateWallChunkMeshesAsync(taskContext);
             return;
         }
