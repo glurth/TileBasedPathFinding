@@ -23,10 +23,16 @@ namespace EyE.Maps.Templates
         abstract public UniTask GenerateMazeAsync(TaskHandler taskContext, bool testAllWalls = false);
         abstract public void GenerateMaze(bool testAllWalls = false);
         abstract public System.Type CoordinateType {get;}
+        /// <summary>
+        /// derived versions will throw excpetions if an improper coordinate type is passed in.
+        /// </summary>
+        /// <param name="coordBase"></param>
+        /// <returns></returns>
         abstract public Vector3 GetModelSpacePosition(ITileCoordinateBase coordBase);
         abstract public Quaternion GetModelSpaceOrientation(ITileCoordinateBase coordBase);
         abstract public Bounds GetModelSpaceBounds();
         abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
+        abstract public ITileCoordinateBase SizeAsCoord { get; }
     }
 
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
@@ -36,6 +42,10 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        /// <summary>
+        /// this defines the maze itself.  Walls are expected to be double sided (e.g. a true in the bool array for both coords the wall touches. Using the correct index in the array for each coord, as defined by the GetNeighbor(index) function.)
+        /// </summary>
+        /// <param name="walls"></param>
         public void SetWalls(Dictionary<T, bool[]> walls) { this.walls = walls; }
         public IReadOnlyDictionary<T, bool[]> Walls { get { return walls; } }
 
@@ -44,6 +54,7 @@ namespace EyE.Maps.Templates
         public readonly int seed;
 
         public T size { get { return _size; } }
+        public override ITileCoordinateBase SizeAsCoord { get => _size; }
         public float worldScale { get; private set; }
 
         public T start;

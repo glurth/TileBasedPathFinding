@@ -62,6 +62,9 @@ namespace EyE.Maps.Templates
         public abstract UniTask SetMazeAsync(GenericMazeMapBase toValue, TaskHandler taskContext);
 
         public Vector3 mazeNormal = Vector3.up;
+        /// <summary>
+        /// Radius of a circle INSCRIBED on the tile
+        /// </summary>
         public float TileScale { get => tileScale; }
         protected float tileScale = 1f;
         public bool wallDimensionsAsFractionOfTileScale=false;
@@ -79,7 +82,7 @@ namespace EyE.Maps.Templates
         public bool createMazeOnEnable = true;
         public Material wallChunkMaterial;
 
-      //  public abstract void BakeMapTexture(RenderTexture targetTexture);
+        public abstract void BakeMapTexture(RenderTexture targetTexture);
         public abstract bool IsTileVisible(ITileCoordinateBase coord);
         public abstract void SetTileVisibility(ITileCoordinateBase coord, bool isVisible);
     }
@@ -484,7 +487,7 @@ namespace EyE.Maps.Templates
         /// using a dedicated orthographic top-down camera view, and cleans up all temporary objects.
         /// </summary>
         /// <param name="targetTexture">The RenderTexture to draw the map onto.</param>
-        public void BakeMapTexture(RenderTexture targetTexture)
+        public override void BakeMapTexture(RenderTexture targetTexture)
         {
             if (wallChunkMeshes == null || wallChunkMeshes.Count == 0 || wallChunkMaterial == null)
             {
