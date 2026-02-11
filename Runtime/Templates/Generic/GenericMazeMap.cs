@@ -446,7 +446,7 @@ namespace EyE.Maps.Templates
         {
             Bounds bounds;
             Vector3 sizePos = GetModelSpacePosition(size);
-            //Vector3 singleTileOffset = SingleTileModelSpaceOffset();
+            Vector3 singleTileOffset = SingleTileModelSpaceOffset();
             //sizePos-= singleTileOffset * 0.5f;
             //this is the center of 1 tile past x,y (for 2d) - need to subtract half a tiles worth
             // but since 0,0 is talso the center of a tile, we nee to ADD half- so cancels
@@ -454,7 +454,7 @@ namespace EyE.Maps.Templates
 
            //Vector3 singleTileOffset = SingleTileModelSpaceOffset();
           //  bounds.size += singleTileOffset;
-          //  bounds.center -= singleTileOffset * 0.5f;
+            bounds.center -= singleTileOffset * 0.5f;
             return bounds;
         }
 
