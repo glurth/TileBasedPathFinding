@@ -146,9 +146,23 @@ namespace EyE.Maps.Templates
 
             }
         }
+
+        Dictionary<FaceCoordinate, Vector3> lazyFaceCenters = new Dictionary<FaceCoordinate, Vector3>();
         public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
-            return sourceMap.faceDetails[coord.faceIndex].normal;
+            if (lazyFaceCenters.TryGetValue(coord, out Vector3 pos))
+                return pos;
+            List<int> vertIndexes = sourceMap.faceDetails[coord.faceIndex].cornerVertexMeshIndices;
+            if (vertIndexes.Count < 3)
+                return sourceMap.faceDetails[coord.faceIndex].normal;
+            Vector3 avg = Vector3.zero;
+            foreach (int i in vertIndexes)
+            {
+                avg += sourceMap.meshRef.vertices[i];
+            }
+            avg /= vertIndexes.Count;
+            lazyFaceCenters[coord] = pos;
+            return avg;
             /*List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
             if (faceTriStarts==null || faceTriStarts.Count == 0)
                 return sourceMap.faceDetails[coord.faceIndex].normal;//fallback

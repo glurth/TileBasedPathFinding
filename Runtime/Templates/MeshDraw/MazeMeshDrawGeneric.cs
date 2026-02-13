@@ -117,18 +117,6 @@ namespace EyE.Maps.Templates
         GenericMazeMap<T> _maze = null;
         public GenericMazeMap<T> maze{get => _maze;}
 
-        /*
-        /// <summary>
-        /// Assigns a maze map and immediately generates its mesh representation.
-        /// </summary>
-        /// <param name="toValue">Maze map to assign.</param>
-        void SetMaze(GenericMazeMap<T> toValue)
-        {
-            _maze = toValue;
-            BuildChucks();
-            GenerateMazeVisuals();
-            chunkRegenByIndex.Clear(); 
-        }*/
         /// <summary>
         /// Sets an external visibility dictionary reference for per-tile visibility control.
         /// </summary>
@@ -186,30 +174,11 @@ namespace EyE.Maps.Templates
                 return DefaultMazeSize();
             }
         }
-        /* moved to base
-        public float tileScale = 1f;               // Size of the tiles
-        public float wallThicknessFraction = 0.2f; // Thickness of the walls (fraction of tile size)
-        public float wallHeightFraction = 0.2f; // Thickness of the walls (fraction of tile size)
-        public float wallWidthFraction = 1f; // Thickness of the walls (fraction of tile size)
-        
-        public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
-        public GameObject endPositionMarkerPrefab;             // Prefab for floor tiles
-
-        public bool drawBorderWalls = true;        // Determines if border walls should be drawn
-        public bool startHidden = false;
-                /// <summary>
-        /// mostly used for testing- automatically create a random maze upon enable.
-        /// </summary>
-        public bool createMazeOnEnable = true;
-        */
 
         //instance refs
         private GameObject instantiatedStartPositionMarker;
         private GameObject instantiatedEndPositionMarker;
 
-        
-    //    protected List<MeshFilter> wallChunkMeshFilters;
-    //    public MeshFilter wallChunkMeshFilterPrefab;
         //visibility stuff
         private Dictionary<T, bool> tileVisibility = new Dictionary<T, bool>();
 
