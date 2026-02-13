@@ -161,7 +161,7 @@ namespace EyE.Maps.Templates
                 avg += sourceMap.meshRef.vertices[i];
             }
             avg /= vertIndexes.Count;
-            lazyFaceCenters[coord] = pos;
+            lazyFaceCenters[coord] = avg;
             return avg;
             /*List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
             if (faceTriStarts==null || faceTriStarts.Count == 0)
