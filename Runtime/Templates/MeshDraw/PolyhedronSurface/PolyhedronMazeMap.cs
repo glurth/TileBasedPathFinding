@@ -150,32 +150,9 @@ namespace EyE.Maps.Templates
         Dictionary<FaceCoordinate, Vector3> lazyFaceCenters = new Dictionary<FaceCoordinate, Vector3>();
         public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
-            if (lazyFaceCenters.TryGetValue(coord, out Vector3 pos))
-                return pos;
-            List<int> vertIndexes = sourceMap.faceDetails[coord.faceIndex].cornerVertexMeshIndices;
-            if (vertIndexes.Count < 3)
-                return sourceMap.faceDetails[coord.faceIndex].normal;
-            Vector3 avg = Vector3.zero;
-            foreach (int i in vertIndexes)
-            {
-                avg += sourceMap.meshRef.vertices[i];
-            }
-            avg /= vertIndexes.Count;
-            lazyFaceCenters[coord] = avg;
-            return avg;
-            /*List<int> faceTriStarts= sourceMap.faceDetails[coord.faceIndex].triangles;
-            if (faceTriStarts==null || faceTriStarts.Count == 0)
-                return sourceMap.faceDetails[coord.faceIndex].normal;//fallback
-            int triIndex = faceTriStarts[0];
-            if (faceTriStarts.Count == 1)
-            {                
-                Vector3 sumPos = asyncUsableVertexList[asyncUsableTriangleList[triIndex]];
-                sumPos += asyncUsableVertexList[asyncUsableTriangleList[triIndex+1]];
-                sumPos += asyncUsableVertexList[asyncUsableTriangleList[triIndex + 2]];
-                return sumPos / 3f;
-            }
-            //if multiple triangle make up each face, it must be constructed such that the first triangle index references the center of the face.
-            return asyncUsableVertexList[asyncUsableTriangleList[triIndex]];*/
+            return sourceMap.faceDetails[coord.faceIndex].faceCenterPosition;
+
+
         }
         public override Vector3 SingleTileModelSpaceOffset()
         {
