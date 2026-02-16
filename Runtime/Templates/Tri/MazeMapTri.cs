@@ -6,21 +6,24 @@ namespace EyE.Maps.Templates
     public class MazeMapTri : MazeMap2D<TriangularIndex2D> 
     {
         
-        public MazeMapTri(TriangularIndex2D size,Vector3 mazeNormal, float worldScale = 1, int numSolutions = 1) :
+        public MazeMapTri(TriangularIndex2D size,Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new TriangularIndex2D(0, 0),
             end: new TriangularIndex2D(size.x - 1, size.y - 1),
-            mazeNormal,worldScale, numSolutions)
+            mazeNormal,
+            numTeleportTiles , alwaysReverseTeleport ,
+            worldScale, numSolutions)
         {
 
         }
         
        
 
-        public MazeMapTri(TriangularIndex2D size, float worldScale = 1, int numSolutions = 1) :
+        public MazeMapTri(TriangularIndex2D size, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new TriangularIndex2D(0, 0),
             end: new TriangularIndex2D(size.x - 1, size.y - 1),
+            numTeleportTiles , alwaysReverseTeleport ,
             worldScale,  numSolutions)
         {
 

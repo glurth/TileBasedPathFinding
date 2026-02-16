@@ -8,11 +8,13 @@ namespace EyE.Maps.Templates
     }
     public abstract class MazeMap2D<T> : GenericMazeMap<T>, MazeMap2DCommon where T: ITileCoordinate<T>
     {
-        public MazeMap2D(T size, T start, T end, float worldScale = 1f, int numSolutions = 1) : base(size, start, end, worldScale, numSolutions)
+        public MazeMap2D(T size, T start, T end, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1) : 
+            base(size, start, end, numTeleportTiles , alwaysReverseTeleport , worldScale, numSolutions)
         {
             InitOrientationMembers(-Vector3.forward);
         }
-        public MazeMap2D(T size, T start, T end, Vector3 mazeNormal, float worldScale = 1f, int numSolutions = 1):base(size,start,end,worldScale,numSolutions)
+        public MazeMap2D(T size, T start, T end, Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1):
+            base(size,start,end, numTeleportTiles, alwaysReverseTeleport, worldScale,numSolutions)
         {
             InitOrientationMembers(mazeNormal);
         }
@@ -103,19 +105,22 @@ namespace EyE.Maps.Templates
     public class MazeMapRect : MazeMap2D<RectangularCoord>//  GenericMazeMap<RectangularCoord>
     {
 
-        public MazeMapRect(RectangularCoord size, float worldScale = 1, int numSolutions = 1) :
+        public MazeMapRect(RectangularCoord size, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new RectangularCoord(Vector2Int.zero),
             end: new RectangularCoord(new Vector2Int(size.x - 1, size.y - 1)),
+            numTeleportTiles , alwaysReverseTeleport ,
             worldScale, numSolutions)
         {
 
         }
-        public MazeMapRect(RectangularCoord size, Vector3 mazeNormal, float worldScale = 1, int numSolutions = 1) :
+        public MazeMapRect(RectangularCoord size, Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) :
             base(size,
             start: new RectangularCoord(Vector2Int.zero),
             end: new RectangularCoord(new Vector2Int(size.x - 1, size.y - 1)),
-            mazeNormal, worldScale, numSolutions)
+            mazeNormal,
+            numTeleportTiles, alwaysReverseTeleport,
+            worldScale, numSolutions)
         {
 
         }

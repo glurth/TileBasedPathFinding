@@ -21,15 +21,15 @@ namespace EyE.Maps.Templates
         private int rings;
         internal int baseSectors;
 
-        public MazeMapRadial(int rings, int baseSectors, Vector3 mazeNormal,  float worldScale = 1f, int numSolutions = 1)
-            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), mazeNormal, worldScale, numSolutions)
+        public MazeMapRadial(int rings, int baseSectors, Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1)
+            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), mazeNormal,  numTeleportTiles,  alwaysReverseTeleport, worldScale, numSolutions)
         {
             this.rings = Mathf.Max(1, rings);
             this.baseSectors = Mathf.Max(1, baseSectors);
             RadialCoord.mapRef = this;
         }
-        public MazeMapRadial(int rings, int baseSectors = 6, float worldScale = 1f, int numSolutions = 1)
-            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), worldScale, numSolutions)
+        public MazeMapRadial(int rings, int baseSectors = 6, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1)
+            : base(new RadialCoord(rings, baseSectors), new RadialCoord(0, 0), new RadialCoord(rings - 1, 0), numTeleportTiles, alwaysReverseTeleport, worldScale, numSolutions)
         {
 
             this.rings = Mathf.Max(1, rings);

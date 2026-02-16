@@ -42,7 +42,9 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        
         protected Dictionary<T, T> teleporters = new Dictionary<T, T>();
+
         public IReadOnlyDictionary<T, T> Teleporters => teleporters;
         /// <summary>
         /// this defines the maze itself.  Walls are expected to be double sided (e.g. a true in the bool array for both coords the wall touches. Using the correct index in the array for each coord, as defined by the GetNeighbor(index) function.)
@@ -53,7 +55,7 @@ namespace EyE.Maps.Templates
 
         protected Dictionary<T, bool> visited = new Dictionary<T, bool>();
         protected System.Random random;
-        public readonly int seed;
+
 
         public T size { get { return _size; } }
         public override ITileCoordinateBase SizeAsCoord { get => _size; }
@@ -63,7 +65,14 @@ namespace EyE.Maps.Templates
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
 
-        public GenericMazeMap(T size, T start, T end, float worldScale = 1f, int numSolutions = 1)
+
+        //generation parameters
+        int numTeleportTilesToGenerate = 3;//used during mesh generation
+        bool alwaysReverseTeleport = true;//used during mesh generation
+        int numSolutionsCounter = 1;
+        int seed;
+
+        public GenericMazeMap(T size, T start, T end, int numTeleportTiles=0,bool alwaysReverseTeleport=true, float worldScale = 1f, int numSolutions = 1)
         {
             this.start = start;
             this.end = end;
@@ -73,8 +82,10 @@ namespace EyE.Maps.Templates
             this.seed = System.Environment.TickCount;
             this.random = new System.Random(seed);
             this.numSolutionsCounter = numSolutions;
+            this.numTeleportTilesToGenerate = numTeleportTiles;
+            this.alwaysReverseTeleport = alwaysReverseTeleport;
         }
-        public GenericMazeMap(T size, T start, T end, int seed, float worldScale = 1f, int numSolutions = 1)
+        public GenericMazeMap(T size, T start, T end, int seed, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1)
         {
             this.start = start;
             this.end = end;
@@ -84,6 +95,8 @@ namespace EyE.Maps.Templates
             this.seed = seed;
             this.random = new System.Random(seed);
             this.numSolutionsCounter = numSolutions;
+            this.numTeleportTilesToGenerate = numTeleportTiles;
+            this.alwaysReverseTeleport = alwaysReverseTeleport;
         }
 
 
@@ -191,8 +204,7 @@ namespace EyE.Maps.Templates
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
 
-            int numTeleportTilesToGenerate = 3;
-            bool alwaysReverseTeleport = true;
+
             //do shuffle of cachedAllCoords
             int n = cachedAllCoords.Count;
             while (n > 1)
@@ -308,7 +320,7 @@ namespace EyE.Maps.Templates
             }
         }
 
-        int numSolutionsCounter = 1;
+
         /// <summary>
         /// Asynchronously generates branching paths off the main path.
         /// </summary>
