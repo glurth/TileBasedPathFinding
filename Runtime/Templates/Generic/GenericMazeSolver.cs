@@ -23,7 +23,7 @@ namespace EyE.Maps.Templates
                 Debug.Log("End out of bounds");
 
 
-            path = TileAStarPathFinder<T>.GetPathFromTo(map, map.start, map.end, -1f, false, loopLimit);
+            path = TileAStarPathFinder<T>.GetPathFromTo(map, map.start, map.end,map.Teleporters, -1f, false, loopLimit);
 
         }
 

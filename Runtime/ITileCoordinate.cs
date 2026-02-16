@@ -110,7 +110,59 @@ namespace EyE.Maps
         /// </summary>
         /// <param name="neighborIndex">The index of the neighbor.</param>
         /// <returns>The neighboring tile coordinate.</returns>
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex);
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex);
+
+
+
+    }
+    public static class ITileCoordinateExtensions
+    {
+        /// <summary>
+        /// Returns the neighboring tile at the specified index.
+        /// </summary>
+        /// <param name="neighborIndex">The index of the neighbor.</param>
+        /// <returns>The neighboring tile coordinate.</returns>
+        static public ITileCoordinateBase GetPathNeighborBase(this ITileCoordinateBase coord, int neighborIndex, IReadOnlyDictionary<ITileCoordinateBase, ITileCoordinateBase> teleporters)
+        {
+            ITileCoordinateBase spatialNeighbor = coord.GetSpatialNeighborBase(neighborIndex);
+            if (teleporters == null) return spatialNeighbor;
+            if (teleporters.TryGetValue(spatialNeighbor, out ITileCoordinateBase teleportDestination))
+                return teleportDestination;
+            return spatialNeighbor;
+        }
+
+        /// <summary>
+        /// Returns the neighboring tile at the specified index.  Similar to the base interface version, but of a specific coordinate type
+        /// </summary>
+        /// <param name="neighborIndex">The index of the neighbor.</param>
+        /// <returns>The neighboring tile coordinate.</returns>
+        static public T GetPathNeighbor<T>(this ITileCoordinate<T> coord, int neighborIndex, IReadOnlyDictionary<T, T> teleporters) where T : ITileCoordinate<T>
+        {
+            T spatialNeighbor = coord.GetSpatialNeighbor(neighborIndex);
+            if (teleporters == null) return spatialNeighbor;
+            if (teleporters.TryGetValue(spatialNeighbor, out T teleportDestination))
+                return teleportDestination;
+            return spatialNeighbor;
+        }
+
+        /// <summary>
+        /// Returns an array of neighboring tile coordinates.
+        /// </summary>
+        /// <returns>An array of neighboring tile coordinates.</returns>
+        static public T[] GetPathNeighbors<T>(this ITileCoordinate<T> coord, IReadOnlyDictionary<T, T> teleporters) where T : ITileCoordinate<T>
+        {
+            T[] spatialNeighbors = coord.GetSpatialNeighbors();
+            if (teleporters == null) return spatialNeighbors;
+            T[] pathNeighbors = new T[spatialNeighbors.Length];
+            for (int i = 0; i < spatialNeighbors.Length; i++)
+            {
+                if (teleporters.TryGetValue(spatialNeighbors[i], out T teleportDestination))
+                    pathNeighbors[i]=teleportDestination;
+                pathNeighbors[i] = spatialNeighbors[i]; ;
+            }
+            return pathNeighbors;
+        }
+
     }
 
     /// <summary>
@@ -125,23 +177,20 @@ namespace EyE.Maps
         public T value { get; }
 
         /// <summary>
-        /// Returns the number of neighboring tiles for this tile.
-        /// </summary>
-        /// <returns>The number of neighbors.</returns>
-        //public int NumberOfNeighbors();
-
-        /// <summary>
         /// Returns an array of neighboring tile coordinates.
         /// </summary>
         /// <returns>An array of neighboring tile coordinates.</returns>
-        public T[] GetNeighbors();
+        public T[] GetSpatialNeighbors();
+
+
+
 
         /// <summary>
-        /// Returns the neighboring tile at the specified index.
+        /// Returns the neighboring tile at the specified index.  Similar to the base interface version, but of a specific coordinate type
         /// </summary>
         /// <param name="neighborIndex">The index of the neighbor.</param>
         /// <returns>The neighboring tile coordinate.</returns>
-        public T GetNeighbor(int neighborIndex);
+        public T GetSpatialNeighbor(int neighborIndex);
 
         /// <summary>
         /// Calculates the heuristic distance from this tile to the specified end tile.

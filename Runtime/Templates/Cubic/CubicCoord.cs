@@ -29,7 +29,7 @@ namespace EyE.Maps.Templates
         /// <summary>
         /// Returns the neighboring coordinates in the order: +X, -X, +Y, -Y, +Z, -Z
         /// </summary>
-        public CubicCoord[] GetNeighbors()
+        public CubicCoord[] GetSpatialNeighbors()
         {
             return new CubicCoord[]
             {
@@ -42,13 +42,13 @@ namespace EyE.Maps.Templates
             };
         }
 
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
-            return GetNeighbor(neighborIndex);
+            return GetSpatialNeighbor(neighborIndex);
         }
-        public CubicCoord GetNeighbor(int neighborIndex)
+        public CubicCoord GetSpatialNeighbor(int neighborIndex)
         {
-            var neighbors = GetNeighbors();
+            var neighbors = GetSpatialNeighbors();
             if (neighborIndex >= 0 && neighborIndex < neighbors.Length)
                 return neighbors[neighborIndex];
             throw new System.ArgumentOutOfRangeException();

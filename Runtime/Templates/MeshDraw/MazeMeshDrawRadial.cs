@@ -160,13 +160,13 @@ namespace EyE.Maps.Templates
 
                 for (int ni = 0; ni < neighborsCount; ni++)
                 {
-                    RadialCoord neighbor = tile.GetNeighbor(ni);
+                    RadialCoord neighbor = tile.GetSpatialNeighbor(ni);
                     bool inBounds = map.IsWithinBounds(neighbor);
 
                     // skip entirely if out-of-bounds and not drawing borders
                     if (!inBounds && !displayBorderWalls) continue;
 
-                    int wallIndex = map.GetNeighborIndexOf(tile, neighbor);
+                    int wallIndex = map.GetSpatialNeighborIndexOf(tile, neighbor);
                     bool hasWall = (!inBounds) || map.Walls[tile][wallIndex];
 
                     if (!hasWall)

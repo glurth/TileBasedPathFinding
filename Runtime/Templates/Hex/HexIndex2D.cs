@@ -305,16 +305,16 @@ namespace EyE.Maps.Templates
             if (a < 0) a += 6;
             return a;
         }
-        public HexIndex2D[] GetNeighbors()
+        public HexIndex2D[] GetSpatialNeighbors()
         {
             return GetAllNeighbors();
         }
 
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
-            return GetNeighbor(neighborIndex);
+            return GetSpatialNeighbor(neighborIndex);
         }
-        public HexIndex2D GetNeighbor(int edge)//edge zero based 0-5
+        public HexIndex2D GetSpatialNeighbor(int edge)//edge zero based 0-5
         {
             HexIndex2D oddEvenOffet = neighborIndexOffsets[edge];
 
@@ -341,11 +341,11 @@ namespace EyE.Maps.Templates
             if (edge == 4) { neighbor.x -= 1; if ((0x01 & this.x) != 0) neighbor.y += 1; }
             return neighbor;*/
         }
-        public HexIndex2D GetNeighborInverse(int edge)
+        public HexIndex2D GetSpatialNeighborInverse(int edge)
         {
             //edge = edge - 3;
             //if (edge < 0) edge += 6;
-            return GetNeighbor(InverseDirectionIndex(edge));
+            return GetSpatialNeighbor(InverseDirectionIndex(edge));
         }
         public int DirectionTo(HexIndex2D target)
         {

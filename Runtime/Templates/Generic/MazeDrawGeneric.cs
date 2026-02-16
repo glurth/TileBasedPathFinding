@@ -189,7 +189,7 @@ namespace EyE.Maps.Templates
             isAcute = false;
           //  return 0;
             Quaternion wallDir = maze.NeighborBorderOrientation(coord, wallIndex);
-            T neighbor1 = coord.GetNeighbor(wallIndex);
+            T neighbor1 = coord.GetSpatialNeighbor(wallIndex);
            // Debug.Log("*Starting touching wall count [" + coord + "] wall [" + neighbor1 + " ] rightSide:" + isRightEnd);
             Vector3 tilePos = maze.GetModelSpacePosition(coord);
             Vector3 neighbor1Pos = maze.GetModelSpacePosition(neighbor1);
@@ -234,7 +234,7 @@ namespace EyE.Maps.Templates
                 {
                     (T, int) currentFromTo = toCheck.Dequeue();
                     T start = currentFromTo.Item1;
-                    dest = start.GetNeighbor(currentFromTo.Item2);
+                    dest = start.GetSpatialNeighbor(currentFromTo.Item2);
 
                     //do check
                     if (sanityCounter++ > 104) throw new System.Exception("Unexpededly many tiles checked in MazeDrawGeneric<" + typeof(T) + ">:NumTouchingWallsAtWallEnd function");
@@ -274,7 +274,7 @@ namespace EyE.Maps.Templates
                // Debug.Log("--*Enqueing neighbors of " + dest);
                 for (int i = 0; i < dest.NumberOfNeighbors(); i++)
                 {
-                    T nextNeighborToCheck = dest.GetNeighbor(i);
+                    T nextNeighborToCheck = dest.GetSpatialNeighbor(i);
                     if (visited.Contains(nextNeighborToCheck)) continue;
 
                     Vector3 currentPos = maze.GetModelSpacePosition(nextNeighborToCheck);
@@ -388,10 +388,10 @@ namespace EyE.Maps.Templates
                 // Debug.Log("creating walls for coord: " + coord + "  newighbors: " + string.Join(',', coord.GetNeighbors()));
                 for (int i = 0; i < neighborCount; i++)
                 {
-                    logstr += ("\nedge between faces " + coord + " and " + coord.GetNeighbor(i) + ", has visible wall: " + wallsForTile[i] + "  edge dir: " + GetNeighborWallMatrix(coord, i, tilePosition, neighborCount).MultiplyVector(Vector3.right).normalized);
+                    logstr += ("\nedge between faces " + coord + " and " + coord.GetSpatialNeighbor(i) + ", has visible wall: " + wallsForTile[i] + "  edge dir: " + GetNeighborWallMatrix(coord, i, tilePosition, neighborCount).MultiplyVector(Vector3.right).normalized);
                     if (wallsForTile[i])
                     {
-                        T neighbor = coord.GetNeighbor(i);
+                        T neighbor = coord.GetSpatialNeighbor(i);
 
                         // Skip creating border walls if drawBorderWalls is false and the neighbor is outside the maze bounds
                         if (!drawBorderWalls && !maze.IsWithinBounds(neighbor))
@@ -470,7 +470,7 @@ namespace EyE.Maps.Templates
 
         protected virtual Matrix4x4 GetNeighborWallMatrix(T coord, int neighborIndex, Vector3 tilePosition, int neighborCount)
         {
-            T neighbor = coord.GetNeighbor(neighborIndex);
+            T neighbor = coord.GetSpatialNeighbor(neighborIndex);
             float wallThickness = //this.tileScale *
                 wallThicknessFraction;
             float wallHeight = //this.tileScale * 

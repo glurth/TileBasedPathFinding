@@ -120,7 +120,7 @@ namespace EyE.Maps.Templates
         {
 
             // Find neighbor and use the midpoint angle between the two tile centers to orient the wall
-            RadialCoord neighbor = coord.GetNeighbor(neighborIndex);
+            RadialCoord neighbor = coord.GetSpatialNeighbor(neighborIndex);
 
 
             Vector3 a = GetModelSpacePosition(coord);

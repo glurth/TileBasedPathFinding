@@ -27,7 +27,7 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
     /// 
     /// </summary>
     /// <returns>up,down,right,left in order</returns>
-    public RectangularCoord[] GetNeighbors()
+    public RectangularCoord[] GetSpatialNeighbors()
     {
         return new RectangularCoord[]
         {
@@ -37,14 +37,14 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
             new RectangularCoord(new Vector2Int(x, y - 1))
         };
     }
-    public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+    public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
     {
-        return GetNeighbor(neighborIndex);
+        return GetSpatialNeighbor(neighborIndex);
     }
 
-    public RectangularCoord GetNeighbor(int neighborIndex)
+    public RectangularCoord GetSpatialNeighbor(int neighborIndex)
     {
-        var neighbors = GetNeighbors();
+        var neighbors = GetSpatialNeighbors();
         if (neighborIndex >= 0 && neighborIndex < neighbors.Length)
             return neighbors[neighborIndex];
         throw new System.ArgumentOutOfRangeException();

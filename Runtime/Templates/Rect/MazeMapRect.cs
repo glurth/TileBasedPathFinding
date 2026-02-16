@@ -31,7 +31,7 @@ namespace EyE.Maps.Templates
         }
         override public Quaternion NeighborBorderOrientation(T coord, int neighborIndex)
         {
-            T neighborCoord = coord.GetNeighbor(neighborIndex);
+            T neighborCoord = coord.GetSpatialNeighbor(neighborIndex);
             Vector3 pos = GetModelSpacePosition(coord);
             Vector3 neighborPos = GetModelSpacePosition(neighborCoord);
             Vector3 diff = neighborPos - pos;

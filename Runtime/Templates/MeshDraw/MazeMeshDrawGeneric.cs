@@ -633,7 +633,7 @@ namespace EyE.Maps.Templates
             isAcute = false;
           //  return 0;
             Quaternion wallDir = maze.NeighborBorderOrientation(coord, wallIndex);
-            T neighbor1 = coord.GetNeighbor(wallIndex);
+            T neighbor1 = coord.GetSpatialNeighbor(wallIndex);
            // Debug.Log("*Starting touching wall count [" + coord + "] wall [" + neighbor1 + " ] rightSide:" + isRightEnd);
             Vector3 tilePos = maze.GetModelSpacePosition(coord);
             Vector3 neighbor1Pos = maze.GetModelSpacePosition(neighbor1);
@@ -678,7 +678,7 @@ namespace EyE.Maps.Templates
                 {
                     (T, int) currentFromTo = toCheck.Dequeue();
                     T start = currentFromTo.Item1;
-                    dest = start.GetNeighbor(currentFromTo.Item2);
+                    dest = start.GetSpatialNeighbor(currentFromTo.Item2);
 
                     //do check
                     if (sanityCounter++ > 104) throw new System.Exception("Unexpededly many tiles checked in MazeDrawGeneric<" + typeof(T) + ">:NumTouchingWallsAtWallEnd function");
@@ -718,7 +718,7 @@ namespace EyE.Maps.Templates
                // Debug.Log("--*Enqueing neighbors of " + dest);
                 for (int i = 0; i < dest.NumberOfNeighbors(); i++)
                 {
-                    T nextNeighborToCheck = dest.GetNeighbor(i);
+                    T nextNeighborToCheck = dest.GetSpatialNeighbor(i);
                     if (visited.Contains(nextNeighborToCheck)) continue;
 
                     Vector3 currentPos = maze.GetModelSpacePosition(nextNeighborToCheck);
@@ -768,7 +768,7 @@ namespace EyE.Maps.Templates
                 int thisCoordChunk = chunkHandler.ChunkID(coord);
                 chunkRegenByIndex.Add(thisCoordChunk);
                 //add neighborchunks, incase on border
-                foreach (T neighbor in coord.GetNeighbors())
+                foreach (T neighbor in coord.GetSpatialNeighbors())
                 {
                     if (maze.IsWithinBounds(neighbor))
                     {
@@ -1262,7 +1262,7 @@ namespace EyE.Maps.Templates
         protected virtual Vector3 GeneralLocalComputeCornerPos(T coord, int neighborIndex)
         {
             Vector3 tilePosition = map.GetModelSpacePosition(coord);
-            Vector3 neighborPosition = map.GetModelSpacePosition(coord.GetNeighbor(neighborIndex));
+            Vector3 neighborPosition = map.GetModelSpacePosition(coord.GetSpatialNeighbor(neighborIndex));
 
             Vector3 wallPosition = (tilePosition + neighborPosition) * 0.5f;
 
@@ -1279,7 +1279,7 @@ namespace EyE.Maps.Templates
         {
             //compute corner using orientation.
             int neighborCount = coord.NumberOfNeighbors();
-            T neighbor = coord.GetNeighbor(neighborIndex);
+            T neighbor = coord.GetSpatialNeighbor(neighborIndex);
             Vector3 tilePosition = map.GetModelSpacePosition(coord);
             Vector3 neighborPosition = map.GetModelSpacePosition(neighbor);
             
@@ -1529,7 +1529,7 @@ namespace EyE.Maps.Templates
                 int edgeChunk = chunckIndexByFaceCoord[coord];
                 for (int i = 0; i < cornerCount; i++)
                 {
-                    T neighborCoord = coord.GetNeighbor(i);
+                    T neighborCoord = coord.GetSpatialNeighbor(i);
 
                     int currentCornerA = cornerIndiciesForCurrentCoord[i];
                     int currentCornerB = cornerIndiciesForCurrentCoord[(i + 1).RingIndex(cornerCount)];
@@ -1547,7 +1547,7 @@ namespace EyE.Maps.Templates
                     int GetNeighborIndex(T source, T neighbor)
                     {
                         int i = 0;
-                        foreach (T test in source.GetNeighbors())
+                        foreach (T test in source.GetSpatialNeighbors())
                         {
                             if (test.Equals(neighbor))
                                 return i;

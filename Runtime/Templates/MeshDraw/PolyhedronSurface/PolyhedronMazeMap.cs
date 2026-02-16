@@ -60,17 +60,17 @@ namespace EyE.Maps.Templates
                 return hash;
             }
         }
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
-            return GetNeighbor(neighborIndex);
+            return GetSpatialNeighbor(neighborIndex);
         }
 
-        public FaceCoordinate GetNeighbor(int neighborIndex)
+        public FaceCoordinate GetSpatialNeighbor(int neighborIndex)
         {
             return new FaceCoordinate(sourceRef, details.neighborIndices[neighborIndex]);
         }
 
-        public FaceCoordinate[] GetNeighbors()
+        public FaceCoordinate[] GetSpatialNeighbors()
         {
             int numNeighbors = details.neighborIndices.Count;
             FaceCoordinate[] neighbors = new FaceCoordinate[numNeighbors];
@@ -165,7 +165,7 @@ namespace EyE.Maps.Templates
         public override Quaternion GetModelSpaceOrientation(FaceCoordinate coord)
         {
             Vector3 coordPos = GetModelSpacePosition(coord);
-            Vector3 neighborPos = GetModelSpacePosition(coord.GetNeighbor(0));
+            Vector3 neighborPos = GetModelSpacePosition(coord.GetSpatialNeighbor(0));
             Vector3 diff = neighborPos - coordPos;
             Quaternion orientataion = Quaternion.identity;
             if (coord.NumberOfNeighbors() % 2 != 0)
@@ -181,7 +181,7 @@ namespace EyE.Maps.Templates
         public override Quaternion NeighborBorderOrientation(FaceCoordinate coord, int neighborIndex)
         {
             Vector3 coordPos = GetModelSpacePosition(coord);
-            Vector3 neighborPos = GetModelSpacePosition(coord.GetNeighbor(neighborIndex));
+            Vector3 neighborPos = GetModelSpacePosition(coord.GetSpatialNeighbor(neighborIndex));
             Vector3 diff = neighborPos - coordPos;
             Vector3 avg = (coordPos + neighborPos) * 0.5f;
             diff = diff.normalized;

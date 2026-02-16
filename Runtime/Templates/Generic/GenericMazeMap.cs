@@ -42,6 +42,8 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        protected Dictionary<T, T> teleporters = new Dictionary<T, T>();
+        public IReadOnlyDictionary<T, T> Teleporters => teleporters;
         /// <summary>
         /// this defines the maze itself.  Walls are expected to be double sided (e.g. a true in the bool array for both coords the wall touches. Using the correct index in the array for each coord, as defined by the GetNeighbor(index) function.)
         /// </summary>
@@ -92,7 +94,7 @@ namespace EyE.Maps.Templates
             {
                 for (int n = 0; n < source.NumberOfNeighbors(); n++)
                 {
-                    if (source.GetNeighbor(n).Equals(neighor))
+                    if (source.GetSpatialNeighbor(n).Equals(neighor))
                         return n;
                 }
                 throw new System.Exception("inavlid neighbor");
@@ -102,7 +104,7 @@ namespace EyE.Maps.Templates
             {
                 for (int n = 0; n < tileCoord.NumberOfNeighbors(); n++)
                 {
-                    T neighborCoord = tileCoord.GetNeighbor(n);
+                    T neighborCoord = tileCoord.GetSpatialNeighbor(n);
                     if (IsWithinBounds(neighborCoord))
                     {
                         int reverseNeighborIndex = GetNeighborIndex(neighborCoord, tileCoord);
@@ -117,14 +119,14 @@ namespace EyE.Maps.Templates
         private float WeightAgainstCrowding(T candidate, Stack<T> currentPath)
         {
             int used = 0;
-            foreach (T n in candidate.GetNeighbors())
+            foreach (T n in candidate.GetSpatialNeighbors())
             {
                 //if (visited.ContainsKey(n) && visited[n] && currentPath.Contains(n))
                 if (currentPath.Contains(n))
                     used += 30;
                 else
                 {
-                    foreach (T m in n.GetNeighbors())
+                    foreach (T m in n.GetSpatialNeighbors())
                         if (currentPath.Contains(m))
                             used += 10;
                 }
@@ -164,8 +166,12 @@ namespace EyE.Maps.Templates
         {
             //var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
+            List<T> cachedAllCoords= new();
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+            {
+                cachedAllCoords.Add((T)tileCoord);
                 totalSteps++;
+            }
             int completedSteps = 0;
 
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
@@ -184,6 +190,39 @@ namespace EyE.Maps.Templates
 
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
             }
+
+            int numTeleportTilesToGenerate = 3;
+            bool alwaysReverseTeleport = true;
+            //do shuffle of cachedAllCoords
+            int n = cachedAllCoords.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = Random.Range(0, n + 1);
+                T value = cachedAllCoords[k];
+                cachedAllCoords[k] = cachedAllCoords[n];
+                cachedAllCoords[n] = value;
+            }
+            int currentIndex = 0;
+
+            for (int i = 0; i < numTeleportTilesToGenerate; i++)
+            {
+                // Check to prevent IndexOutOfRangeException
+                if (currentIndex + 1 >= cachedAllCoords.Count) break;
+
+                // Grab the next two random tiles from our shuffled list
+                T source = cachedAllCoords[currentIndex++];
+                T dest = cachedAllCoords[currentIndex++];
+
+                teleporters.Add(source, dest);
+
+                if (alwaysReverseTeleport)
+                {
+                    teleporters.Add(dest, source);
+                }
+            }
+
+
 
             if (!testAllWalls)
             {
@@ -227,12 +266,16 @@ namespace EyE.Maps.Templates
                 if (current.Equals(end))
                     break;
 
-                List<T> neighbors = GetUnvisitedNeighbors(current);
-
-                if (neighbors.Count > 0)
+               // List<T> neighbors = GetUnvisitedNeighbors(current);
+                List<NeighborDetails> neighborsDetails = GetUnvisitedNeighbors(current);
+                if (neighborsDetails.Count > 0)
                 {
+                    List<T> pathNeighbors = new();
+                    foreach (NeighborDetails details in neighborsDetails)
+                        pathNeighbors.Add(details.pathNeighbor);
                     //T next = neighbors[random.Next(neighbors.Count)];
-                    T next = PickWeighted(neighbors, stack);
+                    T next = PickWeighted(pathNeighbors, stack);
+                    int neighborIndex = pathNeighbors.IndexOf(next);
                     //  while (DistFromPath(next) < 2 && ((random.Next()&0x01)==0))
                     {
                         //    next = neighbors[random.Next(neighbors.Count)];
@@ -240,6 +283,7 @@ namespace EyE.Maps.Templates
 
                     RemoveWall(current, next);
                     visited[next] = true;
+                    visited[neighborsDetails[neighborIndex].spatialNeighbor] = true;
                     stack.Push(next);
                 }
                 else
@@ -341,13 +385,16 @@ namespace EyE.Maps.Templates
             while (stack.Count > 0)
             {
                 T current = stack.Peek();
-                List<T> neighbors = GetUnvisitedNeighbors(current);
+               // List<T> neighbors = GetUnvisitedNeighbors(current);
+                List<NeighborDetails> neighborsDetails = GetUnvisitedNeighbors(current);
 
-                if (neighbors.Count > 0)
+                if (neighborsDetails.Count > 0)
                 {
-                    T next = neighbors[random.Next(neighbors.Count)];
-                    RemoveWall(current, next);
+                    NeighborDetails currentNeighborDetails = neighborsDetails[random.Next(neighborsDetails.Count)];
+                    T next = currentNeighborDetails.pathNeighbor;
+                    RemoveWall(current, next);// could simplify Removewall back to original version by passing in spatialneighbor instead
                     visited[next] = true;
+                    visited[currentNeighborDetails.spatialNeighbor] = true;
                     path.Add(next);
                     stack.Push(next);
                 }
@@ -362,15 +409,29 @@ namespace EyE.Maps.Templates
             return path;
         }
 
+        protected struct NeighborDetails
+        {
+            public T pathNeighbor;       // The logical tile we move TO (the destination if teleporting)
+            public T spatialNeighbor;     // The physical tile we move THROUGH (the source if teleporting)
+            public bool IsTeleport;
+
+            public NeighborDetails(T pathNeighbor, T spatialNeighbor, bool isTeleport)
+            {
+                this.pathNeighbor = pathNeighbor;
+                this.spatialNeighbor = spatialNeighbor;
+                IsTeleport = isTeleport;
+            }
+        }
+
         /// <summary>
         /// Returns the list of unvisited neighboring tiles.
         /// </summary>
         /// <param name="tile">Current tile to check from.</param>
-        protected virtual List<T> GetUnvisitedNeighbors(T tile)
+        protected virtual List<NeighborDetails> GetUnvisitedNeighbors(T tile)
         {
-            List<T> unVisitedneighbors = new List<T>();
+            /*List<T> unVisitedneighbors = new List<T>();
 
-            foreach (T neighbor in tile.GetNeighbors())
+            foreach (T neighbor in tile.GetPathNeighbors(teleporters))
             {
                 if (IsWithinBounds(neighbor))
                 {
@@ -380,13 +441,46 @@ namespace EyE.Maps.Templates
                 }
             }
 
+            return unVisitedneighbors;*/
+            List<NeighborDetails> unVisitedneighbors = new List<NeighborDetails>();
+            int numNeighbors = tile.NumberOfNeighbors();
+            T[] spatialNeighbors = tile.GetSpatialNeighbors();
+            T[] pathNeighbors = tile.GetPathNeighbors(teleporters);
+            for (int i = 0; i < numNeighbors; i++)
+            {
+                T spatialNeighbor = spatialNeighbors[i];
+                T pathNeighbor = pathNeighbors[i];
+                if (IsWithinBounds(spatialNeighbor) && !visited[spatialNeighbor] && !visited[pathNeighbor])
+                    unVisitedneighbors.Add(new NeighborDetails(spatialNeighbor, pathNeighbors[i], teleporters.ContainsKey(spatialNeighbor)));
+            }
             return unVisitedneighbors;
+
         }
 
-        public int GetNeighborIndexOf(T current, T neighbor)
+        /// <summary>
+        /// spatial
+        /// </summary>
+        /// <param name="current"></param>
+        /// <param name="neighbor"></param>
+        /// <returns></returns>
+        public int GetSpatialNeighborIndexOf(T current, T neighbor)
         {
             int neighborIndexCounter = 0;
-            foreach (T n in current.GetNeighbors())
+            foreach (T n in current.GetSpatialNeighbors())
+            {
+                if (n.Equals(neighbor))
+                    return neighborIndexCounter;
+                //Debug.Log("Found neighbor-  current: " + current + "  neighbor: " + n);
+                neighborIndexCounter++;
+            }
+            //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
+            return -1;
+        }
+
+        public int GetPathNeighborIndexOf(T current, T neighbor)
+        {
+            int neighborIndexCounter = 0;
+            foreach (T n in current.GetPathNeighbors(teleporters))
             {
                 if (n.Equals(neighbor))
                     return neighborIndexCounter;
@@ -403,16 +497,48 @@ namespace EyE.Maps.Templates
         /// <param name="next"></param>
         private void RemoveWall(T current, T next)
         {
-            int nieghborIndex = GetNeighborIndexOf(current, next);
-            int reverseNeighborIndex = GetNeighborIndexOf(next, current);
-            walls[current][nieghborIndex] = false;
+
+            int neighborIndex = GetSpatialNeighborIndexOf(current, next);
+
+            // If they aren't spatial neighbors, 'next' must be a teleport destination.
+            if (neighborIndex == -1)
+            {
+                // Find which spatial neighbor of 'current' leads to 'next' via teleport
+                foreach (T spatialNeighbor in current.GetSpatialNeighbors())
+                {
+                    if (teleporters.TryGetValue(spatialNeighbor, out T dest) && dest.Equals(next))
+                    {
+                        // The wall we actually need to break is between 
+                        // 'current' and the 'spatialNeighbor' (the teleport entrance).
+                        int actualIndex = GetSpatialNeighborIndexOf(current, spatialNeighbor);
+                        int reverseIndex = GetSpatialNeighborIndexOf(spatialNeighbor, current);
+
+                        walls[current][actualIndex] = false;
+                        walls[spatialNeighbor][reverseIndex] = false;
+                        return;
+                    }
+                }
+                Debug.LogWarning("Unable to find source of teleporter destination:[" + next + "]  Given source-neighbor [" + current + "].  No walls removed.");
+                return; // Fallback if no link found
+            }
+
+            // Standard spatial wall removal
+            int reverseNeighborIndex = GetSpatialNeighborIndexOf(next, current);
+            walls[current][neighborIndex] = false;
             walls[next][reverseNeighborIndex] = false;
+
+            /*
+// old-pre teleport Standard spatial wall removal
+int nieghborIndex = GetSpatialNeighborIndexOf(current, next);
+int reverseNeighborIndex = GetSpatialNeighborIndexOf(next, current);
+walls[current][nieghborIndex] = false;
+walls[next][reverseNeighborIndex] = false;*/
         }
 
         //returns cost to move from one tile to it's neighbor, returns -1 if impassible, or not neighbors
         public float GetMoveCost(ITileCoordinate<T> coordT, ITileCoordinate<T> coordTDest, float max = -1, bool bothdir = false)
         {
-            int neighborIndex = GetNeighborIndexOf(coordT.value, coordTDest.value);
+            int neighborIndex = GetPathNeighborIndexOf(coordT.value, coordTDest.value);
             if (neighborIndex == -1) return -1;
             return GetMoveCost(coordT, neighborIndex, max, bothdir);
         }
@@ -422,7 +548,7 @@ namespace EyE.Maps.Templates
         {
             T coord = coordT.value;
             if (!IsWithinBounds(coord)) return -1;
-            T neighborCoord = coordT.GetNeighbor(neighborIndex);
+            T neighborCoord = coordT.GetPathNeighbor(neighborIndex,teleporters);
 
             if (IsWithinBounds(neighborCoord))
             {

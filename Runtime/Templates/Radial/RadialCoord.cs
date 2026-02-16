@@ -49,21 +49,21 @@ namespace EyE.Maps.Templates
             return 4;//one outer ring sector+ inner, left, right
         }
         
-        public RadialCoord[] GetNeighbors()
+        public RadialCoord[] GetSpatialNeighbors()
         {
             int numNeighbors = NumberOfNeighbors();
             RadialCoord[] n = new RadialCoord[numNeighbors];
             for (int i = 0; i < numNeighbors; i++)
-                n[i] = GetNeighbor(i);
+                n[i] = GetSpatialNeighbor(i);
             return n;
         }
 
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
-            return GetNeighbor(neighborIndex);
+            return GetSpatialNeighbor(neighborIndex);
         }
 
-        public RadialCoord GetNeighbor(int neighborIndex)
+        public RadialCoord GetSpatialNeighbor(int neighborIndex)
         {
             if (ring == 0)
                 return new RadialCoord(1, neighborIndex);

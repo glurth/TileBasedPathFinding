@@ -198,17 +198,18 @@ namespace EyE.Maps
         /// <param name="maxSlope"></param>
         /// <param name="bothDir"></param>
         /// <returns>return null if no path can be found</returns>
-        static public TileOnPath<T> GetPathFromTo(IMap<T> map, ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, float maxSlope = -1, bool bothDir = false, int loopLimit = 10000)
+        static public TileOnPath<T> GetPathFromTo(IMap<T> map, ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, IReadOnlyDictionary<T, T> teleporters, float maxSlope = -1, bool bothDir = false, int loopLimit = 10000)
         {
             return TileAStarPathFinder<T>.GetPathFromTo(
                 startCoordinate
                 , endCoordinate
                 , (ITileCoordinate<T> a, int n) => { return map.GetMoveCost(a, n, maxSlope, bothDir); }
+                , teleporters
                 , loopLimit);
         }
 
 
-        static public TileOnPath<T> GetPathFromTo(ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, MoveCost GetMoveCost, int loopLimit = 10000)
+        static public TileOnPath<T> GetPathFromTo(ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, MoveCost GetMoveCost, IReadOnlyDictionary<T,T> teleporters, int loopLimit = 10000)
         {
 
             //GetMoveCostFrom(HexIndex2D loc, int direction);
@@ -249,7 +250,7 @@ namespace EyE.Maps
                 for (int i = 0; i < numNeighbors; i++)
                 {
                     loopCounter++;
-                    ITileCoordinate<T> neighborCoord = currentTile.coordinate.GetNeighbor(i);
+                    ITileCoordinate<T> neighborCoord = currentTile.coordinate.GetPathNeighbor(i, teleporters);
                     //   Debug.Log("    neighbor " + i + ": " + neighborCoord.ToString());
                     float moveCost = GetMoveCost(currentTile.coordinate, i);
 

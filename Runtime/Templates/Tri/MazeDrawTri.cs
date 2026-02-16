@@ -53,8 +53,8 @@ namespace EyE.Maps.Templates
             int cornerIndex = isRightEnd ? (wallIndex + 1) % 3 : (wallIndex + 2) % 3;
 
             TriangularIndex2D tri0 = coord;
-            TriangularIndex2D tri1 = coord.GetNeighbor(cornerIndex);
-            TriangularIndex2D tri2 = tri1.GetNeighbor((cornerIndex + 1) % 3);
+            TriangularIndex2D tri1 = coord.GetSpatialNeighbor(cornerIndex);
+            TriangularIndex2D tri2 = tri1.GetSpatialNeighbor((cornerIndex + 1) % 3);
 
             // Collect walls at this corner
             var walls = new List<(TriangularIndex2D tri, int wallIdx)>();

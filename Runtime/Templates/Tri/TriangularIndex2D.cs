@@ -67,7 +67,7 @@ namespace EyE.Maps.Templates
             return 3;
         }
 
-        public TriangularIndex2D[] GetNeighbors()
+        public TriangularIndex2D[] GetSpatialNeighbors()
         {
             TriangularIndex2D[] neighbors = new TriangularIndex2D[NumberOfNeighbors()];
             TriangularIndex2D[] neighborOffsets= downNeighborOffsets;
@@ -80,12 +80,12 @@ namespace EyE.Maps.Templates
             }
             return neighbors;
         }
-        public ITileCoordinateBase GetNeighborBase(int neighborIndex)
+        public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
-            return GetNeighbor(neighborIndex);
+            return GetSpatialNeighbor(neighborIndex);
         }
 
-        public TriangularIndex2D GetNeighbor(int neighborIndex)
+        public TriangularIndex2D GetSpatialNeighbor(int neighborIndex)
         {
             if (neighborIndex < 0 || neighborIndex >= NumberOfNeighbors())
             {

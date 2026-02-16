@@ -165,9 +165,9 @@ namespace EyE.Maps.Templates
                     int c = 0;
                     while (c < 6)
                     {
-                        HexIndex2D neighbor = tile.GetNeighbor(c);
+                        HexIndex2D neighbor = tile.GetSpatialNeighbor(c);
                         int secondNeighborCornerIndex = ((c + 5) % 6);
-                        HexIndex2D neighbor2 = tile.GetNeighbor(secondNeighborCornerIndex);
+                        HexIndex2D neighbor2 = tile.GetSpatialNeighbor(secondNeighborCornerIndex);
 
 
                         Vector3Int cc = tileCubedCoord + neighbor.ToCubedCoords() + neighbor2.ToCubedCoords();
