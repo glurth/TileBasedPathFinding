@@ -210,7 +210,7 @@ namespace EyE.Maps.Templates
             while (n > 1)
             {
                 n--;
-                int k = Random.Range(0, n + 1);
+                int k = (int)(random.NextDouble() * (n + 1));// Random.Range(0, n + 1);
                 T value = cachedAllCoords[k];
                 cachedAllCoords[k] = cachedAllCoords[n];
                 cachedAllCoords[n] = value;
