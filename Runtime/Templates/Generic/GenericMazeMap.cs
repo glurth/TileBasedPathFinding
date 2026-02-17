@@ -42,8 +42,8 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
-        
-        protected Dictionary<T, T> teleporters = new Dictionary<T, T>();
+
+        protected Dictionary<T, T> teleporters = null;
 
         public IReadOnlyDictionary<T, T> Teleporters => teleporters;
         /// <summary>
@@ -216,7 +216,7 @@ namespace EyE.Maps.Templates
                 cachedAllCoords[n] = value;
             }
             int currentIndex = 0;
-
+            teleporters= new Dictionary<T, T>();
             for (int i = 0; i < numTeleportTilesToGenerate; i++)
             {
                 // Check to prevent IndexOutOfRangeException
