@@ -140,9 +140,9 @@ namespace EyE.Maps
         {
             T spatialNeighbor = coord.GetSpatialNeighbor(neighborIndex);
             if (teleporters == null) return spatialNeighbor;
-           // if (teleporters.TryGetValue(spatialNeighbor, out T teleportDestination))//is coord a teleporter source?
-             //   return teleportDestination.GetPathNeighbor(neighborIndex, teleporters);
-            if (teleporters.TryGetValue(spatialNeighbor, out T teleportDestination))
+            if (teleporters.TryGetValue((T)coord, out T teleportDestination))//is coord a teleporter source?
+                return teleportDestination.GetPathNeighbor(neighborIndex, teleporters);
+            if (teleporters.TryGetValue(spatialNeighbor, out teleportDestination))
                 return teleportDestination;
             return spatialNeighbor;
         }
