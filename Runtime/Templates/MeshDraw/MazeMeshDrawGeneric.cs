@@ -1247,6 +1247,7 @@ namespace EyE.Maps.Templates
 
         protected virtual async UniTask AsyncInit()
         {
+            await UniTask.Yield();
            // await UniTask.SwitchToMainThread();
           //  await UniTask.SwitchToThreadPool();
         }

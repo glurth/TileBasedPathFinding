@@ -307,7 +307,7 @@ namespace EyE.Maps.Templates
             }
 
             return path;
-
+            /*
             float DistFromPath(T checkCoord, Stack<T> stack)
             {
                 float min = float.PositiveInfinity;
@@ -317,7 +317,7 @@ namespace EyE.Maps.Templates
                     if (dist < min) min = dist;
                 }
                 return min;
-            }
+            }*/
         }
 
 
