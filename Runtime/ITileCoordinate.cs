@@ -126,7 +126,9 @@ namespace EyE.Maps
         {
             ITileCoordinateBase spatialNeighbor = coord.GetSpatialNeighborBase(neighborIndex);
             if (teleporters == null) return spatialNeighbor;
-            if (teleporters.TryGetValue(spatialNeighbor, out ITileCoordinateBase teleportDestination))
+            if (teleporters.TryGetValue(coord, out ITileCoordinateBase teleportDestination))//is coord a teleporter source?
+                return teleportDestination.GetSpatialNeighborBase(neighborIndex);//, teleporters);
+            if (teleporters.TryGetValue(spatialNeighbor, out teleportDestination))
                 return teleportDestination;
             return spatialNeighbor;
         }
@@ -153,12 +155,16 @@ namespace EyE.Maps
         /// <returns>An array of neighboring tile coordinates.</returns>
         static public T[] GetPathNeighbors<T>(this ITileCoordinate<T> coord, IReadOnlyDictionary<T, T> teleporters) where T : ITileCoordinate<T>
         {
-            T[] spatialNeighbors = coord.GetSpatialNeighbors();
-            if (teleporters == null) return spatialNeighbors;
+            T[] spatialNeighbors;// = coord.GetSpatialNeighbors();
+            if (teleporters == null) return coord.GetSpatialNeighbors(); 
+            if (teleporters.TryGetValue((T)coord, out T teleportDestination))
+                spatialNeighbors = teleportDestination.GetSpatialNeighbors();
+            else
+                spatialNeighbors = coord.GetSpatialNeighbors();
             T[] pathNeighbors = new T[spatialNeighbors.Length];
             for (int i = 0; i < spatialNeighbors.Length; i++)
             {
-                if (teleporters.TryGetValue(spatialNeighbors[i], out T teleportDestination))
+                if (teleporters.TryGetValue(spatialNeighbors[i], out teleportDestination))
                     pathNeighbors[i]=teleportDestination;
                 pathNeighbors[i] = spatialNeighbors[i]; ;
             }
