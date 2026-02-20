@@ -309,7 +309,10 @@ namespace EyE.Maps.Templates
         {
             return GetAllNeighbors();
         }
-
+        public ITileCoordinateBase[] GetSpatialNeighborsBase()
+        {
+            return this.GetSpatialNeighborsBaseExtension();
+        }
         public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
             return GetSpatialNeighbor(neighborIndex);

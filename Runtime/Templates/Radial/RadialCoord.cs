@@ -57,7 +57,10 @@ namespace EyE.Maps.Templates
                 n[i] = GetSpatialNeighbor(i);
             return n;
         }
-
+        public ITileCoordinateBase[] GetSpatialNeighborsBase()
+        {
+            return this.GetSpatialNeighborsBaseExtension();
+        }
         public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
             return GetSpatialNeighbor(neighborIndex);

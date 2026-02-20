@@ -35,6 +35,112 @@ namespace EyE.Maps.Templates
         abstract public ITileCoordinateBase SizeAsCoord { get; }
     }
 
+
+    public struct TeleportDestination
+    {
+        public ITileCoordinateBase coord;
+        public bool firstNeighbors;  //  for two  way teleporters determines if THIS (destination) coord defines the first of the neighbors (when false, the dictionary's "source" coord does)
+
+        public TeleportDestination(ITileCoordinateBase coord, bool firstNeighbors)
+        {
+            this.coord = coord;
+            this.firstNeighbors = firstNeighbors;
+        }
+    }
+    public sealed class TeleporterCollection
+    {
+        private readonly Dictionary<ITileCoordinateBase, TeleportDestination> _forward;
+        private readonly Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> _reverse;
+
+        public TeleporterCollection()
+        {
+            _forward = new Dictionary<ITileCoordinateBase, TeleportDestination>();
+            _reverse = new Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>>();
+        }
+
+        public void AddOneWay(
+            ITileCoordinateBase source,
+            ITileCoordinateBase destination,
+            bool destinationDefinesFirstNeighbors)
+        {
+            if (_forward.ContainsKey(source))
+            {
+                throw new System.InvalidOperationException("Source already has a teleporter.");
+            }
+
+            TeleportDestination teleportDestination =
+                new TeleportDestination(destination, destinationDefinesFirstNeighbors);
+
+            _forward.Add(source, teleportDestination);
+
+            if (!_reverse.ContainsKey(destination))
+            {
+                _reverse.Add(destination, new HashSet<ITileCoordinateBase>());
+            }
+
+            _reverse[destination].Add(source);
+        }
+
+        public void AddTwoWay(
+            ITileCoordinateBase a,
+            ITileCoordinateBase b,
+            bool aDefinesFirstNeighbors)
+        {
+            // A -> B
+            AddOneWay(a, b, !aDefinesFirstNeighbors);
+
+            // B -> A
+            AddOneWay(b, a, aDefinesFirstNeighbors);
+        }
+
+        public bool TryGetDestination(
+            ITileCoordinateBase source,
+            out TeleportDestination destination)
+        {
+            return _forward.TryGetValue(source, out destination);
+        }
+
+        public bool TryGetSources(
+            ITileCoordinateBase destination,
+            out HashSet<ITileCoordinateBase> sources)
+        {
+            return _reverse.TryGetValue(destination, out sources);
+        }
+
+        public bool IsTeleporterSource(ITileCoordinateBase coord)
+        {
+            return _forward.ContainsKey(coord);
+        }
+
+        public bool IsTeleporterDestination(ITileCoordinateBase coord)
+        {
+            return _reverse.ContainsKey(coord);
+        }
+        public bool IsPartOfTwoWay(ITileCoordinateBase coord)
+        {
+            if (!_forward.ContainsKey(coord))
+            {
+                return false;
+            }
+
+            TeleportDestination destination = _forward[coord];
+
+            if (!_forward.ContainsKey(destination.coord))
+            {
+                return false;
+            }
+
+            TeleportDestination back = _forward[destination.coord];
+
+            if (!EqualityComparer<ITileCoordinateBase>.Default.Equals(back.coord, coord))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+    }
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
     abstract public class GenericMazeMap<T> : GenericMazeMapBase, IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
     {
@@ -43,9 +149,12 @@ namespace EyE.Maps.Templates
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
 
-        protected Dictionary<T, T> teleporters = null;
 
-        public IReadOnlyDictionary<T, T> Teleporters => teleporters;
+
+        //protected Dictionary<T, TeleportDestination> teleporters = null;
+        protected TeleporterCollection teleporters;
+        //public IReadOnlyDictionary<T, TeleportDestination> Teleporters => teleporters;
+        public TeleporterCollection Teleporters => teleporters;
         /// <summary>
         /// this defines the maze itself.  Walls are expected to be double sided (e.g. a true in the bool array for both coords the wall touches. Using the correct index in the array for each coord, as defined by the GetNeighbor(index) function.)
         /// </summary>
@@ -216,7 +325,7 @@ namespace EyE.Maps.Templates
                 cachedAllCoords[n] = value;
             }
             int currentIndex = 0;
-            teleporters= new Dictionary<T, T>();
+            teleporters = new TeleporterCollection();// new Dictionary<T, TeleportDestination>();
             for (int i = 0; i < numTeleportTilesToGenerate; i++)
             {
                 // Check to prevent IndexOutOfRangeException
@@ -226,11 +335,15 @@ namespace EyE.Maps.Templates
                 T source = cachedAllCoords[currentIndex++];
                 T dest = cachedAllCoords[currentIndex++];
 
-                teleporters.Add(source, dest);
+                //teleporters..Add(source, new TeleportDestination(dest,false));
 
                 if (alwaysReverseTeleport)
                 {
-                    teleporters.Add(dest, source);
+                    teleporters.AddTwoWay(source, dest, true);
+                }
+                else
+                {
+                    teleporters.AddOneWay(source, dest, true);
                 }
             }
 
@@ -463,7 +576,7 @@ namespace EyE.Maps.Templates
                 T spatialNeighbor = spatialNeighbors[i];
                 T pathNeighbor = pathNeighbors[i];
                 if (IsWithinBounds(spatialNeighbor) && !visited[spatialNeighbor] && !visited[pathNeighbor])
-                    unVisitedneighbors.Add(new NeighborDetails(spatialNeighbor, pathNeighbors[i], teleporters.ContainsKey(spatialNeighbor)));
+                    unVisitedneighbors.Add(new NeighborDetails(spatialNeighbor, pathNeighbors[i], teleporters.IsTeleporterSource(spatialNeighbor)));
             }
             return unVisitedneighbors;
 
@@ -518,7 +631,7 @@ namespace EyE.Maps.Templates
                 // Find which spatial neighbor of 'current' leads to 'next' via teleport
                 foreach (T spatialNeighbor in current.GetSpatialNeighbors())
                 {
-                    if (teleporters.TryGetValue(spatialNeighbor, out T dest) && dest.Equals(next))
+                    if (teleporters.TryGetDestination(spatialNeighbor, out Templates.TeleportDestination dest) && dest.coord.Equals(next))
                     {
                         // The wall we actually need to break is between 
                         // 'current' and the 'spatialNeighbor' (the teleport entrance).

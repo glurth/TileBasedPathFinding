@@ -78,7 +78,10 @@ namespace EyE.Maps.Templates
                 neighbors[i] = new FaceCoordinate(sourceRef, details.neighborIndices[i]);
             return neighbors;
         }
-
+        public ITileCoordinateBase[] GetSpatialNeighborsBase()
+        {
+            return this.GetSpatialNeighborsBaseExtension();
+        }
         public float HeuristicDistanceTo(ITileCoordinate<FaceCoordinate> end)
         {
             return 1f - Vector3.Dot(details.normal, sourceRef.faceDetails[((FaceCoordinate)end).faceIndex].normal);

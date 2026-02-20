@@ -41,7 +41,10 @@ namespace EyE.Maps.Templates
             new CubicCoord(new Vector3Int(x, y, z - 1))  // -Z
             };
         }
-
+        public ITileCoordinateBase[] GetSpatialNeighborsBase()
+        {
+            return this.GetSpatialNeighborsBaseExtension();
+        }
         public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {
             return GetSpatialNeighbor(neighborIndex);

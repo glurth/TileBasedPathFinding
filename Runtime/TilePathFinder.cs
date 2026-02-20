@@ -198,7 +198,7 @@ namespace EyE.Maps
         /// <param name="maxSlope"></param>
         /// <param name="bothDir"></param>
         /// <returns>return null if no path can be found</returns>
-        static public TileOnPath<T> GetPathFromTo(IMap<T> map, ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, IReadOnlyDictionary<T, T> teleporters, float maxSlope = -1, bool bothDir = false, int loopLimit = 10000)
+        static public TileOnPath<T> GetPathFromTo(IMap<T> map, ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, Templates.TeleporterCollection teleporters, float maxSlope = -1, bool bothDir = false, int loopLimit = 10000)
         {
             return TileAStarPathFinder<T>.GetPathFromTo(
                 startCoordinate
@@ -209,7 +209,7 @@ namespace EyE.Maps
         }
 
 
-        static public TileOnPath<T> GetPathFromTo(ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, MoveCost GetMoveCost, IReadOnlyDictionary<T,T> teleporters, int loopLimit = 10000)
+        static public TileOnPath<T> GetPathFromTo(ITileCoordinate<T> startCoordinate, ITileCoordinate<T> endCoordinate, MoveCost GetMoveCost, Templates.TeleporterCollection teleporters, int loopLimit = 10000)
         {
 
             //GetMoveCostFrom(HexIndex2D loc, int direction);

@@ -37,9 +37,15 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
             new RectangularCoord(new Vector2Int(x, y - 1))
         };
     }
+    public ITileCoordinateBase[] GetSpatialNeighborsBase()
+    {
+        return this.GetSpatialNeighborsBaseExtension();
+    }
+
+
     public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
     {
-        return GetSpatialNeighbor(neighborIndex);
+        return  GetSpatialNeighbor(neighborIndex);
     }
 
     public RectangularCoord GetSpatialNeighbor(int neighborIndex)

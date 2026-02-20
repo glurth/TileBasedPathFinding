@@ -112,25 +112,78 @@ namespace EyE.Maps
         /// <returns>The neighboring tile coordinate.</returns>
         public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex);
 
-
+        public ITileCoordinateBase[] GetSpatialNeighborsBase();
 
     }
+
     public static class ITileCoordinateExtensions
     {
+
+        static public ITileCoordinateBase[] GetSpatialNeighborsBaseExtension<T>(this ITileCoordinate<T> coord) where T : ITileCoordinate<T>
+        {
+            T[] typedArray = coord.GetSpatialNeighbors();
+            ITileCoordinateBase[] result =
+                    new ITileCoordinateBase[typedArray.Length];
+
+            for (int i = 0; i < typedArray.Length; i++)
+            {
+                result[i] = typedArray[i];   // boxing happens here
+            }
+            return result;
+        }
+
+
         /// <summary>
         /// Returns the neighboring tile at the specified index.
         /// </summary>
         /// <param name="neighborIndex">The index of the neighbor.</param>
         /// <returns>The neighboring tile coordinate.</returns>
-        static public ITileCoordinateBase GetPathNeighborBase(this ITileCoordinateBase coord, int neighborIndex, IReadOnlyDictionary<ITileCoordinateBase, ITileCoordinateBase> teleporters)
+        static public ITileCoordinateBase[] GetPathNeighborsBase(this ITileCoordinateBase coord, Templates.TeleporterCollection teleporters)
         {
-            ITileCoordinateBase spatialNeighbor = coord.GetSpatialNeighborBase(neighborIndex);
-            if (teleporters == null) return spatialNeighbor;
-            if (teleporters.TryGetValue(coord, out ITileCoordinateBase teleportDestination))//is coord a teleporter source?
-                return teleportDestination.GetSpatialNeighborBase(neighborIndex);//, teleporters);
-            if (teleporters.TryGetValue(spatialNeighbor, out teleportDestination))
-                return teleportDestination;
-            return spatialNeighbor;
+            //T[] spatialNeighbors;// = coord.GetSpatialNeighbors();
+            if (teleporters == null) return coord.GetSpatialNeighborsBase();
+
+            if (teleporters.IsPartOfTwoWay(coord))
+            {
+                teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest);
+
+                int neighborCount = coord.NumberOfNeighbors();
+                neighborCount += dest.coord.NumberOfNeighbors();
+                ITileCoordinateBase[] allNeighbors = new ITileCoordinateBase[neighborCount];
+                ITileCoordinateBase[] destNeighbors = dest.coord.GetSpatialNeighborsBase();
+                ITileCoordinateBase[] sourceNeighbors = dest.coord.GetSpatialNeighborsBase();
+                if (dest.firstNeighbors)
+                {
+                    Array.Copy(destNeighbors, 0, allNeighbors, 0, destNeighbors.Length);
+                    Array.Copy(sourceNeighbors, 0, allNeighbors, destNeighbors.Length, sourceNeighbors.Length);
+                }
+                else
+                {
+                    Array.Copy(sourceNeighbors, 0, allNeighbors, 0, sourceNeighbors.Length);
+                    Array.Copy(destNeighbors, 0, allNeighbors, sourceNeighbors.Length, destNeighbors.Length);
+                }
+                return allNeighbors;
+            }
+            else
+            {
+                if (teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest))
+                {
+                    return dest.coord.GetSpatialNeighborsBase();
+                }
+                else
+                {
+                    return coord.GetSpatialNeighborsBase();
+                }
+            }
+        }
+        /// <summary>
+        /// Returns the neighboring tile at the specified index.
+        /// </summary>
+        /// <param name="neighborIndex">The index of the neighbor.</param>
+        /// <returns>The neighboring tile coordinate.</returns>
+        static public ITileCoordinateBase GetPathNeighborBase(this ITileCoordinateBase coord, int neighborIndex, Templates.TeleporterCollection teleporters)
+        {
+            return coord.GetPathNeighborsBase(teleporters)[neighborIndex];
         }
 
         /// <summary>
@@ -138,37 +191,54 @@ namespace EyE.Maps
         /// </summary>
         /// <param name="neighborIndex">The index of the neighbor.</param>
         /// <returns>The neighboring tile coordinate.</returns>
-        static public T GetPathNeighbor<T>(this ITileCoordinate<T> coord, int neighborIndex, IReadOnlyDictionary<T, T> teleporters) where T : ITileCoordinate<T>
+        static public T GetPathNeighbor<T>(this ITileCoordinate<T> coord, int neighborIndex, Templates.TeleporterCollection teleporters) where T : ITileCoordinate<T>
         {
-            T spatialNeighbor = coord.GetSpatialNeighbor(neighborIndex);
-            if (teleporters == null) return spatialNeighbor;
-            if (teleporters.TryGetValue((T)coord, out T teleportDestination))//is coord a teleporter source?
-                return teleportDestination.GetSpatialNeighbor(neighborIndex);//, teleporters);
-            if (teleporters.TryGetValue(spatialNeighbor, out teleportDestination))
-                return teleportDestination;
-            return spatialNeighbor;
+            return coord.GetPathNeighbors(teleporters)[neighborIndex];
         }
 
         /// <summary>
         /// Returns an array of neighboring tile coordinates.
         /// </summary>
         /// <returns>An array of neighboring tile coordinates.</returns>
-        static public T[] GetPathNeighbors<T>(this ITileCoordinate<T> coord, IReadOnlyDictionary<T, T> teleporters) where T : ITileCoordinate<T>
+        static public T[] GetPathNeighbors<T>(this ITileCoordinate<T> coord, Templates.TeleporterCollection teleporters) where T : ITileCoordinate<T>
         {
-            T[] spatialNeighbors;// = coord.GetSpatialNeighbors();
-            if (teleporters == null) return coord.GetSpatialNeighbors(); 
-            if (teleporters.TryGetValue((T)coord, out T teleportDestination))
-                spatialNeighbors = teleportDestination.GetSpatialNeighbors();
-            else
-                spatialNeighbors = coord.GetSpatialNeighbors();
-            T[] pathNeighbors = new T[spatialNeighbors.Length];
-            for (int i = 0; i < spatialNeighbors.Length; i++)
+            //T[] spatialNeighbors;// = coord.GetSpatialNeighbors();
+            if (teleporters == null) return coord.GetSpatialNeighbors();
+
+            if (teleporters.IsPartOfTwoWay(coord))
             {
-                if (teleporters.TryGetValue(spatialNeighbors[i], out teleportDestination))
-                    pathNeighbors[i]=teleportDestination;
-                pathNeighbors[i] = spatialNeighbors[i]; ;
+                teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest);
+
+                int neighborCount = coord.NumberOfNeighbors();
+                neighborCount += dest.coord.NumberOfNeighbors();
+                T[] allNeighbors = new T[neighborCount];
+                T[] destNeighbors = ((T)(dest.coord)).GetSpatialNeighbors();
+                T[] sourceNeighbors = ((T)(dest.coord)).GetSpatialNeighbors();
+                if (dest.firstNeighbors)
+                {
+                    Array.Copy(destNeighbors, 0, allNeighbors, 0, destNeighbors.Length);
+                    Array.Copy(sourceNeighbors, 0, allNeighbors, destNeighbors.Length, sourceNeighbors.Length);
+                }
+                else
+                {
+                    Array.Copy(sourceNeighbors, 0, allNeighbors, 0, sourceNeighbors.Length);
+                    Array.Copy(destNeighbors, 0, allNeighbors, sourceNeighbors.Length, destNeighbors.Length);
+                }
+                return allNeighbors;
             }
-            return pathNeighbors;
+            else
+            {
+                if (teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest))
+                {
+                    return ((T)(dest.coord)).GetSpatialNeighbors();
+                }
+                else
+                {
+                    return coord.GetSpatialNeighbors();
+                }
+            }
+
+
         }
 
     }
