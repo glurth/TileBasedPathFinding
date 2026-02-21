@@ -158,6 +158,25 @@ namespace EyE.Maps.Templates
         }
 
         /// <summary>
+        /// Attempts to get the teleport destination Coordinate for a given source.
+        /// </summary>
+        /// <param name="source">The source coordinate.</param>
+        /// <param name="destination">The resulting teleport destination if found.</param>
+        /// <returns>True if a teleporter exists for the source; otherwise false.</returns>
+        public bool TryGetDestination(
+            ITileCoordinateBase source,
+            out ITileCoordinateBase destination)
+        {
+            if (_forward.TryGetValue(source, out TeleportDestination telDest))
+            {
+                destination = telDest.coord;
+                return true;
+            }
+            destination = default(ITileCoordinateBase);
+            return false;
+        }
+
+        /// <summary>
         /// Attempts to get all sources that teleport to a given destination.
         /// </summary>
         /// <param name="destination">The destination coordinate.</param>
