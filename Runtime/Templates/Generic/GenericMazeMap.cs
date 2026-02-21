@@ -36,28 +36,71 @@ namespace EyE.Maps.Templates
     }
 
 
+    /// <summary>
+    /// Represents the destination of a teleporter along with neighbor ordering metadata.
+    /// </summary>
     public struct TeleportDestination
     {
+        /// <summary>
+        /// The coordinate this teleporter leads to.
+        /// </summary>
         public ITileCoordinateBase coord;
-        public bool firstNeighbors;  //  for two  way teleporters determines if THIS (destination) coord defines the first of the neighbors (when false, the dictionary's "source" coord does)
 
+        /// <summary>
+        /// For two-way teleporters, determines whether this destination coordinate
+        /// defines the first neighbor ordering. When false, the source coordinate defines it.
+        /// </summary>
+        public bool firstNeighbors;
+
+        /// <summary>
+        /// Creates a new teleport destination.
+        /// </summary>
+        /// <param name="coord">The coordinate this teleporter leads to.</param>
+        /// <param name="firstNeighbors">
+        /// True if this destination defines the first neighbor ordering; otherwise false.
+        /// </param>
         public TeleportDestination(ITileCoordinateBase coord, bool firstNeighbors)
         {
             this.coord = coord;
             this.firstNeighbors = firstNeighbors;
         }
     }
+
+    /// <summary>
+    /// Stores and manages one-way and two-way teleporter relationships between tile coordinates.
+    /// </summary>
     public sealed class TeleporterCollection
     {
+        /// <summary>
+        /// Maps teleporter sources to their destinations.
+        /// </summary>
         private readonly Dictionary<ITileCoordinateBase, TeleportDestination> _forward;
+
+        /// <summary>
+        /// Maps teleporter destinations to all sources that point to them.
+        /// </summary>
         private readonly Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> _reverse;
 
+        /// <summary>
+        /// Initializes a new empty teleporter collection.
+        /// </summary>
         public TeleporterCollection()
         {
             _forward = new Dictionary<ITileCoordinateBase, TeleportDestination>();
             _reverse = new Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>>();
         }
 
+        /// <summary>
+        /// Adds a one-way teleporter from <paramref name="source"/> to <paramref name="destination"/>.
+        /// </summary>
+        /// <param name="source">The source coordinate.</param>
+        /// <param name="destination">The destination coordinate.</param>
+        /// <param name="destinationDefinesFirstNeighbors">
+        /// Determines whether the destination coordinate defines the first neighbor ordering.
+        /// </param>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the source already has a teleporter.
+        /// </exception>
         public void AddOneWay(
             ITileCoordinateBase source,
             ITileCoordinateBase destination,
@@ -81,6 +124,14 @@ namespace EyE.Maps.Templates
             _reverse[destination].Add(source);
         }
 
+        /// <summary>
+        /// Adds a two-way teleporter between <paramref name="a"/> and <paramref name="b"/>.
+        /// </summary>
+        /// <param name="a">First coordinate.</param>
+        /// <param name="b">Second coordinate.</param>
+        /// <param name="aDefinesFirstNeighbors">
+        /// If true, coordinate <paramref name="a"/> defines the first neighbor ordering.
+        /// </param>
         public void AddTwoWay(
             ITileCoordinateBase a,
             ITileCoordinateBase b,
@@ -93,6 +144,12 @@ namespace EyE.Maps.Templates
             AddOneWay(b, a, aDefinesFirstNeighbors);
         }
 
+        /// <summary>
+        /// Attempts to get the teleport destination for a given source.
+        /// </summary>
+        /// <param name="source">The source coordinate.</param>
+        /// <param name="destination">The resulting teleport destination if found.</param>
+        /// <returns>True if a teleporter exists for the source; otherwise false.</returns>
         public bool TryGetDestination(
             ITileCoordinateBase source,
             out TeleportDestination destination)
@@ -100,6 +157,12 @@ namespace EyE.Maps.Templates
             return _forward.TryGetValue(source, out destination);
         }
 
+        /// <summary>
+        /// Attempts to get all sources that teleport to a given destination.
+        /// </summary>
+        /// <param name="destination">The destination coordinate.</param>
+        /// <param name="sources">All sources that teleport to the destination.</param>
+        /// <returns>True if at least one source teleports to the destination; otherwise false.</returns>
         public bool TryGetSources(
             ITileCoordinateBase destination,
             out HashSet<ITileCoordinateBase> sources)
@@ -107,15 +170,25 @@ namespace EyE.Maps.Templates
             return _reverse.TryGetValue(destination, out sources);
         }
 
+        /// <summary>
+        /// Determines whether the specified coordinate is a teleporter source.
+        /// </summary>
         public bool IsTeleporterSource(ITileCoordinateBase coord)
         {
             return _forward.ContainsKey(coord);
         }
 
+        /// <summary>
+        /// Determines whether the specified coordinate is a teleporter destination.
+        /// </summary>
         public bool IsTeleporterDestination(ITileCoordinateBase coord)
         {
             return _reverse.ContainsKey(coord);
         }
+
+        /// <summary>
+        /// Determines whether the specified coordinate participates in a two-way teleporter.
+        /// </summary>
         public bool IsPartOfTwoWay(ITileCoordinateBase coord)
         {
             if (!_forward.ContainsKey(coord))
@@ -140,7 +213,35 @@ namespace EyE.Maps.Templates
             return true;
         }
 
+        /// <summary>
+        /// Gets all teleporter source coordinates.
+        /// </summary>
+        /// <returns>A collection of all coordinates that act as teleporter sources.</returns>
+        public IEnumerable<ITileCoordinateBase> GetAllSources()
+        {
+            return _forward.Keys;
+        }
+
+        /// <summary>
+        /// Gets all coordinates that are destinations but not themselves teleporter sources.
+        /// </summary>
+        /// <returns>
+        /// A collection of destination-only coordinates (excludes those participating as sources,
+        /// such as in two-way teleporters).
+        /// </returns>
+        public IEnumerable<ITileCoordinateBase> GetAllDestinationOnlys()
+        {
+            foreach (KeyValuePair<ITileCoordinateBase, HashSet<ITileCoordinateBase>> pair in _reverse)
+            {
+                if (!_forward.ContainsKey(pair.Key))
+                {
+                    yield return pair.Key;
+                }
+            }
+        }
     }
+
+
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
     abstract public class GenericMazeMap<T> : GenericMazeMapBase, IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
     {
