@@ -69,7 +69,7 @@ namespace EyE.Maps.Templates
     /// <summary>
     /// Stores and manages one-way and two-way teleporter relationships between tile coordinates.
     /// </summary>
-    public sealed class TeleporterCollection
+    public class TeleporterCollection
     {
         /// <summary>
         /// Maps teleporter sources to their destinations.
@@ -257,6 +257,68 @@ namespace EyE.Maps.Templates
                     yield return pair.Key;
                 }
             }
+        }
+
+
+        /// <summary>
+        /// Resolves a path neighbor index back to the underlying spatial coordinate
+        /// and its spatial neighbor index, accounting for teleport offset rules.
+        /// </summary>
+        /// <param name="coord">The coordinate from which the path neighbor originates.</param>
+        /// <param name="pathNeighborIndex">Neighbor index in path-space.</param>
+        /// <param name="spatialNeighbor">Resolved spatial neighbor coordinate.</param>
+        /// <param name="spatialNeighborIndex">
+        /// The neighbor index relative to the spatial coordinate.
+        /// </param>
+        /// <returns>True if resolution succeeds; otherwise false.</returns>
+        public bool TryResolvePathNeighborReverse(
+            ITileCoordinateBase coord,
+            int pathNeighborIndex,
+            out ITileCoordinateBase spatialNeighbor,
+            out int spatialNeighborIndex)
+        {
+            spatialNeighbor = null;
+            spatialNeighborIndex = -1;
+
+            ITileCoordinateBase effectiveCoord = coord;
+            bool firstNeighbors = true;
+
+            TeleportDestination destination;
+
+            if (_forward.TryGetValue(coord, out destination))
+            {
+                effectiveCoord = destination.coord;
+                firstNeighbors = destination.firstNeighbors;
+            }
+
+            int neighborCount = effectiveCoord.NumberOfNeighbors();
+
+            if (pathNeighborIndex < 0)
+            {
+                return false;
+            }
+
+            if (pathNeighborIndex >= neighborCount)
+            {
+                return false;
+            }
+
+            int resolvedIndex = pathNeighborIndex;
+
+            if (!firstNeighbors)
+            {
+                resolvedIndex = pathNeighborIndex - 1;
+
+                if (resolvedIndex < 0)
+                {
+                    resolvedIndex = neighborCount - 1;
+                }
+            }
+
+            spatialNeighbor = effectiveCoord.GetSpatialNeighborBase(resolvedIndex);
+            spatialNeighborIndex = resolvedIndex;
+
+            return true;
         }
     }
 
@@ -674,19 +736,7 @@ namespace EyE.Maps.Templates
         /// <param name="tile">Current tile to check from.</param>
         protected virtual List<NeighborDetails> GetUnvisitedNeighbors(T tile)
         {
-            /*List<T> unVisitedneighbors = new List<T>();
 
-            foreach (T neighbor in tile.GetPathNeighbors(teleporters))
-            {
-                if (IsWithinBounds(neighbor))
-                {
-                    // Debug.Log(" checking neighbor for visited-  current: " + tile + "  neighbor: " + neighbor);
-                    if (!visited[neighbor])
-                        unVisitedneighbors.Add(neighbor);
-                }
-            }
-
-            return unVisitedneighbors;*/
             List<NeighborDetails> unVisitedneighbors = new List<NeighborDetails>();
             int numNeighbors = tile.NumberOfNeighbors();
             T[] spatialNeighbors = tile.GetSpatialNeighbors();
@@ -795,17 +845,22 @@ walls[next][reverseNeighborIndex] = false;*/
             if (!IsWithinBounds(coord)) return -1;
             T neighborCoord = coordT.GetPathNeighbor(neighborIndex,teleporters);
 
+
+
             if (IsWithinBounds(neighborCoord))
             {
                 T coordWithWall = coord;
-                /*int wallIndex = neighborIndex;
-                int numDim = (int)(size.NumberOfNeighbors() / 2f);
-                if (neighborIndex >= numDim)//second half of neighbor index, swap roles- opposite will hold wall
+                int actualIndex = GetSpatialNeighborIndexOf(coordWithWall, neighborCoord);
+                if (actualIndex == -1)
                 {
-                    coordWithWall = neighborCoord;
-                    neighborIndex -= numDim;
-                }*/
-                if (walls[coordWithWall][neighborIndex])
+                    if (teleporters.TryGetDestination(coordT, out TeleportDestination dest))
+                    {
+                        coordWithWall = (T)dest.coord;
+                        actualIndex = GetSpatialNeighborIndexOf(coordWithWall, neighborCoord);
+                        
+                    }
+                }
+                if (walls[coordWithWall][actualIndex])
                     return -1;
 
                 return 1;// walls[coord.value.x, coord.value.y] ? -1 : 1;
