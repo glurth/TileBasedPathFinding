@@ -9,14 +9,14 @@ namespace EyE.Maps.Templates
     {
         protected override GenericMazeMap<RectangularCoord> CreateMazeMap()
         {
-            MazeMapRect maze = new MazeMapRect(mazeSize,mazeNormal);
+            MazeMapRect maze = new MazeMapRect(mazeSize,mazeNormal,1);
             maze.GenerateMaze();
             return maze;
         }
 
         protected override async UniTask<GenericMazeMap<RectangularCoord>> CreateMazeMapAsync(TaskHandler taskContext)
         {
-            MazeMapRect maze = new MazeMapRect(mazeSize, mazeNormal);
+            MazeMapRect maze = new MazeMapRect(mazeSize, mazeNormal,1);
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }

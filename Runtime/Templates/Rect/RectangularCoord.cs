@@ -39,7 +39,7 @@ public struct RectangularCoord : ITileCoordinate<RectangularCoord>
     }
     public ITileCoordinateBase[] GetSpatialNeighborsBase()
     {
-        return this.GetSpatialNeighborsBaseExtension();
+        return GetSpatialNeighbors().CoordBoxer();
     }
 
 

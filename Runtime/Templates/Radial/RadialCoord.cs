@@ -59,7 +59,7 @@ namespace EyE.Maps.Templates
         }
         public ITileCoordinateBase[] GetSpatialNeighborsBase()
         {
-            return this.GetSpatialNeighborsBaseExtension();
+            return GetSpatialNeighbors().CoordBoxer();
         }
         public ITileCoordinateBase GetSpatialNeighborBase(int neighborIndex)
         {

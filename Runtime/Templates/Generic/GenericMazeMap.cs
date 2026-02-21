@@ -575,7 +575,7 @@ namespace EyE.Maps.Templates
             {
                 T spatialNeighbor = spatialNeighbors[i];
                 T pathNeighbor = pathNeighbors[i];
-                if (IsWithinBounds(spatialNeighbor) && !visited[spatialNeighbor] && !visited[pathNeighbor])
+                if (IsWithinBounds(spatialNeighbor) && IsWithinBounds(pathNeighbor) && !visited[spatialNeighbor] && !visited[pathNeighbor])
                     unVisitedneighbors.Add(new NeighborDetails(spatialNeighbor, pathNeighbors[i], teleporters.IsTeleporterSource(spatialNeighbor)));
             }
             return unVisitedneighbors;

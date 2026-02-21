@@ -119,20 +119,16 @@ namespace EyE.Maps
     public static class ITileCoordinateExtensions
     {
 
-        static public ITileCoordinateBase[] GetSpatialNeighborsBaseExtension<T>(this ITileCoordinate<T> coord) where T : ITileCoordinate<T>
+
+        /// <summary>
+        /// Returns the neighboring tile at the specified index.
+        /// </summary>
+        /// <param name="neighborIndex">The index of the neighbor.</param>
+        /// <returns>The neighboring tile coordinate.</returns>
+        static public ITileCoordinateBase GetPathNeighborBase(this ITileCoordinateBase coord, int neighborIndex, Templates.TeleporterCollection teleporters)
         {
-            T[] typedArray = coord.GetSpatialNeighbors();
-            ITileCoordinateBase[] result =
-                    new ITileCoordinateBase[typedArray.Length];
-
-            for (int i = 0; i < typedArray.Length; i++)
-            {
-                result[i] = typedArray[i];   // boxing happens here
-            }
-            return result;
+            return coord.GetPathNeighborsBase(teleporters)[neighborIndex];
         }
-
-
         /// <summary>
         /// Returns the neighboring tile at the specified index.
         /// </summary>
@@ -147,11 +143,10 @@ namespace EyE.Maps
             {
                 teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest);
 
-                int neighborCount = coord.NumberOfNeighbors();
-                neighborCount += dest.coord.NumberOfNeighbors();
-                ITileCoordinateBase[] allNeighbors = new ITileCoordinateBase[neighborCount];
+
                 ITileCoordinateBase[] destNeighbors = dest.coord.GetSpatialNeighborsBase();
-                ITileCoordinateBase[] sourceNeighbors = dest.coord.GetSpatialNeighborsBase();
+                ITileCoordinateBase[] sourceNeighbors = coord.GetSpatialNeighborsBase();
+                ITileCoordinateBase[] allNeighbors = new ITileCoordinateBase[sourceNeighbors.Length+ destNeighbors.Length];
                 if (dest.firstNeighbors)
                 {
                     Array.Copy(destNeighbors, 0, allNeighbors, 0, destNeighbors.Length);
@@ -176,15 +171,7 @@ namespace EyE.Maps
                 }
             }
         }
-        /// <summary>
-        /// Returns the neighboring tile at the specified index.
-        /// </summary>
-        /// <param name="neighborIndex">The index of the neighbor.</param>
-        /// <returns>The neighboring tile coordinate.</returns>
-        static public ITileCoordinateBase GetPathNeighborBase(this ITileCoordinateBase coord, int neighborIndex, Templates.TeleporterCollection teleporters)
-        {
-            return coord.GetPathNeighborsBase(teleporters)[neighborIndex];
-        }
+
 
         /// <summary>
         /// Returns the neighboring tile at the specified index.  Similar to the base interface version, but of a specific coordinate type
@@ -197,23 +184,32 @@ namespace EyE.Maps
         }
 
         /// <summary>
-        /// Returns an array of neighboring tile coordinates.
+        /// Returns the pathfinding neighbors for this coordinate, incorporating teleporter rules.
+        /// 
+        /// Behavior:
+        /// - If <paramref name="teleporters"/> is null, returns only spatial neighbors.
+        /// - If <paramref name="coord"/> is the source of a one-way teleporter, returns only the spatial
+        ///   neighbors of the destination tile (movement is immediate; you cannot remain on the source).
+        /// - If <paramref name="coord"/> is part of a two-way teleporter, returns the union of:
+        ///     1) This tile's spatial neighbors, and
+        ///     2) The destination tile's spatial neighbors.
+        ///   Ordering is controlled by TeleportDestination.firstNeighbors.
+        /// - If <paramref name="coord"/> is not a teleporter source, returns only spatial neighbors.
+        /// 
         /// </summary>
         /// <returns>An array of neighboring tile coordinates.</returns>
         static public T[] GetPathNeighbors<T>(this ITileCoordinate<T> coord, Templates.TeleporterCollection teleporters) where T : ITileCoordinate<T>
         {
-            //T[] spatialNeighbors;// = coord.GetSpatialNeighbors();
+
             if (teleporters == null) return coord.GetSpatialNeighbors();
 
             if (teleporters.IsPartOfTwoWay(coord))
             {
                 teleporters.TryGetDestination(coord, out Templates.TeleportDestination dest);
 
-                int neighborCount = coord.NumberOfNeighbors();
-                neighborCount += dest.coord.NumberOfNeighbors();
-                T[] allNeighbors = new T[neighborCount];
                 T[] destNeighbors = ((T)(dest.coord)).GetSpatialNeighbors();
-                T[] sourceNeighbors = ((T)(dest.coord)).GetSpatialNeighbors();
+                T[] sourceNeighbors = coord.GetSpatialNeighbors();
+                T[] allNeighbors = new T[sourceNeighbors.Length + destNeighbors.Length];
                 if (dest.firstNeighbors)
                 {
                     Array.Copy(destNeighbors, 0, allNeighbors, 0, destNeighbors.Length);
@@ -241,6 +237,14 @@ namespace EyE.Maps
 
         }
 
+
+        static public ITileCoordinateBase[] CoordBoxer<T>(this T[] sourceArray) where T : ITileCoordinate<T>
+        {
+            ITileCoordinateBase[] boxedArray = new ITileCoordinateBase[sourceArray.Length];
+            for (int i = 0; i < sourceArray.Length; i++)
+                boxedArray[i] = (ITileCoordinateBase)sourceArray[i];
+            return boxedArray;
+        }
     }
 
     /// <summary>
