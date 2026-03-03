@@ -90,6 +90,20 @@ namespace EyE.Threading
             ownsCancellationSource = true;
             this.progress = new ProgressFloatRef();
         }
+
+        private Func<UniTask> deferredTaskFunction=null;
+        private bool isDeferred => deferredTaskFunction != null;
+
+        // Constructor for Deferred Execution
+        public TaskHandler(Func<UniTask> taskFunctionRef, ProgressFloatRef progress = null)
+        {
+            this.deferredTaskFunction = taskFunctionRef;
+            this.progress = progress ?? new ProgressFloatRef();
+            this.CancellationSource = new CancellationTokenSource();
+            this.ownsCancellationSource = true;
+            this.isAsynchrnousProcess = true;
+            this.taskSet = false; // Task isn't "set" yet because it hasn't run
+        }
         #endregion
 
         #region Disposal
@@ -206,6 +220,35 @@ namespace EyE.Threading
 
 
         }
+        public void AssignDeferredTask(Func<UniTask> taskFunctionRef)
+        {
+            if (taskSet)
+                throw new System.Exception("You may not pass a task to a TaskHandler that has already been assigned one");
+            deferredTaskFunction = taskFunctionRef;
+            taskSet = false;
+        }
+        public async UniTask AwaitTaskAsync()
+        {
+            // Path A: We are the "Owner/Launcher" (Deferred)
+            if (isDeferred && !taskSet)
+            {
+                task = deferredTaskFunction.Invoke();
+                taskSet = true;
+                await task; // Safe because we are the first/only awaiter
+                SetComplete();
+            }
+            // Path B: Joining an existing process (Hot)
+            else if (taskSet)
+            {
+
+                while (IsRunning)
+                    await Yield();//  processingTask;
+
+                SetComplete();
+
+            }
+        }
+
         public async UniTask Yield()
         {
             if (!IsAsynchrnousProcess) return;
