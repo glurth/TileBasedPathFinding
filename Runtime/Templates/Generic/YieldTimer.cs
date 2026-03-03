@@ -187,6 +187,7 @@ namespace EyE.Threading
         readonly ProgressFloatRef progress;
         CancellationTokenSource CancellationSource { get; }
         UniTask task;
+        public UniTask Task { get => task; }
         bool taskSet = false;
         YieldTimer internalYieldControl = new YieldTimer();
         bool isComplete = false;
