@@ -142,21 +142,23 @@ namespace EyE.Threading
             if (disposed) return;
             disposed = true;
 
-            // Stop any future launches
             deferredTaskFunction = null;
 
             if (ownsCancellationSource && CancellationSource != null)
             {
+                // Signal the save logic to stop
                 try { CancellationSource.Cancel(); } catch { }
 
-                if (IsRunning)
+                // If nothing is running, we can kill the CTS now.
+                // IF something is running, we CANNOT dispose the CTS yet.
+                if (!IsRunning)
                 {
-                    // Ensure the background task has a chance to close FileStreams, etc.
-                    _ = CleanupAsync();
+                    CancellationSource.Dispose();
                 }
                 else
                 {
-                    CancellationSource.Dispose();
+                    // We let the RUNNING task dispose the CTS when it finally exits.
+                    // This avoids the "await twice" error entirely.
                 }
             }
         }
@@ -256,34 +258,32 @@ namespace EyE.Threading
         {
             ThrowIfDisposed();
 
-            // PATH A: Launch Deferred Task
-            if (deferredTaskFunction != null && !taskSet)
+            try
             {
-                try
+                if (deferredTaskFunction != null && !taskSet)
                 {
                     task = deferredTaskFunction.Invoke();
                     taskSet = true;
-                    await task; // Direct await is safe here as we are the first caller
+                    await task;
                 }
-                finally
+                else if (taskSet)
                 {
-                    SetComplete();
+                    while (task.Status == UniTaskStatus.Pending)
+                        await Yield();
+
+                    if (task.Status == UniTaskStatus.Faulted)
+                        await task;
                 }
             }
-            // PATH B: Join Already Running Task
-            else if (taskSet)
+            finally
             {
-                // We poll to avoid UniTask double-await issues
-                while (task.Status == UniTaskStatus.Pending)
+                isComplete = true;
+                // If the handler was disposed while we were working, 
+                // we clean up the CTS now that we are officially done.
+                if (disposed && ownsCancellationSource)
                 {
-                    await Yield();
+                    CancellationSource?.Dispose();
                 }
-
-                // If it faulted, this re-throws the error to the state's try/catch
-                if (task.Status == UniTaskStatus.Faulted)
-                    await task;
-
-                SetComplete();
             }
         }
 
