@@ -232,7 +232,7 @@ namespace EyE.Threading
             // Path A: We are the "Owner/Launcher" (Deferred)
             if (isDeferred && !taskSet)
             {
-                task = deferredTaskFunction.Invoke();
+                task = UniTask.Defer(deferredTaskFunction);
                 taskSet = true;
                 await task; // Safe because we are the first/only awaiter
                 SetComplete();
