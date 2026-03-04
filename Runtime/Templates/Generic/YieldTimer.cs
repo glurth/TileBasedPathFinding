@@ -142,50 +142,40 @@ namespace EyE.Threading
             if (disposed) return;
             disposed = true;
 
-            // 1. Signal cancellation immediately
+            // Stop any future launches
+            deferredTaskFunction = null;
+
             if (ownsCancellationSource && CancellationSource != null)
             {
-                try
-                {
-                    CancellationSource.Cancel();
-                }
-                catch (ObjectDisposedException) { /* Already gone */ }
-            }
+                try { CancellationSource.Cancel(); } catch { }
 
-            // 2. Cleanup the task
-            if (taskSet && task.Status == UniTaskStatus.Pending)
-            {
-                // Fire and forget the cleanup so we don't block the calling thread
-                _ = CleanupAsync();
-            }
-            else
-            {
-                // If no task is running, we can dispose the source immediately
-                if (ownsCancellationSource)
+                if (IsRunning)
                 {
-                    CancellationSource?.Dispose();
+                    // Ensure the background task has a chance to close FileStreams, etc.
+                    _ = CleanupAsync();
+                }
+                else
+                {
+                    CancellationSource.Dispose();
                 }
             }
-
-            // 3. Clear the function ref to prevent memory leaks/late launches
-            deferredTaskFunction = null;
         }
+
         private async UniTaskVoid CleanupAsync()
         {
             try
             {
                 await task;
             }
-            catch (OperationCanceledException)
-            {
-                // expected
-            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { UnityEngine.Debug.LogWarning($"TaskHandler Cleanup Error: {ex.Message}"); }
             finally
             {
                 if (ownsCancellationSource)
-                    CancellationSource.Dispose();
+                    CancellationSource?.Dispose();
             }
         }
+
         #endregion
 
         #region member variables
@@ -264,23 +254,36 @@ namespace EyE.Threading
         }
         public async UniTask AwaitTaskAsync()
         {
-            // Path A: We are the "Owner/Launcher" (Deferred)
-            if (isDeferred && !taskSet)
+            ThrowIfDisposed();
+
+            // PATH A: Launch Deferred Task
+            if (deferredTaskFunction != null && !taskSet)
             {
-                task = UniTask.Defer(deferredTaskFunction);
-                taskSet = true;
-                await task; // Safe because we are the first/only awaiter
-                SetComplete();
+                try
+                {
+                    task = deferredTaskFunction.Invoke();
+                    taskSet = true;
+                    await task; // Direct await is safe here as we are the first caller
+                }
+                finally
+                {
+                    SetComplete();
+                }
             }
-            // Path B: Joining an existing process (Hot)
+            // PATH B: Join Already Running Task
             else if (taskSet)
             {
+                // We poll to avoid UniTask double-await issues
+                while (task.Status == UniTaskStatus.Pending)
+                {
+                    await Yield();
+                }
 
-                while (IsRunning)
-                    await Yield();//  processingTask;
+                // If it faulted, this re-throws the error to the state's try/catch
+                if (task.Status == UniTaskStatus.Faulted)
+                    await task;
 
                 SetComplete();
-
             }
         }
 
