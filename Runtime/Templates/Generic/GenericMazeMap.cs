@@ -33,6 +33,7 @@ namespace EyE.Maps.Templates
         abstract public Bounds GetModelSpaceBounds();
         abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
         abstract public ITileCoordinateBase SizeAsCoord { get; }
+        public abstract IEnumerable<ITileCoordinateBase> allMapBaseCoords { get; }
     }
 
 
@@ -355,7 +356,15 @@ namespace EyE.Maps.Templates
         public T start;
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
-
+        public override IEnumerable<ITileCoordinateBase> allMapBaseCoords { 
+            get
+            {
+                foreach (T coord in allMapCoords)
+                {
+                    yield return coord;
+                }
+            }
+        }
 
         //generation parameters
         int numTeleportTilesToGenerate = 3;//used during mesh generation
