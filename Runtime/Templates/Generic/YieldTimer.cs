@@ -116,32 +116,11 @@ namespace EyE.Threading
         /// <summary>
         /// Not that Disposing a running task will NOT instantly stop the process.  Rather the process will be stopped, and the disposal will complete, only when the running task next invokes the Yield function.
         /// </summary>
-        /*public void Dispose()
-        {
-            
-            if (disposed) return;
-            disposed = true;
-            if (IsRunning)
-            {
-                CancellationSource.Cancel();
-                if (ownsCancellationSource)
-                    CancellationSource.Dispose();
-                // _ = CleanupAsync();
-            }
-            else
-            {
-                if (ownsCancellationSource)
-                {
-                   // UnityEngine.Debug.Log("Disposing CancelationSource now");
-                    CancellationSource.Dispose();
-                }
-            }
-        }*/
+
         public void Dispose()
         {
             if (disposed) return;
             disposed = true;
-
             deferredTaskFunction = null;
 
             if (ownsCancellationSource && CancellationSource != null)
@@ -163,20 +142,6 @@ namespace EyE.Threading
             }
         }
 
-        private async UniTaskVoid CleanupAsync()
-        {
-            try
-            {
-                await task;
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { UnityEngine.Debug.LogWarning($"TaskHandler Cleanup Error: {ex.Message}"); }
-            finally
-            {
-                if (ownsCancellationSource)
-                    CancellationSource?.Dispose();
-            }
-        }
 
         #endregion
 
@@ -192,9 +157,9 @@ namespace EyE.Threading
         {
             get
             {
-                return taskSet && task.Status == UniTaskStatus.Pending;
-                //if (!taskSet) return false;
-                //return !IsComplete && task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded;
+               // return taskSet && task.Status == UniTaskStatus.Pending;
+                if (!taskSet) return false;
+                return !IsComplete && task.Status != UniTaskStatus.Canceled && task.Status != UniTaskStatus.Faulted && task.Status != UniTaskStatus.Succeeded;
             }
         }
         /// <summary>
@@ -405,4 +370,5 @@ namespace EyE.Threading
             }
         }
     }
+    
 }
