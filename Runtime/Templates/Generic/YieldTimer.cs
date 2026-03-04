@@ -116,7 +116,7 @@ namespace EyE.Threading
         /// <summary>
         /// Not that Disposing a running task will NOT instantly stop the process.  Rather the process will be stopped, and the disposal will complete, only when the running task next invokes the Yield function.
         /// </summary>
-        public void Dispose()
+        /*public void Dispose()
         {
             
             if (disposed) return;
@@ -124,7 +124,9 @@ namespace EyE.Threading
             if (IsRunning)
             {
                 CancellationSource.Cancel();
-                _ = CleanupAsync();
+                if (ownsCancellationSource)
+                    CancellationSource.Dispose();
+                // _ = CleanupAsync();
             }
             else
             {
@@ -134,6 +136,39 @@ namespace EyE.Threading
                     CancellationSource.Dispose();
                 }
             }
+        }*/
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+
+            // 1. Signal cancellation immediately
+            if (ownsCancellationSource && CancellationSource != null)
+            {
+                try
+                {
+                    CancellationSource.Cancel();
+                }
+                catch (ObjectDisposedException) { /* Already gone */ }
+            }
+
+            // 2. Cleanup the task
+            if (taskSet && task.Status == UniTaskStatus.Pending)
+            {
+                // Fire and forget the cleanup so we don't block the calling thread
+                _ = CleanupAsync();
+            }
+            else
+            {
+                // If no task is running, we can dispose the source immediately
+                if (ownsCancellationSource)
+                {
+                    CancellationSource?.Dispose();
+                }
+            }
+
+            // 3. Clear the function ref to prevent memory leaks/late launches
+            deferredTaskFunction = null;
         }
         private async UniTaskVoid CleanupAsync()
         {
