@@ -78,8 +78,7 @@ namespace EyE.Maps.Templates
         private Dictionary<ITileCoordinateBase, TeleportDestination> _forward;
         public IReadOnlyDictionary<ITileCoordinateBase, TeleportDestination> GetForward()
         { return _forward; }
-        public void SetForward(Dictionary<ITileCoordinateBase, TeleportDestination> setTo)
-        { _forward=setTo; }
+
 
         /// <summary>
         /// Maps teleporter destinations to all sources that point to them.
@@ -87,8 +86,7 @@ namespace EyE.Maps.Templates
         private Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> _reverse;
         public IReadOnlyDictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> GetReverse()
         { return _reverse; }
-        public void SetReverse(Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> setTo)
-        { _reverse = setTo; }
+
 
 
 
@@ -100,7 +98,11 @@ namespace EyE.Maps.Templates
             _forward = new Dictionary<ITileCoordinateBase, TeleportDestination>();
             _reverse = new Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>>();
         }
-
+        public TeleporterCollection(Dictionary<ITileCoordinateBase, TeleportDestination> forward, Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> reverse)
+        {
+            _forward = forward;
+            _reverse = reverse;
+        }
         /// <summary>
         /// Adds a one-way teleporter from <paramref name="source"/> to <paramref name="destination"/>.
         /// </summary>
