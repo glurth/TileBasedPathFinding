@@ -75,12 +75,22 @@ namespace EyE.Maps.Templates
         /// <summary>
         /// Maps teleporter sources to their destinations.
         /// </summary>
-        private readonly Dictionary<ITileCoordinateBase, TeleportDestination> _forward;
+        private Dictionary<ITileCoordinateBase, TeleportDestination> _forward;
+        public IReadOnlyDictionary<ITileCoordinateBase, TeleportDestination> GetForward()
+        { return _forward; }
+        public void SetForward(Dictionary<ITileCoordinateBase, TeleportDestination> setTo)
+        { _forward=setTo; }
 
         /// <summary>
         /// Maps teleporter destinations to all sources that point to them.
         /// </summary>
-        private readonly Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> _reverse;
+        private Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> _reverse;
+        public IReadOnlyDictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> GetReverse()
+        { return _reverse; }
+        public void SetReverse(Dictionary<ITileCoordinateBase, HashSet<ITileCoordinateBase>> setTo)
+        { _reverse = setTo; }
+
+
 
         /// <summary>
         /// Initializes a new empty teleporter collection.
