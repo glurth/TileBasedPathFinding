@@ -338,6 +338,10 @@ namespace EyE.Maps.Templates
         protected TeleporterCollection teleporters;
         //public IReadOnlyDictionary<T, TeleportDestination> Teleporters => teleporters;
         public TeleporterCollection Teleporters => teleporters;
+        public void SetTeleports(TeleporterCollection collectionToUse)
+        {
+            teleporters = collectionToUse;
+        }
         /// <summary>
         /// this defines the maze itself.  Walls are expected to be double sided (e.g. a true in the bool array for both coords the wall touches. Using the correct index in the array for each coord, as defined by the GetNeighbor(index) function.)
         /// </summary>
