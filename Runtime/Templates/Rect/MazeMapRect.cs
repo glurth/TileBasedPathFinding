@@ -5,6 +5,7 @@ namespace EyE.Maps.Templates
     public interface MazeMap2DCommon
     {
         Rect Compute2DBounds();
+        void SetNormal(Vector3 normal);
     }
     public abstract class MazeMap2D<T> : GenericMazeMap<T>, MazeMap2DCommon where T: ITileCoordinate<T>
     {
@@ -23,6 +24,12 @@ namespace EyE.Maps.Templates
         protected Vector3 mazeNormal;
         protected Vector3 mapPlaneUp;
         protected Vector3 mapPlaneRight;
+
+        public void SetNormal(Vector3 normal)
+        {
+            InitOrientationMembers(normal);
+        }
+
         void InitOrientationMembers(Vector3 mazeNormal)
         {
             this.mazeNormal = mazeNormal;
