@@ -345,7 +345,7 @@ namespace EyE.Maps
         /// </summary>
         /// <param name="pos">would position</param>
         /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>
-        public T GetCoordinate(Vector3 pos);
+        public ITileCoordinateBase GetCoordinate(Vector3 pos);
 
 
         /// <summary>

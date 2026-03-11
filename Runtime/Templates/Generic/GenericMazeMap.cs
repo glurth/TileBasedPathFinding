@@ -34,6 +34,7 @@ namespace EyE.Maps.Templates
         abstract public Vector3 SingleTileModelSpaceOffset();  //should provide the model space offset between the first tile, and a tile with all coorinate dimensions incremented by one
         abstract public ITileCoordinateBase SizeAsCoord { get; }
         public abstract IEnumerable<ITileCoordinateBase> allMapBaseCoords { get; }
+        abstract public ITileCoordinateBase GetCoordinate(Vector3 pos);
     }
 
 
@@ -947,7 +948,7 @@ walls[next][reverseNeighborIndex] = false;*/
         /// </summary>
         /// <param name="pos">model space position</param>
         /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>
-        virtual public T GetCoordinate(Vector3 pos)
+        override public ITileCoordinateBase GetCoordinate(Vector3 pos)
         {
             T closest= default(T);
             float minDist = float.PositiveInfinity;
