@@ -352,7 +352,11 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
+        private Dictionary<T, bool[]> oneWayWalls = new Dictionary<T, bool[]>();
+        // oneWayWalls[coord][neighborIndex] = true means wall only blocks FROM this coord TO neighbor
+        // This allows movement FROM neighbor back TO coord but not the reverse
 
+        public IReadOnlyDictionary<T, bool[]> OneWayWalls { get { return oneWayWalls; } }
 
 
 
@@ -388,9 +392,10 @@ namespace EyE.Maps.Templates
         int numTeleportTilesToGenerate = 3;//used during mesh generation
         bool alwaysReverseTeleport = true;//used during mesh generation
         int numSolutionsCounter = 1;
+        int oneWayTileCount;
         int seed;
 
-        public GenericMazeMap(T size, T start, T end, int numTeleportTiles=0,bool alwaysReverseTeleport=true, float worldScale = 1f, int numSolutions = 1)
+        public GenericMazeMap(T size, T start, T end, int numTeleportTiles=0,bool alwaysReverseTeleport=true, float worldScale = 1f, int numSolutions = 1, int oneWayTileCount = 0)
         {
             this.start = start;
             this.end = end;
@@ -402,20 +407,9 @@ namespace EyE.Maps.Templates
             this.numSolutionsCounter = numSolutions;
             this.numTeleportTilesToGenerate = numTeleportTiles;
             this.alwaysReverseTeleport = alwaysReverseTeleport;
+            this.oneWayTileCount = oneWayTileCount;
         }
-        public GenericMazeMap(T size, T start, T end, int seed, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1)
-        {
-            this.start = start;
-            this.end = end;
-            //int numWallDimensions = size.NumberOfNeighbors();
-            this._size = size;
-            this.worldScale = worldScale;
-            this.seed = seed;
-            this.random = new System.Random(seed);
-            this.numSolutionsCounter = numSolutions;
-            this.numTeleportTilesToGenerate = numTeleportTiles;
-            this.alwaysReverseTeleport = alwaysReverseTeleport;
-        }
+
 
 
 
@@ -504,8 +498,25 @@ namespace EyE.Maps.Templates
                 totalSteps++;
             }
             int completedSteps = 0;
-
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+            {
+                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
+                bool[] oneWayArray = new bool[size.NumberOfNeighbors()];  // NEW
+                for (int i = 0; i < size.NumberOfNeighbors(); i++)
+                {
+                    wallsArray[i] = true;
+                    oneWayArray[i] = false;
+                }
+
+                walls[tileCoord.value] = wallsArray;
+                oneWayWalls[tileCoord.value] = oneWayArray;  // NEW
+                visited[tileCoord.value] = false;
+
+                completedSteps++;
+                taskContext.IncrementProgress((float)completedSteps / totalSteps);
+                await taskContext.Yield();
+            }
+            /*foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
                 bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
                 for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
@@ -520,7 +531,7 @@ namespace EyE.Maps.Templates
                 //    progressRef.Value = (float)completedSteps / totalSteps;
 
                 await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
-            }
+            }*/
 
 
             //do shuffle of cachedAllCoords
@@ -585,7 +596,7 @@ namespace EyE.Maps.Templates
         /// <param name="start">The starting tile.</param>
         /// <param name="end">The target tile to reach.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        protected virtual async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
+        protected virtual async UniTask<List<T>> OLDGenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
         {
             Stack<T> stack = new Stack<T>();
             List<T> path = new List<T>();
@@ -641,7 +652,59 @@ namespace EyE.Maps.Templates
                 return min;
             }*/
         }
+        protected virtual async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)
+        {
+            Stack<T> stack = new Stack<T>();
+            List<T> path = new List<T>();
+            stack.Push(start);
+            visited[start] = true;
 
+            int oneWayPlacementsRemaining = oneWayTileCount;
+            int pathStepsSinceStart = 0;
+
+            while (stack.Count > 0)
+            {
+                T current = stack.Peek();
+                path.Add(current);
+
+                if (current.Equals(end))
+                    break;
+
+                List<NeighborDetails> neighbors = GetUnvisitedNeighbors(current);
+
+                if (neighbors.Count > 0)
+                {
+                    T next = neighbors[random.Next(neighbors.Count)].pathNeighbor;
+
+                    // Decide if this connection should be one-way
+                    bool useOneWay = oneWayPlacementsRemaining > 0 &&
+                                    pathStepsSinceStart > 0 &&  // Don't place one-way at start
+                                    random.NextDouble() < 0.5;   // 50% chance
+
+                    if (useOneWay)
+                    {
+                        RemoveWallAsOneWay(current, next);
+                        oneWayPlacementsRemaining--;
+                    }
+                    else
+                    {
+                        RemoveWall(current, next);
+                    }
+
+                    visited[next] = true;
+                    stack.Push(next);
+                    pathStepsSinceStart++;
+                }
+                else
+                {
+                    stack.Pop();
+                }
+
+                await taskContext.Yield();
+            }
+
+            return path;
+        }
 
         /// <summary>
         /// Asynchronously generates branching paths off the main path.
@@ -857,6 +920,21 @@ walls[current][nieghborIndex] = false;
 walls[next][reverseNeighborIndex] = false;*/
         }
 
+        private void RemoveWallAsOneWay(T from, T to)
+        {
+            // Remove wall from 'from' to 'to' (one-way)
+            // Keep wall from 'to' back to 'from' (one-way)
+
+            int neighborIndex = GetSpatialNeighborIndexOf(from, to);
+            int reverseNeighborIndex = GetSpatialNeighborIndexOf(to, from);
+
+            walls[from][neighborIndex] = false;        // Open the wall
+            oneWayWalls[from][neighborIndex] = true;   // Mark as one-way FROM this tile
+
+            walls[to][reverseNeighborIndex] = true;    // Keep wall closed on return side
+            oneWayWalls[to][reverseNeighborIndex] = true; // Mark the reverse as one-way
+        }
+
         //returns cost to move from one tile to it's neighbor, returns -1 if impassible, or not neighbors
         public float GetMoveCost(ITileCoordinate<T> coordT, ITileCoordinate<T> coordTDest, float max = -1, bool bothdir = false)
         {
@@ -865,8 +943,10 @@ walls[next][reverseNeighborIndex] = false;*/
             return GetMoveCost(coordT, neighborIndex, max, bothdir);
         }
 
+
+
         // Get move cost between neighboring tiles, -1 means impassable
-        public virtual float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
+        public virtual float OLDGetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
         {
             T coord = coordT.value;
             if (!IsWithinBounds(coord)) return -1;
@@ -894,7 +974,33 @@ walls[next][reverseNeighborIndex] = false;*/
             }
             return -1; // Impassable if out of bounds or blocked
         }
+        public virtual float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
+        {
+            T coord = coordT.value;
+            if (!IsWithinBounds(coord)) return -1;
+            T neighborCoord = coordT.GetPathNeighbor(neighborIndex,teleporters);
 
+            if (IsWithinBounds(neighborCoord))
+            {
+                T coordWithWall = coord;
+
+                if (walls[coordWithWall][neighborIndex])
+                    return -1;  // Wall blocks movement
+
+                // Check for one-way restrictions
+                if (oneWayWalls[coordWithWall][neighborIndex])
+                {
+                    // One-way tile: only allow movement FROM this tile TO neighbor
+                    // Movement in reverse direction should be blocked
+                    if (bothdir)  // If bidirectional requested, one-way blocks reverse
+                        return -1;  // Can't go back through one-way from neighbor
+                    return 1;  // Forward movement allowed
+                }
+
+                return 1;
+            }
+            return -1;
+        }
         override public Bounds GetModelSpaceBounds()
         {
             Bounds bounds;

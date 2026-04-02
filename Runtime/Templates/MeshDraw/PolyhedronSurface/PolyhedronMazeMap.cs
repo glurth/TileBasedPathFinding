@@ -121,14 +121,14 @@ namespace EyE.Maps.Templates
         public int[] AsyncUsableTriangleList =>asyncUsableTriangleList;
         int[] asyncUsableTriangleList = null;
 
-        public FaceMazeMap(FacesAndNeighbors sourceMap, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, int numSolutions = 1) :base(
+        public FaceMazeMap(FacesAndNeighbors sourceMap, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, int numSolutions = 1, int oneWayTileCount = 0) :base(
             size: new FaceCoordinate(sourceMap,sourceMap.faceDetails.Count-1),
             start:new FaceCoordinate(sourceMap, 0),
             end:  new FaceCoordinate(sourceMap, sourceMap.faceDetails.Count - 1),
             numTeleportTiles: numTeleportTiles,
             alwaysReverseTeleport: alwaysReverseTeleport,
             worldScale: 1f,
-            numSolutions: numSolutions)
+            numSolutions: numSolutions, oneWayTileCount)
         {
             if(sourceMap==null) throw new ArgumentNullException("May not pass null to FaceMazeMap constructor");
             if (sourceMap.faceDetails == null || sourceMap.faceDetails.Count==0) throw new ArgumentNullException("May not pass FaceMazeMap with no faceDetails to FaceMazeMap constructor");

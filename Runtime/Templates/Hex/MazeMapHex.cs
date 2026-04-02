@@ -4,12 +4,12 @@ namespace EyE.Maps.Templates
 {
     public class MazeMapHex : MazeMap2D<HexIndex2D>// GenericMazeMap<HexIndex2D>
     {
-        public MazeMapHex(HexIndex2D size, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) : 
-            base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1),  numTeleportTiles,alwaysReverseTeleport, worldScale, numSolutions)
+        public MazeMapHex(HexIndex2D size, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1, int oneWayTileCount = 0) : 
+            base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1),  numTeleportTiles,alwaysReverseTeleport, worldScale, numSolutions, oneWayTileCount)
         {
         }
-        public MazeMapHex(HexIndex2D size, Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1) : 
-            base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1), mazeNormal, numTeleportTiles, alwaysReverseTeleport, worldScale, numSolutions)
+        public MazeMapHex(HexIndex2D size, Vector3 mazeNormal, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1, int numSolutions = 1, int oneWayTileCount = 0) : 
+            base(size, new HexIndex2D(0, 0), new HexIndex2D(size.x - 1, size.y - 1), mazeNormal, numTeleportTiles, alwaysReverseTeleport, worldScale, numSolutions, oneWayTileCount)
         {
         }
         public override IEnumerable<HexIndex2D> allMapCoords
