@@ -352,12 +352,12 @@ namespace EyE.Maps.Templates
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
-        private Dictionary<T, bool[]> oneWayWalls = new Dictionary<T, bool[]>();
+        protected Dictionary<T, bool[]> oneWayWalls = new Dictionary<T, bool[]>();
         // oneWayWalls[coord][neighborIndex] = true means wall only blocks FROM this coord TO neighbor
         // This allows movement FROM neighbor back TO coord but not the reverse
 
         public IReadOnlyDictionary<T, bool[]> OneWayWalls { get { return oneWayWalls; } }
-
+        public void SetOneWayWalls(Dictionary<T, bool[]> oneWayWalls) { this.oneWayWalls = oneWayWalls; }
 
 
         /// <summary>
