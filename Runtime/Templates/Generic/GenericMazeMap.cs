@@ -929,10 +929,10 @@ walls[next][reverseNeighborIndex] = false;*/
             int reverseNeighborIndex = GetSpatialNeighborIndexOf(to, from);
 
             walls[from][neighborIndex] = false;        // Open the wall
-            oneWayWalls[from][neighborIndex] = true;   // Mark as one-way FROM this tile
+            walls[to][reverseNeighborIndex] = false;    // open the wall
 
-            walls[to][reverseNeighborIndex] = true;    // Keep wall closed on return side
-            oneWayWalls[to][reverseNeighborIndex] = true; // Mark the reverse as one-way
+            oneWayWalls[from][neighborIndex] = false;   // Mark as "no wall" FROM this tile (can go)
+            oneWayWalls[to][reverseNeighborIndex] = true; // Mark the reverse as one-way (no go)
         }
 
         //returns cost to move from one tile to it's neighbor, returns -1 if impassible, or not neighbors
@@ -974,27 +974,25 @@ walls[next][reverseNeighborIndex] = false;*/
             }
             return -1; // Impassable if out of bounds or blocked
         }
+
         public virtual float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
         {
             T coord = coordT.value;
             if (!IsWithinBounds(coord)) return -1;
-            T neighborCoord = coordT.GetPathNeighbor(neighborIndex,teleporters);
+            T neighborCoord = coordT.GetPathNeighbor(neighborIndex, teleporters);
+
 
             if (IsWithinBounds(neighborCoord))
             {
-                T coordWithWall = coord;
-
-                if (walls[coordWithWall][neighborIndex])
-                    return -1;  // Wall blocks movement
+                // Check for physical walls
+                if (walls[coord][neighborIndex])
+                    return -1;
 
                 // Check for one-way restrictions
-                if (oneWayWalls[coordWithWall][neighborIndex])
+                if (oneWayWalls != null && oneWayWalls.ContainsKey(coord))
                 {
-                    // One-way tile: only allow movement FROM this tile TO neighbor
-                    // Movement in reverse direction should be blocked
-                    if (bothdir)  // If bidirectional requested, one-way blocks reverse
-                        return -1;  // Can't go back through one-way from neighbor
-                    return 1;  // Forward movement allowed
+                    if (oneWayWalls[coord][neighborIndex])
+                        return -1;  // One-way blocked in this direction
                 }
 
                 return 1;
