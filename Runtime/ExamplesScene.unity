@@ -1530,6 +1530,9 @@ MonoBehaviour:
     type: 3}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 0}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -2076,6 +2079,9 @@ MonoBehaviour:
     type: 3}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 0}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -2312,6 +2318,60 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 464108778}
   m_Mesh: {fileID: 4300000, guid: 58a1b190973ce3547902674d73d3cc11, type: 2}
+--- !u!1 &474559264
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 474559266}
+  - component: {fileID: 474559265}
+  m_Layer: 0
+  m_Name: Topo2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &474559265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474559264}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b6659c35d2359b4baf70a3b3c9d4e5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  runSimulation: 1
+  simulationSpeed: 0.001
+  damping: 0.1
+  springStrength: 0.1
+  nodeRepulsion: 0.001
+  edgeRepulsion: 1
+  edgeUncrossingStength: 1
+  alignmentTorque: 1
+  perpendicularStrength: 0.01
+  idealEdgeLength: 0.03
+--- !u!4 &474559266
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474559264}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.10208147, y: 7.8286014, z: 5.3795505}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 23
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &513407219
 GameObject:
   m_ObjectHideFlags: 0
@@ -2329,7 +2389,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &513407220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2353,12 +2413,17 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  wallChunkSubMeshMaterial: {fileID: 2100000, guid: 2bf1a885bfd074b4499c5a25a5d98290,
+    type: 2}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 6714409032714082515, guid: ffdf1852d31150d419ead210916d8f8e,
+    type: 3}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
-    m_x: 20
-    m_y: 20
+    m_x: 8
+    m_y: 8
   testOffset: 0
 --- !u!4 &513407223
 Transform:
@@ -2408,7 +2473,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &525890850
 Transform:
   m_ObjectHideFlags: 0
@@ -2424,6 +2489,50 @@ Transform:
   - {fileID: 430675483}
   m_Father: {fileID: 0}
   m_RootOrder: 20
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &544419027
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 544419029}
+  - component: {fileID: 544419028}
+  m_Layer: 0
+  m_Name: TopoTest
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &544419028
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 544419027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d2874e0b790bbd4ea5a0a8617292f21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &544419029
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 544419027}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 22
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &571121305
 GameObject:
@@ -3251,6 +3360,9 @@ MonoBehaviour:
     type: 3}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 0}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -3686,6 +3798,9 @@ MonoBehaviour:
     type: 3}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 0}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -4613,6 +4728,9 @@ MonoBehaviour:
     type: 3}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 1
@@ -4653,7 +4771,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1408425213
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4677,6 +4795,9 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 2800000, guid: dfe608a5b89f61b41b8058d9f52f49bd, type: 3}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -5401,6 +5522,9 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
@@ -5466,6 +5590,9 @@ MonoBehaviour:
   endPositionMarkerPrefab: {fileID: 525890849}
   createMazeOnEnable: 1
   wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+  wallChunkSubMeshMaterial: {fileID: 0}
+  sideDepthMap: {fileID: 0}
+  notNormalizedWallMesh: {fileID: 0}
   idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0

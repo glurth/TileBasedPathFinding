@@ -23,7 +23,7 @@ namespace EyE.Maps.Templates
   //      {
   //          return new HexIndex2D(10, 10);
   //      }
-        protected override Chunker<HexIndex2D> GetChunker(int idealTrisPerChunk = 1000)
+        protected override Chunker<HexIndex2D> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
             return new HexChunker(mazeSize);
         }
@@ -39,7 +39,7 @@ namespace EyE.Maps.Templates
     public class HexChunker : Chunker<HexIndex2D>
     {
 
-        public HexChunker(HexIndex2D size, int idealTrisPerChunk = 1000) : base(size,  idealTrisPerChunk ) { }
+        public HexChunker(HexIndex2D size, int trisPerWall = 12, int idealTrisPerChunk = 1000) : base(size, trisPerWall, idealTrisPerChunk ) { }
         protected override int NumberOfTilesInSize(HexIndex2D size)
         {
             return size.x * size.y;

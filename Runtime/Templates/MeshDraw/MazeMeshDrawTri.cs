@@ -20,9 +20,9 @@ namespace EyE.Maps.Templates
             return maze;
         }
 
-        protected override Chunker<TriangularIndex2D> GetChunker(int idealTrisPerChunk = 1000)
+        protected override Chunker<TriangularIndex2D> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
-            return new TriChunker(mazeSize);
+            return new TriChunker(mazeSize, trisPerWall ,idealTrisPerChunk);
         }
 
         protected override WallMeshChunkComputerGeneric<TriangularIndex2D> GetNewMeshComputer()
@@ -36,7 +36,7 @@ namespace EyE.Maps.Templates
     public class TriChunker : Chunker<TriangularIndex2D>
     {
 
-        public TriChunker(TriangularIndex2D size, int idealTrisPerChunk = 1000) : base(size, idealTrisPerChunk ) { }
+        public TriChunker(TriangularIndex2D size, int trisPerWall = 12, int idealTrisPerChunk = 1000) : base(size, trisPerWall, idealTrisPerChunk ) { }
         protected override int NumberOfTilesInSize(TriangularIndex2D size)
         {
             return size.x * size.y;

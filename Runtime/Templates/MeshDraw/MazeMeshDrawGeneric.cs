@@ -81,10 +81,24 @@ namespace EyE.Maps.Templates
         /// </summary>
         public bool createMazeOnEnable = true;
         public Material wallChunkMaterial;
+        public Material wallChunkSubMeshMaterial;
 
         public abstract void BakeMapTexture(RenderTexture targetTexture);
         public abstract bool IsTileVisible(ITileCoordinateBase coord);
         public abstract void SetTileVisibility(ITileCoordinateBase coord, bool isVisible);
+
+        public class WallDrawConfig
+        {
+            public enum DrawType { Quads, SurfaceDepth, MeshTiling }
+            public DrawType drawOption= DrawType.Quads;
+
+            public Texture2D surfaceDepthMap=null;
+            public Vector2Int surfaceDepthTiling;
+
+            public MeshData normalizedMesh;
+            public Vector2 preNormalizedRelativeBounds;
+
+        }
     }
 
     /// <summary>
@@ -176,6 +190,8 @@ namespace EyE.Maps.Templates
         }
 
         //instance refs
+        public Texture2D sideDepthMap;
+        public Mesh notNormalizedWallMesh;
         private GameObject instantiatedStartPositionMarker;
         private GameObject instantiatedEndPositionMarker;
 
@@ -265,7 +281,7 @@ namespace EyE.Maps.Templates
         void BuildChucks()
         {
            // Debug.Log("Allocating chunks");
-            chunkHandler = GetChunker(idealTrisPerChunk);
+            chunkHandler = GetChunker(trisPerWall, idealTrisPerChunk);
             chunkHandler.Build();
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -277,7 +293,7 @@ namespace EyE.Maps.Templates
         {
             //  Debug.Log("Allocating chunks");
             await taskContext.Yield();
-            chunkHandler = GetChunker(idealTrisPerChunk);
+            chunkHandler = GetChunker(trisPerWall, idealTrisPerChunk);
             await chunkHandler.BuildAsync(taskContext);
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -298,7 +314,7 @@ namespace EyE.Maps.Templates
         /// }
         /// </code>
         /// </example>
-        protected abstract Chunker<T> GetChunker(int idealTrisPerChunk = 1000);
+        protected abstract Chunker<T> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000);
         public int idealTrisPerChunk = 1000;
 
 
@@ -375,7 +391,13 @@ namespace EyE.Maps.Templates
             meshComputer = GetNewMeshComputer();
             float scale = 1f;
             if (wallDimensionsAsFractionOfTileScale) scale = tileScale;
-            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, scale * wallThicknessFraction, scale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext);
+            MeshData normalizedWallMesh = null;
+            if (notNormalizedWallMesh != null)
+            {
+                normalizedWallMesh = new MeshData(notNormalizedWallMesh);
+                normalizedWallMesh.Normalize();
+            }
+            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, scale * wallThicknessFraction, scale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext,true, sideDepthMap, normalizedWallMesh);
 
             if (taskContext.IsCancellationRequested) return;
 
@@ -385,6 +407,7 @@ namespace EyE.Maps.Templates
             {
                 wallChunkMeshes.Add(chunkMeshes[i].ToMesh());
             }
+            Debug.Log("Number of chunks generated: " + wallChunkMeshes.Count);
         }
         
         void GenerateWallChunkMeshes()
@@ -443,6 +466,17 @@ namespace EyE.Maps.Templates
                         WallLayer,
                         Camera.main,
                         0,
+                        null,
+                        true,
+                        true
+                    );
+                    Graphics.DrawMesh(
+                        mesh,
+                        cachedWorldTransform, // Draw with the cached matrix
+                        wallChunkSubMeshMaterial,
+                        WallLayer,
+                        Camera.main,
+                        1,
                         null,
                         true,
                         true
@@ -824,45 +858,19 @@ namespace EyE.Maps.Templates
         /// <exception cref="ArgumentException">
         /// Thrown if <see cref="GenerateChunks"/> assigns a coordinate to more than one chunk.
         /// </exception>
-        public Chunker(T size, int idealTrisPerChunk=1000)
+        public Chunker(T size,int trisPerWall=12,  int idealTrisPerChunk=1000)
         {
             this.idealTrisPerChunk = idealTrisPerChunk;
             this.size = size;
+            this.trisPerWall = trisPerWall;
         }
-
 
         public void Build()
         {
             BuildAsync(new TaskHandler(false)).AsTask().GetAwaiter().GetResult();
             return;
-            /*
-            int totalNumTiles = NumberOfTilesInSize(size);
-            int totalTris = (size.NumberOfNeighbors() * trisPerWall * totalNumTiles)/2; /// ISSUE : for poly/face mazes- numneghbors is per face.  need virtual/abstract totalTri's?
-            if (totalTris < idealTrisPerChunk) numChunks = 1;
-            else
-            {
-                numChunks = totalTris / idealTrisPerChunk;
-            }
-
-
-            chunkCoordinateLists = GenerateChunks(numChunks, size);
-            numChunks = chunkCoordinateLists.Count;
-            chunkIDbyCoordinate = new Dictionary<T, int>();
-
-            string logstr = "";
-            for (int chunkCounter = 0; chunkCounter < numChunks; chunkCounter++)
-            {
-                List<T> coordList = chunkCoordinateLists[chunkCounter];
-                foreach (T c in coordList)
-                {
-                    // Using Add as a sanity check: throws if duplicate coordinate found across chunks
-                    chunkIDbyCoordinate.Add(c, chunkCounter);
-                  //  logstr += "\nCoordinate " + c + " is in chunk " + chunkCounter;
-                }
-            }
-          //  Debug.Log("Built chunks (num:"+numChunks+"): " + logstr);
-            */
         }
+
         async public UniTask BuildAsync(TaskHandler taskContext)
         {
             int totalNumTiles = NumberOfTilesInSize(size);
@@ -1030,7 +1038,7 @@ namespace EyE.Maps.Templates
     /// Class exists to keep mesh generation logic, which is a lot, encapsulated.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class WallMeshChunkComputerGeneric<T> where T:ITileCoordinate<T>
+    public class WallMeshChunkComputerGeneric<T> where T : ITileCoordinate<T>
     {
         // Maze Mesh Construction Plan (with unique corners and edges)
         //
@@ -1065,7 +1073,7 @@ namespace EyE.Maps.Templates
         //     - sort corners.edgelist by
         //        - a float: compute edge's angle around normal axis
         //
-        // Step 4: Generate vertex positions (use new param- wallThickness to compute end-side points (front to back thickness) )
+        // Step 4: Generate vertex positions (use param- wallThickness to compute end-side points (front to back thickness) )
         // ----------------------------------------------------
         // - For each uniqueCorner:
         //      - If only one edge is visible:
@@ -1099,7 +1107,7 @@ namespace EyE.Maps.Templates
         //             - create end-cap quad with combos of top bottom
 
         /*input values*/
-        
+
         protected GenericMazeMap<T> map;
         protected MazeMeshDrawGeneric<T> mazeDrawer;
         protected float wallThickness;
@@ -1138,7 +1146,7 @@ namespace EyE.Maps.Templates
             edgesByChunk = new List<List<Edge>>();
             //build chunk by coordinate dictionary (for fast lookup later)
             chunckIndexByFaceCoord = new Dictionary<T, int>();
-            
+
             for (int chunkCounter = 0; chunkCounter < coordsPerChuck.Count; chunkCounter++)
             {
                 IReadOnlyList<T> listOfFaces = coordsPerChuck[chunkCounter];
@@ -1176,15 +1184,16 @@ namespace EyE.Maps.Templates
                 float wallHeight,
                 IReadOnlyList<IReadOnlyList<T>> coordsPerChuck,
                 TaskHandler taskContext,
-                bool displayBorderWalls = true)
+                bool displayBorderWalls = true,
+                Texture2D sideDepthMap = null, MeshData normalizedWallMesh=null)
         {
- 
+
             this.map = data;
             this.mazeDrawer = mazeDrawer;
             this.wallThickness = wallThickness;
             this.wallHeight = wallHeight;
             this.displayBorderWalls = displayBorderWalls;
-            
+
             await AsyncInit();
             // Debug.Log("Wall mesh computer running now");
 
@@ -1215,24 +1224,18 @@ namespace EyE.Maps.Templates
             await taskContext.SetStageMessageAndYield("Generation: computing mesh vertices");
             await GenerateVertexPositionsAsync(taskContext);
             if (taskContext.IsCancellationRequested) return null;
-            await taskContext.SetStageMessageAndYield("Generation: launching "+ edgesByChunk.Count+" tasks to generate chunk meshes");
+            await taskContext.SetStageMessageAndYield("Generation: launching " + edgesByChunk.Count + " tasks to generate chunk meshes");
             UniTask<MeshData>[] tasks = new UniTask<MeshData>[edgesByChunk.Count];
-            List<MeshData> outputMeshes = new List<MeshData>();
-            for(int i = 0;i< edgesByChunk.Count;i++)
-            
+           // List<MeshData> outputMeshes = new List<MeshData>();
+            for (int i = 0; i < edgesByChunk.Count; i++)
+
             {
                 List<Edge> localEdges = edgesByChunk[i]; // capture per iteration
-                tasks[i] = GenerateWallModelAsync(localEdges, taskContext);
-                /*tasks[i]= UniTask.RunOnThreadPool(async () =>
-                {
-                    taskContext.ThrowIfCancellationRequested();
-                    return await GenerateWallModelAsync(localEdges, taskContext); // CPU-only function
-                });*/
-                //outputMeshes.Add(GenerateWallModelAsync(chuckEdges));
+                tasks[i] = GenerateWallModelAsync(localEdges, taskContext, normalizedWallMesh,Vector3.one, sideDepthMap);
             }
             MeshData[] results;
             if (taskContext.IsCancellationRequested) return null;
-            await taskContext.SetStageMessageAndYield("Generation: awaiting launched tasks completion");
+            await taskContext.SetStageMessageAndYield("Generation: generating maze wall models");
             try
             {
                 results = await UniTask.WhenAll(tasks);
@@ -1248,8 +1251,8 @@ namespace EyE.Maps.Templates
         protected virtual async UniTask AsyncInit()
         {
             await UniTask.Yield();
-           // await UniTask.SwitchToMainThread();
-          //  await UniTask.SwitchToThreadPool();
+            // await UniTask.SwitchToMainThread();
+            //  await UniTask.SwitchToThreadPool();
         }
 
 
@@ -1283,14 +1286,14 @@ namespace EyE.Maps.Templates
             T neighbor = coord.GetSpatialNeighbor(neighborIndex);
             Vector3 tilePosition = map.GetModelSpacePosition(coord);
             Vector3 neighborPosition = map.GetModelSpacePosition(neighbor);
-            
+
             Vector3 wallPosition = (tilePosition + neighborPosition) * 0.5f;
             Quaternion wallRotation = map.NeighborBorderOrientation(coord, neighborIndex);
             float neighborDist = (tilePosition - neighborPosition).magnitude;
             float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
             Vector3 C1 = wallPosition + wallRotation * (computedEdgeLength * 0.5f * Vector3.forward);//.left);
             return C1;
-            
+
         }
 
         public virtual Mesh RebuildSingleChunk(int chunk)
@@ -1303,7 +1306,7 @@ namespace EyE.Maps.Templates
 
             List<Edge> chuckEdges = edgesByChunk[chunk];
             //string chunkEdgeDetails = strext.Join<Edge>(chuckEdges, (e) => e.cornerA.ToString() + "-" + e.cornerB.ToString(), "\n");
-           // Debug.Log("Created Mesh for chunk ("+chunk+") containing " + chuckEdges.Count + " edges.");
+            // Debug.Log("Created Mesh for chunk ("+chunk+") containing " + chuckEdges.Count + " edges.");
 
             return GenerateWallModel(chuckEdges);
         }
@@ -1319,7 +1322,7 @@ namespace EyE.Maps.Templates
         protected class Corner
         {
             public Vector3 position;
-          //  public List<int> edgeTo;  //indexes into the uniqueCorners list
+            //  public List<int> edgeTo;  //indexes into the uniqueCorners list
             public List<int> edges;  //indexes into the uniqueEdges list
             public List<int> sortedEdges;  //indexes into the edges list
             public Vector3[] fanRing;
@@ -1329,7 +1332,7 @@ namespace EyE.Maps.Templates
         {
             public int cornerA;
             public int cornerB;
-           // public List<T> touchingCoords= new List<T>();
+            // public List<T> touchingCoords= new List<T>();
             public T sideACoord;  //  to replace touching coords list
             public int sideAEdgeNeighborIndex;  //  to replace touching coords list
             public T sideBCoord;  //  to replace touching coords list
@@ -1344,6 +1347,8 @@ namespace EyE.Maps.Templates
             public Vector3[] wallEndBTopVerts;
             public Vector3? wallEndBTipVert;
             public Vector3? wallEndBTopTipVert;
+            public bool wallEndAIsJunction;
+            public bool wallEndBIsJunction;
             public Color wallEndADebugColor;
             public Color wallEndBDebugColor;
         }
@@ -1357,9 +1362,9 @@ namespace EyE.Maps.Templates
                 return (uniqueCorners[e.cornerA].position - uniqueCorners[e.cornerB].position).normalized;
             throw new System.Exception("Invalid corner index (" + cornerIndex + ")passed to EdgeDirFrom.  Edge only contains indexes " + e.cornerA + " and " + e.cornerB);
         }
-        void AssignToEdge(Edge e, int whichCornerIndex, Vector3 wallEndVertFront, Vector3 wallEndVertBack, Vector3? tip, Color debugColor)
+        void AssignToEdge(Edge e, int whichCornerIndex, Vector3 wallEndVertFront, Vector3 wallEndVertBack, Vector3? tip, bool isJunction, Color debugColor)
         {
-           // Debug.Log("\n    Assigning Edge corner [" + whichCornerIndex + "]: vert avg: " + (wallEndVertFront+wallEndVertBack)*0.5f);
+            // Debug.Log("\n    Assigning Edge corner [" + whichCornerIndex + "]: vert avg: " + (wallEndVertFront+wallEndVertBack)*0.5f);
 
             if (e.cornerA == whichCornerIndex)
             {
@@ -1368,6 +1373,7 @@ namespace EyE.Maps.Templates
                 e.wallEndATipVert = tip;
                 if (tip == null) e.wallEndATopTipVert = null;
                 else e.wallEndATopTipVert = Extrude(tip.Value);
+                e.wallEndAIsJunction = isJunction;
                 e.wallEndADebugColor = debugColor;
             }
             else//assumes (e.cornerB == whichCornerIndex)
@@ -1377,6 +1383,7 @@ namespace EyE.Maps.Templates
                 e.wallEndBTipVert = tip;
                 if (tip == null) e.wallEndBTopTipVert = null;
                 else e.wallEndBTopTipVert = Extrude(tip.Value);
+                e.wallEndBIsJunction = isJunction;
                 e.wallEndBDebugColor = debugColor;
             }
         }
@@ -1414,7 +1421,7 @@ namespace EyE.Maps.Templates
             return true;
         }
 
- 
+
         void BuildUniqueCorners()
         {
             BuildUniqueCornersAsync(new TaskHandler(false)).GetAwaiter().GetResult();
@@ -1429,7 +1436,7 @@ namespace EyE.Maps.Templates
 
             public bool Equals(Vector3 a, Vector3 b)
             {
-                return (a- b).sqrMagnitude <= epsilon;
+                return (a - b).sqrMagnitude <= epsilon;
             }
 
             public int GetHashCode(Vector3 v)
@@ -1447,8 +1454,8 @@ namespace EyE.Maps.Templates
         {
 
             List<Vector3> uniqueCornerPositions = new List<Vector3>();
-            Dictionary<Vector3, int> cornerIndexByPosition = new Dictionary<Vector3, int>( new Vector3ApproxComparer(.0001f));
-            string logstr = "Building corner for map "+GetType();
+            Dictionary<Vector3, int> cornerIndexByPosition = new Dictionary<Vector3, int>(new Vector3ApproxComparer(.0001f));
+            string logstr = "Building corner for map " + GetType();
             int cCount = 0;
             foreach (T coord in map.allMapCoords)
             {
@@ -1458,7 +1465,7 @@ namespace EyE.Maps.Templates
                 for (int n = 0; n < neighborCount; n++)
                 {
                     Vector3 cornerPos = ComputeCornerPos(coord, n);
-                    logstr +="\n     neighbor "+n+" pos: "+cornerPos;
+                    logstr += "\n     neighbor " + n + " pos: " + cornerPos;
                     if (!cornerIndexByPosition.TryGetValue(cornerPos, out int cornerIndex))
                     {
                         cornerIndex = uniqueCornerPositions.Count;
@@ -1536,12 +1543,12 @@ namespace EyE.Maps.Templates
                     int currentCornerB = cornerIndiciesForCurrentCoord[(i + 1).RingIndex(cornerCount)];
 
                     // see if an edge exists that uses these corners- if not create it
-                  //  void swap(ref int a, ref int b) { int temp = a; a = b; b = temp; }
+                    //  void swap(ref int a, ref int b) { int temp = a; a = b; b = temp; }
                     //if (currentCornerA < currentCornerB) swap(ref currentCornerA, ref currentCornerB);
                     int currentEdgeIndex;
                     if (!edgeLookup.TryGetValue(currentCornerA, currentCornerB, out currentEdgeIndex))
                         //if (!edgeLookup.TryGetValue((currentCornerB, currentCornerA), out currentEdgeIndex))
-                            currentEdgeIndex = -1;
+                        currentEdgeIndex = -1;
 
                     //int currentEdgeIndex = uniqueEdges.FindIndex(0, (Edge e) => (e.cornerA == currentCornerA && e.cornerB == currentCornerB) || (e.cornerA == currentCornerB && e.cornerB == currentCornerA));
                     Edge edge;
@@ -1554,7 +1561,7 @@ namespace EyE.Maps.Templates
                                 return i;
                             i++;
                         }
-                        throw new GeometryException("Tiles are not neighbors: ["+ source + "] , ["+ neighbor + "]");
+                        throw new GeometryException("Tiles are not neighbors: [" + source + "] , [" + neighbor + "]");
                     }
                     if (currentEdgeIndex == -1)// if not, create one
                     {
@@ -1563,9 +1570,9 @@ namespace EyE.Maps.Templates
                         edge.sideACoord = coord;
                         edge.sideAEdgeNeighborIndex = i;
                         edge.sideBCoord = neighborCoord;
-                        edge.sideBEdgeNeighborIndex = GetNeighborIndex(neighborCoord,coord);
-                       // edge.touchingCoords.Add(coord);
-                       // edge.touchingCoords.Add(neighborCoord);
+                        edge.sideBEdgeNeighborIndex = GetNeighborIndex(neighborCoord, coord);
+                        // edge.touchingCoords.Add(coord);
+                        // edge.touchingCoords.Add(neighborCoord);
                         currentEdgeIndex = uniqueEdges.Count;
                         uniqueEdges.Add(edge);
                         edgeLookup.Add(currentCornerA, currentCornerB, currentEdgeIndex);
@@ -1585,28 +1592,28 @@ namespace EyE.Maps.Templates
 
                         //  we are only in here if a new edge created: no need to check if it exists in a list
                         int edgeIndex = currentEdgeIndex;// uniqueEdges.IndexOf(edge);
-                      //  if (!cornerAObj.edges.Contains(edgeIndex))
-                            cornerAObj.edges.Add(edgeIndex);
-                     //   if (!cornerBObj.edges.Contains(edgeIndex))
-                            cornerBObj.edges.Add(edgeIndex);
+                                                         //  if (!cornerAObj.edges.Contains(edgeIndex))
+                        cornerAObj.edges.Add(edgeIndex);
+                        //   if (!cornerBObj.edges.Contains(edgeIndex))
+                        cornerBObj.edges.Add(edgeIndex);
 
 
                         // addref to this edge to chunk lists  to do: separate for recompute
-                       
+
                         if (map.IsWithinBounds(neighborCoord))
                             edgeChunk = Mathf.Min(edgeChunk, chunckIndexByFaceCoord[neighborCoord]);
                         //logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
 
-                    //    if (!edgesByChunk[edgeChunk].Contains(edge))
-                            edgesByChunk[edgeChunk].Add(edge);
+                        //    if (!edgesByChunk[edgeChunk].Contains(edge))
+                        edgesByChunk[edgeChunk].Add(edge);
                         //else
-                          //  logstr += "  DUPLICATE  edge";
-                          /*
-                        if (logstr.Length > 2048 * 4)
-                        {
-                            //Debug.Log(logstr);
-                            logstr = "";
-                        }*/
+                        //  logstr += "  DUPLICATE  edge";
+                        /*
+                      if (logstr.Length > 2048 * 4)
+                      {
+                          //Debug.Log(logstr);
+                          logstr = "";
+                      }*/
                     }//edgealready exists
                 }
                 taskContext.IncrementProgress(0.1f);
@@ -1615,7 +1622,7 @@ namespace EyE.Maps.Templates
 
             //Debug.Log(logstr);
         }
-       
+
 
         void SortCornerEdgesClockwise()
         {
@@ -1672,7 +1679,7 @@ namespace EyE.Maps.Templates
                 if (map.Walls[e.sideBCoord][e.sideBEdgeNeighborIndex])
                     if (mazeDrawer.IsTileVisible(e.sideBCoord))
                         return true;
-                
+
             }
             return false;
 
@@ -1682,7 +1689,7 @@ namespace EyE.Maps.Templates
             foreach (Edge e in uniqueEdges)
             {
                 e.hasVisibleWall = CheckIsEdgeVisible(e);//.sideACoord, e.touchingCoords[1]);
-            //    e.hasVisibleWall = CheckIsEdgeVisible(e.touchingCoords[0], e.touchingCoords[1]);
+                                                         //    e.hasVisibleWall = CheckIsEdgeVisible(e.touchingCoords[0], e.touchingCoords[1]);
             }
         }
 
@@ -1692,7 +1699,8 @@ namespace EyE.Maps.Templates
             return;
         }
 
-        async UniTask xxUnOptGenerateVertexPositionsAsync(TaskHandler taskContext)
+
+        async UniTask GenerateVertexPositionsAsync(TaskHandler taskContext)
         {
             // Step 4: Generate vertex positions (use new param- wallThickness to compute end-side points (front to back thickness) )
             // ----------------------------------------------------
@@ -1712,117 +1720,13 @@ namespace EyE.Maps.Templates
             //          - duplicate, Tip (if exists) but extrude into:  tipTopVert
             //          - Each edge gets assigned edge.wallEndVerts[A or B][left and right]  (left = fanRing[i], right = fanRing[i+1], and the TIP Vector3 or null),
             //                 -both top and bottom
-            string logstr = "";
-            for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
-            {
-                Corner c = uniqueCorners[cIndex];
-                logstr += "\nComputing visible edges for unique corner[" + cIndex + "] at position:" + c.position + "  Total edges touching corner:" + c.edges.Count;
-                Vector3 cornerNormal = NormalAtModelSpacePosition(c.position);
-
-                if (c.edges.Count == 0) continue;
-                List<Edge> visibleEdges = new List<Edge>();//edges with walls that touch this corner
-
-                foreach (int edgeIndex in c.sortedEdges)// we want the visible edge list in this order
-                {
-                    //Edge e = uniqueEdges[edgeIndex];
-                    Edge e = uniqueEdges[c.edges[edgeIndex]];
-                    if (e.hasVisibleWall)
-                    {
-                        visibleEdges.Add(e);
-                    }
-
-                }
-
-                if (visibleEdges.Count == 1)
-                {
-                    //compute 2 fanRing verts- assign to single edge-end
-                    Edge e = visibleEdges[0];
-                    Vector3 thicknessOffset = wallThickness * 0.5f * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex)); //assumes spheroid..  todo: change later to param
-                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, Color.black);
-                }
-                else if (visibleEdges.Count > 1)
-                {
-                    c.fanRing = new Vector3[visibleEdges.Count];
-                    Vector3 axis = cornerNormal;//.normalized;// assumes spheroid-fixed
-                    /*Vector3 refDir;
-                    if (Mathf.Abs(axis.z) < 0.99f)
-                        refDir = Vector3.Cross(axis, Vector3.forward); // not parallel
-                    else
-                        refDir = Vector3.Cross(axis, Vector3.right);
-                    refDir.Normalize();
-                    */
-                    Vector3 avgRingPos = Vector3.zero;
-                    //compute visibleCount fanRing verts
-                    for (int eCounter = 0; eCounter < visibleEdges.Count; eCounter++)
-                    {
-                        Edge e = visibleEdges[eCounter];
-                        Edge nextEdge = visibleEdges.RingIndex(eCounter + 1);
-                        //              - Compute dirA and dirB (unit vectors away from corner)
-                        Vector3 edgeDir = EdgeDirFrom(e, cIndex);
-                        Vector3 nextEdgeDir = EdgeDirFrom(nextEdge, cIndex);
-
-                        //bisector stuff working, but only sometimes. we'll try different methods
-                        // get line in form of a point and a direction, for both edge's side and next edge's side
-                        //compute points on each line where they closest (Ideally same point), and compute the avg position of them
-
-                        Vector3 edgeThicknessOffset = -wallThickness * 0.5f * Vector3.Cross(cornerNormal, edgeDir);
-
-                        Vector3 nextEdgethicknessOffset = -wallThickness * 0.5f * Vector3.Cross(cornerNormal, nextEdgeDir);
-                        Vector3 posOnEdgeSide = c.position + edgeThicknessOffset;
-                        // we want the opposite side of the edge wall
-                        Vector3 posOnNextEdgeSide = c.position - nextEdgethicknessOffset;
-                        Vector3 closestSidePoint;
-
-                        if ((posOnEdgeSide - posOnNextEdgeSide).sqrMagnitude > 0.0001f)
-                        {
-                            Ray side = new Ray(posOnEdgeSide, edgeDir);
-                            Ray nextSide = new Ray(posOnNextEdgeSide, nextEdgeDir);
-                            Vector3 closestNextSidePoint;
-                            if (!LineIntersection(side, nextSide, out closestSidePoint, out closestNextSidePoint))// no intersection get midpoint of closest
-                            {
-                                closestSidePoint += closestNextSidePoint;
-                                closestSidePoint *= 0.5f;
-                            }
-                        }
-                        else
-                            closestSidePoint = posOnEdgeSide;
-                        c.fanRing[eCounter] = closestSidePoint;
-                        //Debug.Log("FanRing-  setting for corner[" + cIndex + "].position:" + c.position + " fanRing[" + eCounter + "] to position" + closestSidePoint);
-                        avgRingPos += c.fanRing[eCounter];
-                    }
-                    avgRingPos /= visibleEdges.Count;
-
-                    if (visibleEdges.Count > 2) //add tip point fan common point
-                    {
-                        c.tipVert = avgRingPos;// c.position;// can it be this simple? I don't think so....possibly- we'll see how those offsets work.
-                    }
-                    //loopthough walls again, assign end verts from fan verts-  can be optiized into main loop, if needed
-                    for (int eCounter = 0; eCounter < visibleEdges.Count; eCounter++)
-                    {
-                        Edge e = visibleEdges[eCounter];
-                        Color color = Color.red * ((float)eCounter / (float)visibleEdges.Count);
-                        
-                        AssignToEdge(e, cIndex, c.fanRing.RingIndex(eCounter), c.fanRing.RingIndex(eCounter - 1), c.tipVert, color);
-                        //Vector3 thicknessOffset = wallThickness * 0.5f * Vector3.Cross(c.position.normalized, EdgeDir(e)); //assumes spheroid..  todo: change later to param
-                        //AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null);//works as test, just not what we want
-                    }
-                }// end - more than one edge here
-                taskContext.IncrementProgress(0.1f);
-                await taskContext.Yield();
-            }
-
-            Debug.Log(logstr);
-        }
-
-        async UniTask GenerateVertexPositionsAsync(TaskHandler taskContext)
-        {
             //string logstr = "";
             float halfT = wallThickness * 0.5f;
 
             for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
             {
                 Corner c = uniqueCorners[cIndex];
-               // logstr += "\nComputing visible edges for unique corner[" + cIndex + "] at position:" + c.position + "  Total edges touching corner:" + c.edges.Count;
+                // logstr += "\nComputing visible edges for unique corner[" + cIndex + "] at position:" + c.position + "  Total edges touching corner:" + c.edges.Count;
                 if (c.edges.Count == 0) continue;
 
                 Vector3 cornerNormal = NormalAtModelSpacePosition(c.position); // cache once per corner
@@ -1842,7 +1746,7 @@ namespace EyE.Maps.Templates
                 {
                     Edge e = visibleEdges[0];
                     Vector3 thicknessOffset = halfT * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex));
-                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, Color.black);
+                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null,false, Color.black);
                 }
                 else if (visibleCount > 1)
                 {
@@ -1896,7 +1800,7 @@ namespace EyE.Maps.Templates
                     }
 
                     avgRingPos /= visibleCount;
-
+                    bool isJunction = (visibleCount > 1);
                     if (visibleCount > 2)
                     {
                         c.tipVert = avgRingPos;
@@ -1906,7 +1810,7 @@ namespace EyE.Maps.Templates
                     {
                         Edge e = visibleEdges[eCounter];
                         Color color = Color.red * ((float)eCounter / visibleCount);
-                        AssignToEdge(e, cIndex, c.fanRing.RingIndex(eCounter), c.fanRing.RingIndex(eCounter - 1), c.tipVert, color);
+                        AssignToEdge(e, cIndex, c.fanRing.RingIndex(eCounter), c.fanRing.RingIndex(eCounter - 1), c.tipVert, isJunction, color);
                     }
                 }// end more than one visible edge touching corner
 
@@ -1914,16 +1818,22 @@ namespace EyE.Maps.Templates
                 await taskContext.Yield();
             }
 
-          //  Debug.Log(logstr);
+            //  Debug.Log(logstr);
         }
 
 
-        Mesh GenerateWallModel(List<Edge> edgesInChunk)
+        Mesh GenerateWallModel(List<Edge> edgesInChunk, MeshData normalizedMeshBase = null, Vector3 meshAspectRatio = default(Vector3), Texture2D sideDepthTexture = null, Vector2Int depthSegements = default(Vector2Int))
         {
-            return GenerateWallModelAsync(edgesInChunk,new TaskHandler(false)).GetAwaiter().GetResult().ToMesh();
+            return GenerateWallModelAsync(edgesInChunk, new TaskHandler(false), normalizedMeshBase , meshAspectRatio, sideDepthTexture , depthSegements).GetAwaiter().GetResult().ToMesh();
         }
-
-        async UniTask<MeshData> GenerateWallModelAsync(List<Edge> edgesInChunk, TaskHandler taskContext)
+        struct CacheWallPoint
+        {
+            public Vector3 pointOnQuadL;
+            public Vector3 pointOnQuadR;
+            public Vector3 pointOnQuadCenter;
+            public float depth;
+        }
+        async UniTask<MeshData> GenerateWallModelAsync(List<Edge> edgesInChunk, TaskHandler taskContext, MeshData normalizedMeshBase=null, Vector3 meshAspectRatio= default(Vector3), Texture2D sideDepthTexture = null, Vector2Int depthSegements = default(Vector2Int))
         {
             // Step 5: Generate Wall Geometry
             // ------------------------------
@@ -1940,17 +1850,22 @@ namespace EyE.Maps.Templates
             //             - create end-cap quad with combos of top bottom
             List<Vector3> verts = new List<Vector3>();
             List<int> tris = new List<int>();
+            List<int> subMeshTris = new List<int>();
             List<Vector2> uvs = new List<Vector2>();
             List<Color> colors = new List<Color>();
+            if (depthSegements == default(Vector2Int))
+                depthSegements = new Vector2Int(64, 64);
             string logstr = "";
+            List<MeshData> mergeableMeshes= new List<MeshData>();
+
             for (int edgeIndexInChunk = 0; edgeIndexInChunk < edgesInChunk.Count; edgeIndexInChunk++)
             {
-                if(taskContext.IsCancellationRequested) return new MeshData();
+                if (taskContext.IsCancellationRequested) return new MeshData();
                 Edge e = edgesInChunk[edgeIndexInChunk];
                 logstr += "\nEdgeInChunk[" + edgeIndexInChunk + "]:  corners[" + e.cornerA + "] , [" + e.cornerB + "]";
                 if (!e.hasVisibleWall) continue;
                 if (e.wallEndAVerts == null)
-                    throw new System.Exception("e.wallEndAVerts is null.  edge in chunk index: " + edgeIndexInChunk + "  edge corner a index: "+e.cornerA + "  edge corner b index: " + e.cornerB);
+                    throw new System.Exception("e.wallEndAVerts is null.  edge in chunk index: " + edgeIndexInChunk + "  edge corner a index: " + e.cornerA + "  edge corner b index: " + e.cornerB);
                 if (e.wallEndBVerts == null)
                     throw new System.Exception("e.wallEndBVerts is null.  edge in chunk index: " + edgeIndexInChunk + "  edge corner a index: " + e.cornerA + "  edge corner b index: " + e.cornerB);
                 logstr += "\n     vert avg: " + (e.wallEndAVerts[0] + e.wallEndAVerts[1]) * 0.5f + " and " + (e.wallEndBVerts[0] + e.wallEndBVerts[1]) * 0.5f;
@@ -1962,55 +1877,129 @@ namespace EyE.Maps.Templates
                 var aTip = e.wallEndATipVert;
                 var aTipTop = e.wallEndATopTipVert;
                 var aColor = e.wallEndADebugColor;
+                bool aIsJunction = e.wallEndAIsJunction;
 
                 var bBot = e.wallEndBVerts;
                 var bTop = e.wallEndBTopVerts;
                 var bTip = e.wallEndBTipVert;
                 var bTipTop = e.wallEndBTopTipVert;
                 var bColor = e.wallEndBDebugColor;
-                // Bottom quad (A[0]→B[1], A[1]→B[0])
-                AddQuad(aBot[0], aBot[1], bBot[1], bBot[0], aColor, bColor, verts, tris, uvs, colors);
-                // Top quad
-                AddQuad(aTop[0], aTop[1], bTop[1], bTop[0], aColor, bColor, verts, tris, uvs, colors);
+                bool bIsJunction = e.wallEndBIsJunction;
 
-                // Front face: A[0]→ATop[0]→BTop[1]→B[1]
-                AddQuad(aBot[1], aTop[0], bTop[0], bBot[1], aColor, bColor, verts, tris, uvs, colors);
+               
 
-                // Back face: A[1]→ATop[1]→BTop[0]→B[0]
-                AddQuad(aTop[1], aBot[0], bBot[0], bTop[1], aColor, bColor, verts, tris, uvs, colors);
-
-                // End A
-                if (aTip.HasValue && aTipTop.HasValue)
+                if (sideDepthTexture == null)
                 {
-                    AddTri(aBot[1], aBot[0], aTip.Value, aColor, verts, tris, uvs, colors);
-                    AddTri(aTop[1], aTop[0], aTipTop.Value, aColor, verts, tris, uvs, colors);
+                    if (normalizedMeshBase != null)
+                    {
+                        int numCopies = 3;
+                        float tInc = 1f / numCopies;
+                        float t0 = 0;
+                        for (int i = 0; i < numCopies; i++,t0+=tInc)
+                        {
+                            float t1 = t0+tInc;
+                            if (t1 > 1f) t1 = 1f;
+
+                            // match your original parameter mapping exactly
+                            Vector3 seg_aBot0 = Vector3.Lerp(aBot[0], bBot[0], t0);
+                            Vector3 seg_aBot1 = Vector3.Lerp(aBot[1], bBot[1], t0);
+                            Vector3 seg_aTop1 = Vector3.Lerp(aTop[1], bTop[1], t0);
+                            Vector3 seg_aTop0 = Vector3.Lerp(aTop[0], bTop[0], t0);
+
+                            Vector3 seg_bBot0 = Vector3.Lerp(aBot[0], bBot[0], t1);
+                            Vector3 seg_bBot1 = Vector3.Lerp(aBot[1], bBot[1], t1);
+                            Vector3 seg_bTop1 = Vector3.Lerp(aTop[1], bTop[1], t1);
+                            Vector3 seg_bTop0 = Vector3.Lerp(aTop[0], bTop[0], t1);
+
+                            MeshData wallMesh = TransformNormaizedMeshAlongWall(
+                                normalizedMeshBase,
+                                seg_aBot0, seg_aBot1, seg_aTop1, seg_aTop0,
+                                seg_bBot0, seg_bBot1, seg_bTop1, seg_bTop0
+                            );
+
+                            mergeableMeshes.Add(wallMesh);
+                        }
+                        /*
+                        int numCopies = 3;//test with hard coded 3, for now
+                        // add loop to go along length of wall (from start to end) "numCopies" amount of times, and create a transformed meshData, for each section.
+                        {
+                            //note: normalized mesh has all verts defined between 0,0,0 and 1,1,1
+
+                            //definition:  MeshData TransformNormaizedMeshAlongWall(MeshData normalizdMesh,
+                            //   Vector3 cornerBottomLeftStart, Vector3 cornerBottomRightStart, Vector3 cornerTopLeftStart, Vector3 cornerTopRightStart,
+                            //   Vector3 cornerBottomLeftEnd, Vector3 cornerBottomRightEnd, Vector3 cornerTopLeftEnd, Vector3 cornerTopRightEnd)
+                            MeshData wallMesh = TransformNormaizedMeshAlongWall(normalizedMeshBase, aBot[0], aBot[1], aTop[1], aTop[0],
+                                bBot[0], bBot[1], bTop[1], bTop[0]);
+                            mergeableMeshes.Add(wallMesh);
+                        }*/
+                    }
+                    else
+                    {
+                        // Bottom quad (A[0]→B[1], A[1]→B[0])
+                        AddQuad(aBot[0], aBot[1], bBot[1], bBot[0], aColor, bColor, verts, subMeshTris, uvs, colors);
+                        // Top quad
+                        AddQuad(aTop[0], aTop[1], bTop[1], bTop[0], aColor, bColor, verts, subMeshTris, uvs, colors);
+
+                        // Front face: A[0]→ATop[0]→BTop[1]→B[1]
+                        AddQuad(aBot[1], aTop[0], bTop[0], bBot[1], aColor, bColor, verts, tris, uvs, colors);
+
+                        // Back face: A[1]→ATop[1]→BTop[0]→B[0]
+                        AddQuad(aTop[1], aBot[0], bBot[0], bTop[1], aColor, bColor, verts, tris, uvs, colors);
+                    }
                 }
                 else
                 {
-                    AddQuad(aBot[1], aBot[0], aTop[1], aTop[0], aColor, aColor, verts, tris, uvs, colors);
+
+                    BuildLengthwiseWallFaces(
+                            aBot[0], aBot[1], bBot[1], bBot[0],
+                            aTop[0], aTop[1], bTop[1], bTop[0],
+                            aColor, bColor, verts, tris, subMeshTris, uvs, colors);
+
+                }
+
+                // End A
+                if (aTip.HasValue && aTipTop.HasValue)//only junctions of more that two edges has a tip
+                {
+                    AddTri(aBot[1], aBot[0], aTip.Value, aColor, verts, subMeshTris, uvs, colors);
+                    AddTri(aTop[1], aTop[0], aTipTop.Value, aColor, verts, subMeshTris, uvs, colors);
+                }
+                else
+                {
+                    if(!aIsJunction && normalizedMeshBase==null)// only draw end cap when NO junction at all
+                        AddQuad(aBot[1], aBot[0], aTop[1], aTop[0], aColor, aColor, verts, subMeshTris, uvs, colors);
                 }
 
                 // End B
-                if (bTip.HasValue && bTipTop.HasValue)
+                if (bTip.HasValue && bTipTop.HasValue)//only junctions of more that two edges has a tip
                 {
-                    AddTri(bBot[0], bBot[1], bTip.Value, bColor, verts, tris, uvs, colors);
-                    AddTri(bTop[0], bTop[1], bTipTop.Value, bColor, verts, tris, uvs, colors);
+                    AddTri(bBot[0], bBot[1], bTip.Value, bColor, verts, subMeshTris, uvs, colors);
+                    AddTri(bTop[0], bTop[1], bTipTop.Value, bColor, verts, subMeshTris, uvs, colors);
                 }
                 else
                 {
-                    AddQuad(bBot[0], bBot[1], bTop[0], bTop[1], bColor, bColor, verts, tris, uvs, colors);
+                    if(!bIsJunction && normalizedMeshBase == null)// only draw end cap when NO junction at all
+                        AddQuad(bBot[0], bBot[1], bTop[0], bTop[1], bColor, bColor, verts, subMeshTris, uvs, colors);
                 }
-                taskContext.IncrementProgress(1 / (float)edgesInChunk.Count);
+                taskContext.IncrementProgress(0.5f);
                 await taskContext.Yield();
             }
             // Debug.Log(logstr);
             MeshData mesh = new MeshData();
             mesh.SetVertices(verts);
-            mesh.SetTriangles(tris);//, 0);
+            mesh.SetTriangles(tris, 0);
+            mesh.SetTriangles(subMeshTris, 1);
             mesh.SetUVs(0, uvs);
             mesh.SetColors(colors);
-            mesh.RecalculateNormals();
             mesh.RecalculateBounds();
+
+            if (mergeableMeshes.Count > 0)
+            {
+                mergeableMeshes.Add(mesh);
+                mesh = MeshData.MergeMeshes(mergeableMeshes);
+            }
+
+            mesh.RecalculateNormals();
+            
             taskContext.IncrementProgress(0.2f);
             // string chunkEdgeDetails = strext.Join<Edge>(edgesInChunk, (e) => e.cornerA.ToString() + "-" + e.cornerB.ToString(), "\n");
             // Debug.Log("Created Mesh for chunk containing " + edgesInChunk.Count + " edges. Final vertex count: " + verts.Count + "\n" + chunkEdgeDetails);
@@ -2018,20 +2007,31 @@ namespace EyE.Maps.Templates
             return mesh;
 
 
+            float SampleDepth(Vector2 uv)
+            {
+                Color c = sideDepthTexture.GetPixelBilinear(uv.x, uv.y);
+                return 1f - c.grayscale; // scale externally if needed
+            }
             void AddQuad(Vector3 bl, Vector3 tl, Vector3 tr, Vector3 br,
                 Color colorL, Color colorR,
-                List<Vector3> v, List<int> t, List<Vector2> uv, List<Color> col)
+                List<Vector3> v, List<int> t, List<Vector2> uv, List<Color> col, List<Vector2> useUvs = null)
             {
                 int start = v.Count;
                 v.Add(bl); v.Add(tl); v.Add(tr); v.Add(br);
                 t.Add(start + 0); t.Add(start + 1); t.Add(start + 2);
                 t.Add(start + 0); t.Add(start + 2); t.Add(start + 3);
 
-                uv.Add(new Vector2(0, 0)); // bl
-                uv.Add(new Vector2(0, 1)); // tl
-                uv.Add(new Vector2(1, 1)); // tr
-                uv.Add(new Vector2(1, 0)); // br
-
+                if (useUvs == null)
+                {
+                    uv.Add(new Vector2(0, 0)); // bl
+                    uv.Add(new Vector2(0, 1)); // tl
+                    uv.Add(new Vector2(1, 1)); // tr
+                    uv.Add(new Vector2(1, 0)); // br
+                }
+                else
+                {
+                    uv.Add(useUvs[0]); uv.Add(useUvs[1]); uv.Add(useUvs[2]); uv.Add(useUvs[3]);
+                }
                 col.Add(colorL);
                 col.Add(colorL);
                 col.Add(colorR);
@@ -2065,6 +2065,228 @@ namespace EyE.Maps.Templates
                 col.Add(c);
                 col.Add(c);
 
+            }
+
+            MeshData TransformNormaizedMeshAlongWall(MeshData normalizdMesh,
+            Vector3 cornerBottomLeftStart, Vector3 cornerBottomRightStart, Vector3 cornerTopLeftStart, Vector3 cornerTopRightStart,
+            Vector3 cornerBottomLeftEnd, Vector3 cornerBottomRightEnd, Vector3 cornerTopLeftEnd, Vector3 cornerTopRightEnd)
+            {
+                MeshData result = new MeshData(normalizdMesh);
+                Vector3[] verts = result.vertices;
+
+                // Precompute vertical offset (constant over shape)
+                Vector3 heightOffset = cornerTopLeftStart - cornerBottomLeftStart;
+
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    Vector3 v = verts[i];
+
+                    float x = v.x; // left -> right
+                    float y = v.y; // bottom -> top
+                    float z = v.z; // start -> end
+
+                    // 1) move along the two side rails (these are parallel by constraint)
+                    Vector3 leftPos = Vector3.Lerp(cornerBottomLeftStart, cornerBottomLeftEnd, z);
+                    Vector3 rightPos = Vector3.Lerp(cornerBottomRightStart, cornerBottomRightEnd, z);
+
+                    // 2) interpolate across width (handles non-parallel start/end edges)
+                    Vector3 basePos = Vector3.Lerp(leftPos, rightPos, x);
+
+                    // 3) apply vertical offset and assign back to array
+                    verts[i] = basePos + heightOffset * y;
+                }
+
+                //result.vertices = verts;// shouldn't be needed- we are working on the arrayRef
+                return result;
+            }
+            void BuildLengthwiseWallFaces(
+                Vector3 botA0, Vector3 botA1, Vector3 botB1, Vector3 botB0,
+                Vector3 topA0, Vector3 topA1, Vector3 topB1, Vector3 topB0,
+                Color colorA, Color colorB,
+                List<Vector3> verts, List<int> tris, List<int> subMeshTris,List<Vector2> uvs, List<Color> colors)
+            {
+                float incU = 1f / depthSegements.x;
+                float incV = 1f / depthSegements.y;
+
+                int uCount = depthSegements.x + 1;
+                int vCount = depthSegements.y + 1;
+
+                //center quad- we will LERP towards UV's on this, rather than offset by a normal for depth (old method)
+                Vector3 botACenter = (botA0 + botA1) * 0.5f;
+                Vector3 botBCenter = (botB0 + botB1) * 0.5f;
+                Vector3 topACenter = (topA0 + topA1) * 0.5f;
+                Vector3 topBCenter = (topB0 + topB1) * 0.5f;
+
+                // Cache all depth samples up front
+                CacheWallPoint[,] wallPointCache = new CacheWallPoint[uCount, vCount];
+
+                float[,] depthCache = new float[uCount, vCount];
+                for (int ui = 0; ui < uCount; ui++)
+                    for (int vi = 0; vi < vCount; vi++)
+                    {
+                        Vector2 uv = new Vector2(ui * incU, vi * incV);
+                        depthCache[ui, vi] = SampleDepth(uv);
+                        CacheWallPoint cachePt;
+                        cachePt.depth = SampleDepth(uv);
+                        cachePt.pointOnQuadL = GetPointOnQuad(botA1, botB1, topA0, topB0, uv);
+                        cachePt.pointOnQuadR = GetPointOnQuad(botA0, botB0, topA1, topB1, uv);
+                        cachePt.pointOnQuadCenter = GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, uv);
+                        wallPointCache[ui, vi] = cachePt;
+                    }
+
+                for (int j = 0; j < depthSegements.y; j++)
+                {
+                    float V = j * incV;
+                    float VNext = V + incV;
+                    bool isBottomRow = j == 0;
+                    bool isTopRow = j == depthSegements.y - 1;
+
+                    for (int i = 0; i < depthSegements.x; i++)
+                    {
+                        float U = i * incU;
+                        float UNext = U + incU;
+
+                        CacheWallPoint cachePtBL = wallPointCache[i, j];
+                        CacheWallPoint cachePtBR = wallPointCache[i + 1, j];
+                        CacheWallPoint cachePtTL = wallPointCache[i, j + 1];
+                        CacheWallPoint cachePtTR = wallPointCache[i + 1, j + 1];
+
+                        float dBL = cachePtBL.depth;// depthCache[i, j];
+                        float dBR = cachePtBR.depth;//depthCache[i + 1, j];
+                        float dTL = cachePtTL.depth;//depthCache[i, j + 1];
+                        float dTR = cachePtTR.depth;//depthCache[i + 1, j + 1];
+
+                        // ── BOTTOM FACE (first V row only) ──────────────────────────────
+                        if (isBottomRow && !(dBL >= 0.99f && dBR >= 0.99f))
+                        {
+                            // Bottom face rail: lerp between botA0↔botB0 and botA1↔botB1
+                            Vector3 posBL = cachePtBL.pointOnQuadL;//  Vector3.Lerp(botA0, botB0, U);
+                            Vector3 posBR = cachePtBL.pointOnQuadR;// Vector3.Lerp(botA1, botB1, U);
+                            Vector3 posTL = cachePtBR.pointOnQuadL;// Vector3.Lerp(botA0, botB0, UNext);
+                            Vector3 posTR = cachePtBR.pointOnQuadR;// Vector3.Lerp(botA1, botB1, UNext);
+
+                            Vector3 posCenter0 = cachePtBL.pointOnQuadCenter;// Vector3.Lerp(botACenter, botBCenter, U);
+                            Vector3 posCenter1 = cachePtBR.pointOnQuadCenter;// Vector3.Lerp(botACenter, botBCenter, UNext);
+
+                            posBL = Vector3.Lerp(posBL, posCenter0, dBL);
+                            posBR = Vector3.Lerp(posBR, posCenter0, dBL);
+                            posTL = Vector3.Lerp(posTL, posCenter1, dBR);
+                            posTR = Vector3.Lerp(posTR, posCenter1, dBR);
+
+                            //top and bottom faces, edges depth cuts into uv, rather than squishing
+                            float uvL0 = dBL * 0.5f;        // left edge trimmed inward
+                            float uvR0 = 1f - (dBL * 0.5f); // right edge trimmed inward
+                            float uvL1 = dBR * 0.5f;
+                            float uvR1 = 1f - (dBR * 0.5f);
+
+                            AddQuad(posBL, posBR, posTR, posTL, colorA, colorB, verts, subMeshTris, uvs, colors,
+                                new List<Vector2> {
+                                    new Vector2(uvL0, 0),
+                                    new Vector2(uvL1, 1),   // note: U/UNext axis is V here (along wall length)
+                                    new Vector2(uvR1, 1),
+                                    new Vector2(uvR0, 0) });
+                        }
+
+                        // ── SIDE FACES (front + back, every row) ────────────────────────
+                        if (!(dBL >= 0.99f && dBR >= 0.99f && dTL >= 0.99f && dTR >= 0.99f))
+                        {
+                            Vector2 UV_BL = new Vector2(U, V);
+                            Vector2 UV_BR = new Vector2(UNext, V);
+                            Vector2 UV_TL = new Vector2(U, VNext);
+                            Vector2 UV_TR = new Vector2(UNext, VNext);
+
+                            Vector3 centerBottomLeft = cachePtBL.pointOnQuadCenter;// GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_BL);
+                            Vector3 centerBottomRight = cachePtBR.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_BR);
+                            Vector3 centerTopLeft = cachePtTL.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_TL);
+                            Vector3 centerTopRight = cachePtTR.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_TR);
+
+                            // left face: botA1→topA0→topB0→botB1
+                            {
+                                Vector3 bl = cachePtBL.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_BL);
+                                Vector3 br = cachePtBR.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_BR);
+                                Vector3 tl = cachePtTL.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_TL);
+                                Vector3 tr = cachePtTR.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_TR);
+
+                                bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
+                                br = Vector3.Lerp(br, centerBottomRight, dBR);
+                                tl = Vector3.Lerp(tl, centerTopLeft, dTL);
+                                tr = Vector3.Lerp(tr, centerTopRight, dTR);
+                                AddQuad(bl,tl,tr,br,
+                                        colorA, colorB, verts, tris, uvs, colors,
+                                        new List<Vector2> { UV_BL, UV_TL, UV_TR, UV_BR });
+
+                            }
+
+                            // right face: botA0→topA1→topB1→botB0
+                            {
+                                Vector3 bl = cachePtBL.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_BL);
+                                Vector3 br = cachePtBR.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_BR);
+                                Vector3 tl = cachePtTL.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_TL);
+                                Vector3 tr = cachePtTR.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_TR);
+                                bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
+                                br = Vector3.Lerp(br, centerBottomRight, dBR);
+                                tl = Vector3.Lerp(tl, centerTopLeft, dTL);
+                                tr = Vector3.Lerp(tr, centerTopRight, dTR);
+
+                                UV_BL.x = 1f - UV_BL.x;
+                                UV_BR.x = 1f - UV_BR.x;
+                                UV_TL.x = 1f - UV_TL.x;
+                                UV_TR.x = 1f - UV_TR.x;
+
+                                AddQuad(tl,bl,br,tr,
+                                        colorA, colorB, verts, tris, uvs, colors,
+                                        new List<Vector2> { UV_TL, UV_BL, UV_BR, UV_TR });
+                                /* old
+                                Vector3 bNormal = Vector3.Cross(tl - bl, br - bl).normalized * -1f;
+                                AddQuad(
+                                    tl - bNormal * dTL * wallThickness * 0.5f,
+                                    bl - bNormal * dBL * wallThickness * 0.5f,
+                                    br - bNormal * dBR * wallThickness * 0.5f,
+                                    tr - bNormal * dTR * wallThickness * 0.5f,
+                                    colorA, colorB, verts, tris, uvs, colors,
+                                    new List<Vector2> { UV_TL, UV_BL, UV_BR, UV_TR });*/
+                            }
+                        }
+
+                        // ── TOP FACE (last V row only) ───────────────────────────────────
+                        if (isTopRow && !(dTL >= 0.99f && dTR >= 0.99f))
+                        {
+                            // Top face rail: lerp between topA0↔topB0 and topA1↔topB1
+                            Vector3 posL0 = cachePtTL.pointOnQuadL;//  Vector3.Lerp(topA0, topB0, U);
+                            Vector3 posR0 = cachePtTL.pointOnQuadR;//  Vector3.Lerp(topA1, topB1, U);
+                            Vector3 posL1 = cachePtTR.pointOnQuadL;//  Vector3.Lerp(topA0, topB0, UNext);
+                            Vector3 posR1 = cachePtTR.pointOnQuadR;//  Vector3.Lerp(topA1, topB1, UNext);
+
+                            Vector3 posCenter0 = cachePtTL.pointOnQuadCenter;// Vector3.Lerp(topACenter, topBCenter, U);
+                            Vector3 posCenter1 = cachePtTR.pointOnQuadCenter;//Vector3.Lerp(topACenter, topBCenter, UNext);
+
+                            Vector3 vBL = Vector3.Lerp(posL0, posCenter0, dTL);
+                            Vector3 vBR = Vector3.Lerp(posR0, posCenter0, dTL);
+                            Vector3 vTL = Vector3.Lerp(posL1, posCenter1, dTR);
+                            Vector3 vTR = Vector3.Lerp(posR1, posCenter1, dTR);
+
+                            //top and bottom faces, edges depth cuts into uv, rather than squishing
+                            float vOffset = dTL * 0.5f;
+                            float vOffsetNext = dTR * 0.5f;
+                            // Facing up (matches original BuildTopWallMesh isTop=true winding)
+                            AddQuad(vBL, vBR, vTR, vTL, colorA, colorB, verts, subMeshTris, uvs, colors,
+                                new List<Vector2> {
+                                    new Vector2(U, vOffset),// dTL * 0.5f),        // bl
+                                    new Vector2(U, 1f-vOffset),//dTR * 0.5f);//,        // br
+                                    new Vector2(UNext, 1f-vOffsetNext),//1f - dTR * 0.5f),   // tr
+                                    new Vector2(UNext, vOffsetNext) });// 1f - dTL * 0.5f) }); // tl
+
+                        }
+                    }
+                }
+
+                static Vector3 GetPointOnQuad(Vector3 p00, Vector3 p10, Vector3 p01, Vector3 p11, Vector2 uv)
+                {
+                    return Vector3.Lerp(
+                        Vector3.Lerp(p00, p10, uv.x),
+                        Vector3.Lerp(p01, p11, uv.x),
+                        uv.y);
+                }
             }
         }
     }

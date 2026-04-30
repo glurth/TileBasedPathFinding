@@ -346,14 +346,14 @@ namespace EyE.Maps.Templates
 
 
     //this version has double-sided walls (since there may be an odd number of neighbors- we can't easily do single walls.
-    abstract public class GenericMazeMap<T> : GenericMazeMapBase, IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
+    abstract public partial class GenericMazeMap<T> : GenericMazeMapBase, IMap<T>, IMapDrawable<T> where T : ITileCoordinate<T>
     {
         private T _size;
 
 
         protected Dictionary<T, bool[]> walls = new Dictionary<T, bool[]>();
         protected Dictionary<T, bool[]> oneWayWalls = new Dictionary<T, bool[]>();
-        // oneWayWalls[coord][neighborIndex] = true means wall only blocks FROM this coord TO neighbor
+        // oneWayWalls[coord][neighborIndex] = true means wall only blocks FROM coord TO neighborOfCoordIndex
         // This allows movement FROM neighbor back TO coord but not the reverse
 
         public IReadOnlyDictionary<T, bool[]> OneWayWalls { get { return oneWayWalls; } }
@@ -489,6 +489,11 @@ namespace EyE.Maps.Templates
         /// <param name="progressRef">Optional progress reference for external monitoring (0 to 1).</param>
         public override async UniTask GenerateMazeAsync(TaskHandler taskContext, bool testAllWalls = false)
         {
+            /*Debug.Log("MazeGen Starting");
+            await GenerateFromTopologyAsync(ExampleTopologies.BuildSampleTopology(), taskContext);
+            Debug.Log("MazeGen Completed");
+            return;*/
+
             //var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
             List<T> cachedAllCoords= new();
@@ -501,7 +506,7 @@ namespace EyE.Maps.Templates
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
                 bool[] wallsArray = new bool[size.NumberOfNeighbors()];
-                bool[] oneWayArray = new bool[size.NumberOfNeighbors()];  // NEW
+                bool[] oneWayArray = new bool[size.NumberOfNeighbors()]; 
                 for (int i = 0; i < size.NumberOfNeighbors(); i++)
                 {
                     wallsArray[i] = true;
@@ -509,7 +514,7 @@ namespace EyE.Maps.Templates
                 }
 
                 walls[tileCoord.value] = wallsArray;
-                oneWayWalls[tileCoord.value] = oneWayArray;  // NEW
+                oneWayWalls[tileCoord.value] = oneWayArray; 
                 visited[tileCoord.value] = false;
 
                 completedSteps++;
@@ -590,68 +595,13 @@ namespace EyE.Maps.Templates
             GenerateMazeAsync(new TaskHandler(false), testAllWalls).AsTask().GetAwaiter().GetResult();//.Forget();
         }
         public override System.Type CoordinateType { get => typeof(T); }
+
         /// <summary>
         /// Asynchronously generates the main path from start to end.
         /// </summary>
         /// <param name="start">The starting tile.</param>
         /// <param name="end">The target tile to reach.</param>
         /// <param name="yieldTimer">Used to yield control based on elapsed time.</param>
-        protected virtual async UniTask<List<T>> OLDGenerateMainPathAsync(T start, T end, TaskHandler taskContext)//YieldTimer yieldTimer)
-        {
-            Stack<T> stack = new Stack<T>();
-            List<T> path = new List<T>();
-            stack.Push(start);
-            visited[start] = true;
-
-            while (stack.Count > 0)
-            {
-                T current = stack.Peek();
-                path.Add(current);
-
-                if (current.Equals(end))
-                    break;
-
-               // List<T> neighbors = GetUnvisitedNeighbors(current);
-                List<NeighborDetails> neighborsDetails = GetUnvisitedNeighbors(current);
-                if (neighborsDetails.Count > 0)
-                {
-                    List<T> pathNeighbors = new();
-                    foreach (NeighborDetails details in neighborsDetails)
-                        pathNeighbors.Add(details.pathNeighbor);
-                    //T next = neighbors[random.Next(neighbors.Count)];
-                    T next = PickWeighted(pathNeighbors, stack);
-                    int neighborIndex = pathNeighbors.IndexOf(next);
-                    //  while (DistFromPath(next) < 2 && ((random.Next()&0x01)==0))
-                    {
-                        //    next = neighbors[random.Next(neighbors.Count)];
-                    }
-
-                    RemoveWall(current, next);
-                    visited[next] = true;
-                    visited[neighborsDetails[neighborIndex].spatialNeighbor] = true;
-                    stack.Push(next);
-                }
-                else
-                {
-                    stack.Pop();
-                }
-                taskContext.IncrementProgress(0.1f);
-                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
-            }
-
-            return path;
-            /*
-            float DistFromPath(T checkCoord, Stack<T> stack)
-            {
-                float min = float.PositiveInfinity;
-                foreach (T pathStep in stack)
-                {
-                    float dist = checkCoord.HeuristicDistanceTo(pathStep);
-                    if (dist < min) min = dist;
-                }
-                return min;
-            }*/
-        }
         protected virtual async UniTask<List<T>> GenerateMainPathAsync(T start, T end, TaskHandler taskContext)
         {
             Stack<T> stack = new Stack<T>();
@@ -946,35 +896,6 @@ walls[next][reverseNeighborIndex] = false;*/
 
 
         // Get move cost between neighboring tiles, -1 means impassable
-        public virtual float OLDGetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
-        {
-            T coord = coordT.value;
-            if (!IsWithinBounds(coord)) return -1;
-            T neighborCoord = coordT.GetPathNeighbor(neighborIndex,teleporters);
-
-
-
-            if (IsWithinBounds(neighborCoord))
-            {
-                T coordWithWall = coord;
-                int actualIndex = GetSpatialNeighborIndexOf(coordWithWall, neighborCoord);
-                if (actualIndex == -1)
-                {
-                    if (teleporters.TryGetDestination(coordT, out TeleportDestination dest))
-                    {
-                        coordWithWall = (T)dest.coord;
-                        actualIndex = GetSpatialNeighborIndexOf(coordWithWall, neighborCoord);
-                        
-                    }
-                }
-                if (walls[coordWithWall][actualIndex])
-                    return -1;
-
-                return 1;// walls[coord.value.x, coord.value.y] ? -1 : 1;
-            }
-            return -1; // Impassable if out of bounds or blocked
-        }
-
         public virtual float GetMoveCost(ITileCoordinate<T> coordT, int neighborIndex, float max = -1, bool bothdir = false)
         {
             T coord = coordT.value;
@@ -1022,34 +943,22 @@ walls[next][reverseNeighborIndex] = false;*/
         }
         abstract public Vector3 GetModelSpacePosition(T coord);
 
-        /*virtual public LineSegment GetModelSpaceEdge(T coord, int neighborIndex)
-        {
-            // the below fails for curved surface mazes because the distance from the origin is based on face centers, not model verticies
-            Vector3 tilePosition = GetModelSpacePosition(coord);
-            int neighborCount = coord.NumberOfNeighbors();
-            Quaternion edgeRotation = NeighborBorderOrientation(coord, neighborIndex);
-            T neighbor = coord.GetNeighbor(neighborIndex);
-
-            Vector3 neighborPosition = GetModelSpacePosition(neighbor);//returns a position even for out of bounds coords
-            Vector3 wallPosition = (tilePosition + neighborPosition) / 2;
-            Quaternion wallRotation = NeighborBorderOrientation(coord, neighborIndex);
-            float neighborDist = (tilePosition - neighborPosition).magnitude;
-            float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
-            Vector3 wallLength =  wallRotation * Vector3.right * computedEdgeLength*0.5f;
-            return new LineSegment(wallPosition + wallLength, wallPosition - wallLength);
-        }
-        */
         override public Quaternion GetModelSpaceOrientation(ITileCoordinateBase coordBase)
         {
             T coord = (T)coordBase;
             return GetModelSpaceOrientation(coord);
         }
+        /// <summary>
+        /// This function is defined in descendant classes that have more information about the type of tiles map map.
+        /// </summary>
+        /// <param name="coord"></param>
+        /// <returns></returns>
         virtual public Quaternion GetModelSpaceOrientation(T coord)
         {
             return Quaternion.identity;
         }
         /// <summary>
-        /// Get the coordinate at/closest to a given world position
+        /// Get the coordinate at/closest to a given world position.  Very slow- do not use if avoidable
         /// </summary>
         /// <param name="pos">model space position</param>
         /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>

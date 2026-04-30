@@ -22,9 +22,9 @@ namespace EyE.Maps.Templates
         }
 
 
-        protected override Chunker<RectangularCoord> GetChunker(int idealTrisPerChunk = 1000)
+        protected override Chunker<RectangularCoord> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
-            return new RectChunker(mazeSize);
+            return new RectChunker(mazeSize, trisPerWall , idealTrisPerChunk);
         }
         protected override WallMeshChunkComputerGeneric<RectangularCoord> GetNewMeshComputer()
         {
@@ -35,7 +35,7 @@ namespace EyE.Maps.Templates
     public class RectChunker : Chunker<RectangularCoord>
     {
 
-        public RectChunker(RectangularCoord size, int idealTrisPerChunk = 1000) : base(size,idealTrisPerChunk) { }
+        public RectChunker(RectangularCoord size, int trisPerWall = 12, int idealTrisPerChunk = 1000) : base(size,  trisPerWall , idealTrisPerChunk) { }
         protected override int NumberOfTilesInSize(RectangularCoord size)
         {
             return size.x * size.y;

@@ -46,9 +46,9 @@ namespace EyE.Maps.Templates
             return new FaceCoordinate(facesAndNeighbors,facesAndNeighbors.faceDetails.Count);// facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].neighborIndices, facesAndNeighbors.faceDetails[facesAndNeighbors.faceDetails.Count - 1].normal);
         }
 
-        protected override Chunker<FaceCoordinate> GetChunker(int idealTrisPerChunk = 1000)
+        protected override Chunker<FaceCoordinate> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
-            return new FaceChunker(mazeSize, facesAndNeighbors);
+            return new FaceChunker(mazeSize, facesAndNeighbors,trisPerWall,idealTrisPerChunk);
         }
 
         protected override WallMeshChunkComputerGeneric<FaceCoordinate> GetNewMeshComputer()
@@ -69,7 +69,7 @@ namespace EyE.Maps.Templates
     public class FaceChunker : Chunker<FaceCoordinate>
     {
         FacesAndNeighbors map;
-        public FaceChunker(FaceCoordinate size, FacesAndNeighbors map, int idealTrisPerChunk = 1000) : base(size, idealTrisPerChunk )
+        public FaceChunker(FaceCoordinate size, FacesAndNeighbors map, int trisPerWall = 12, int idealTrisPerChunk = 1000) : base(size,trisPerWall, idealTrisPerChunk )
         {
             this.map = map;
         }

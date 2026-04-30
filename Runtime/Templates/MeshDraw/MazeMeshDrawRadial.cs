@@ -24,9 +24,9 @@ namespace EyE.Maps.Templates
             return radialMaze;
         }
 
-        protected override Chunker<RadialCoord> GetChunker(int idealTrisPerChunk = 1000)
+        protected override Chunker<RadialCoord> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
-            return new RadialChunker(mazeSize, maze as  MazeMapRadial,idealTrisPerChunk);
+            return new RadialChunker(mazeSize, maze as  MazeMapRadial,trisPerWall, idealTrisPerChunk);
         }
         protected override WallMeshChunkComputerGeneric<RadialCoord> GetNewMeshComputer()
         {
@@ -36,7 +36,7 @@ namespace EyE.Maps.Templates
     public class RadialChunker : Chunker<RadialCoord>
     {
         MazeMapRadial mapRef;
-        public RadialChunker(RadialCoord size, MazeMapRadial mapRef,int idealTrisPerChunk = 1000) : base(size, idealTrisPerChunk)
+        public RadialChunker(RadialCoord size, MazeMapRadial mapRef, int trisPerWall = 12, int idealTrisPerChunk = 1000) : base(size, trisPerWall, idealTrisPerChunk)
         {
             this.mapRef = mapRef;
         }
@@ -116,7 +116,8 @@ namespace EyE.Maps.Templates
                 float wallHeight,
                 IReadOnlyList<IReadOnlyList<RadialCoord>> coordsPerChuck,
                 TaskHandler taskContext,
-                bool displayBorderWalls = true)
+                bool displayBorderWalls = true,
+                Texture2D sideDepthMap = null, MeshData normalizedWallMesh = null)
         {
 
             this.map = data;
@@ -284,7 +285,7 @@ namespace EyE.Maps.Templates
             if (n < 2) return;
 
             List<Vector3> verts = mesh.vertices != null ? new List<Vector3>(mesh.vertices) : new List<Vector3>();
-            List<int> tris = mesh.triangles != null ? new List<int>(mesh.triangles) : new List<int>();
+            List<int> tris = mesh.triangles != null && mesh.triangles[0] != null ? new List<int>(mesh.triangles[0]) : new List<int>();
 
             for (int i = 0; i < n - 1; i++)
             {
