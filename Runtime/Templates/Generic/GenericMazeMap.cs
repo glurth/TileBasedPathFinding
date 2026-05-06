@@ -505,9 +505,9 @@ namespace EyE.Maps.Templates
             int completedSteps = 0;
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
-                bool[] wallsArray = new bool[size.NumberOfNeighbors()];
-                bool[] oneWayArray = new bool[size.NumberOfNeighbors()]; 
-                for (int i = 0; i < size.NumberOfNeighbors(); i++)
+                bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
+                bool[] oneWayArray = new bool[tileCoord.NumberOfNeighbors()]; 
+                for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
                 {
                     wallsArray[i] = true;
                     oneWayArray[i] = false;
@@ -801,11 +801,13 @@ namespace EyE.Maps.Templates
         public int GetSpatialNeighborIndexOf(T current, T neighbor)
         {
             int neighborIndexCounter = 0;
+           //Debug.Log("searching for "+ current + "'s neighborIndex of coord " + neighbor);
             foreach (T n in current.GetSpatialNeighbors())
             {
+                //Debug.Log("    Checking neighbor: " + n + "  neighborIndexCounter:"+ neighborIndexCounter);
                 if (n.Equals(neighbor))
                     return neighborIndexCounter;
-                //Debug.Log("Found neighbor-  current: " + current + "  neighbor: " + n);
+                
                 neighborIndexCounter++;
             }
             //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
@@ -859,8 +861,21 @@ namespace EyE.Maps.Templates
 
             // Standard spatial wall removal
             int reverseNeighborIndex = GetSpatialNeighborIndexOf(next, current);
-            walls[current][neighborIndex] = false;
-            walls[next][reverseNeighborIndex] = false;
+            try
+            {
+                walls[current][neighborIndex] = false;
+                walls[next][reverseNeighborIndex] = false;
+            }
+            catch (System.Exception e)
+            {
+                string s = "!!Exception throw accessing walls array. ";
+                s += "\ncurrentTileIndex: " + current + "  num walls: " + walls[current].Length;
+                s += "\nnextTileIndex: " + next + "  num walls: " + walls[next].Length;
+                s += "\nneighborIndex(from current): " + neighborIndex;
+                s += "\nreverseNeighborIndex: " + reverseNeighborIndex;
+                Debug.Log(s);
+                throw (e);
+            }
 
             /*
 // old-pre teleport Standard spatial wall removal

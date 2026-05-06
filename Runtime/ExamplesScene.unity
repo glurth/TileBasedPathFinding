@@ -1517,23 +1517,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d5dd3cd52ccb104bb4b009b1a143db2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.3
-  wallWidthFraction: 1
-  drawBorderWalls: 0
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 0}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 44bbd85b32a72ce40b535b59c6279360,
@@ -2066,23 +2068,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d5dd3cd52ccb104bb4b009b1a143db2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.3
-  wallWidthFraction: 1
-  drawBorderWalls: 0
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 0}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 86b67ac3b64abc34ca9bc61dc4de2966,
@@ -2389,7 +2393,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &513407220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2402,23 +2406,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f8bdef2ccc54a64ab256f489ce04225, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: 1, z: 0}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.2
-  wallWidthFraction: 1
-  drawBorderWalls: 1
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 15000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials:
+    - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 6714409032714082515, guid: ffdf1852d31150d419ead210916d8f8e,
+      type: 3}
+    meshPreScale: {x: 0.5, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 0}
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
-  wallChunkSubMeshMaterial: {fileID: 2100000, guid: 2bf1a885bfd074b4499c5a25a5d98290,
-    type: 2}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 6714409032714082515, guid: ffdf1852d31150d419ead210916d8f8e,
-    type: 3}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
@@ -3347,23 +3353,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d5dd3cd52ccb104bb4b009b1a143db2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.3
-  wallWidthFraction: 1
-  drawBorderWalls: 0
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 0}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: d59bfdb5f6428384ebb3862b01637756,
@@ -3785,23 +3793,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d5dd3cd52ccb104bb4b009b1a143db2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.05
-  wallHeightFraction: 0.1
-  wallWidthFraction: 1
-  drawBorderWalls: 0
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 0}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 96722b6dc0fdd0d48a41fb05a5e7d89d,
@@ -4715,23 +4725,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d5dd3cd52ccb104bb4b009b1a143db2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.3
-  wallWidthFraction: 1
-  drawBorderWalls: 0
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 2263046939854347067, guid: ab9b4c1909d53f541b51ce4ec3ecca98,
     type: 3}
   endPositionMarkerPrefab: {fileID: 785815411452884496, guid: 945561f79b484464ca22768ae14ac33a,
     type: 3}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 1
   createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 58933a1e2867f744ab78eb374ed478ed,
@@ -4784,21 +4796,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 238ab0e4b80a64d4683f155dad80064a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: 0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.2
-  wallWidthFraction: 1
-  drawBorderWalls: 1
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 0}
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 2800000, guid: dfe608a5b89f61b41b8058d9f52f49bd, type: 3}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
@@ -5511,21 +5525,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8922f7e942097c4981348add5588e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: 0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 0.5
-  wallWidthFraction: 1
-  drawBorderWalls: 1
+  drawConfig:
+    mazeNormal: {x: 0, y: 1, z: 0}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials: []
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 0}
   endPositionMarkerPrefab: {fileID: 0}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
@@ -5566,7 +5582,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1686376025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5579,26 +5595,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1e4221a0d0949d42b83417bbc8fcae0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mazeNormal: {x: -0, y: -0, z: -1}
-  wallDimensionsAsFractionOfTileScale: 0
-  wallThicknessFraction: 0.2
-  wallHeightFraction: 1
-  wallWidthFraction: 1
-  drawBorderWalls: 1
+  drawConfig:
+    mazeNormal: {x: 0, y: 0, z: -1}
+    idealTrisPerChunk: 1000
+    wallThickness: 0.2
+    wallHeight: 0.2
+    drawBorderWalls: 1
+    wallMaterials:
+    - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
+    drawOption: 0
+    surfaceDepthMap: {fileID: 0}
+    surfaceDepthTilingResolution: {x: 1, y: 1}
+    notNormalizedMesh: {fileID: 0}
+    meshPreScale: {x: 1, y: 1, z: 1}
+    meshPreOrient: {x: 0, y: 0, z: 0, w: 1}
   startHidden: 0
   startPositionMarkerPrefab: {fileID: 525890849}
   endPositionMarkerPrefab: {fileID: 525890849}
   createMazeOnEnable: 1
-  wallChunkMaterial: {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
-  wallChunkSubMeshMaterial: {fileID: 0}
-  sideDepthMap: {fileID: 0}
-  notNormalizedWallMesh: {fileID: 0}
-  idealTrisPerChunk: 1000
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
-    m_ring: 20
-    m_sector: 12
+    m_ring: 3
+    m_sector: 4
 --- !u!4 &1686376027
 Transform:
   m_ObjectHideFlags: 0

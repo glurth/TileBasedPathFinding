@@ -41,7 +41,7 @@ namespace EyE.Maps.Templates
         public int SectorsAtRing(int ringIndex)
         {
             if (ringIndex <= 0) return 1;
-
+            //return baseSectors; //test
             float r1 = worldScale;
             float r = ringIndex * worldScale;
 

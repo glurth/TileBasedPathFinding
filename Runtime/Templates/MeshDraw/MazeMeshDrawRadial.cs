@@ -98,6 +98,7 @@ namespace EyE.Maps.Templates
         public RadialMazeMeshGenerator(int curvy)
         {
             this.curvy = curvy;
+            radialMap = map as MazeMapRadial;
         }
         /// <summary>
         /// Returns a list of generated meshes, one for each chunk.
@@ -109,24 +110,19 @@ namespace EyE.Maps.Templates
         /// <param name="coordsPerChuck">Number of coordinate each chunk/mesh will represent</param>
         /// <param name="displayBorderWalls"></param>
         /// <returns></returns>
-        async public override UniTask<List<MeshData>> CreateWallsMeshChunksAsync(
+        async public /*override*/ UniTask<List<MeshData>> NOTCreateWallsMeshChunksAsync(
                 GenericMazeMap<RadialCoord> data,
                 MazeMeshDrawGeneric<RadialCoord> mazeDrawer,
-                float wallThickness,
-                float wallHeight,
+                MazeMeshDrawBase.WallDrawConfig drawConfig,
                 IReadOnlyList<IReadOnlyList<RadialCoord>> coordsPerChuck,
-                TaskHandler taskContext,
-                bool displayBorderWalls = true,
-                Texture2D sideDepthMap = null, MeshData normalizedWallMesh = null)
+                TaskHandler taskContext)
         {
 
             this.map = data;
             radialMap = map as MazeMapRadial;
             this.mazeDrawer = mazeDrawer;
             radialDrawer = mazeDrawer as MazeMeshDrawRadial;
-            this.wallThickness = wallThickness;
-            this.wallHeight = wallHeight;
-            this.displayBorderWalls = displayBorderWalls;
+            this.drawConfig = drawConfig;
             this.coordsPerChuck = coordsPerChuck;
             isTileVisible = (RadialCoord coord) => { return mazeDrawer.IsTileVisible(coord); };
             int chunkCounter = 0;
@@ -142,20 +138,217 @@ namespace EyE.Maps.Templates
             return chunkMeshes;
         }
 
-        public override Mesh RebuildSingleChunk(int chunk)
+        protected override int GetMinimalUVxSegements()
+        {
+            return curvy;
+        }
+        static float MidAngleTurns(float angle1, float angle2)
+        {
+            float angleDiff = angle2 - angle1;
+
+            if (angleDiff > 0.5f) angleDiff -= 1f;
+            else if (angleDiff < -0.5f) angleDiff += 1f;
+
+            float mid = angle1 + angleDiff * 0.5f;
+
+            if (mid < 0f) mid += 1f;
+            else if (mid >= 1f) mid -= 1f;
+
+            return mid;
+        }
+        static bool IsCounterClockwiseOf(float contextAngle, float angleToCheck)
+        {
+            float d = angleToCheck - contextAngle;
+
+            if (d > 0.5f) d -= 1f;
+            else if (d < -0.5f) d += 1f;
+
+            return d > 0f;
+        }
+        Vector3 Vector2ToMazePlanePosition(Vector2 point)
+        {
+            Vector3 right = radialMap.MazeOrientation * Vector3.right;
+            Vector3 up = radialMap.MazeOrientation * Vector3.up;
+            return right * point.x + up * point.y;
+        }
+        protected override Vector3 ComputeCornerPos(RadialCoord coord, int neighborIndex)
+        {
+            //return base.ComputeCornerPos(coord, neighborIndex);
+            radialMap = map as MazeMapRadial;
+            RadialCoord neighborCoord = coord.GetSpatialNeighbor(neighborIndex);
+            float radiusToUse;
+            Vector2 angleDir;
+            float coordRingTileWidthInTurns = 1f / radialMap.SectorsAtRing(coord.ring);
+            float neighborRingTileWidthInTurns = 1f / radialMap.SectorsAtRing(neighborCoord.ring);
+            float coordStartAngleInTurns = coord.AngleInTurns - coordRingTileWidthInTurns * 0.5f;
+            float coordEndAngleInTurns = coord.AngleInTurns + coordRingTileWidthInTurns * 0.5f;
+            if (neighborCoord.ring == coord.ring)
+            {
+              //  float edgeAngleInTurns = MidAngleTurns(coord.AngleInTurns, neighborCoord.AngleInTurns);
+                float radiusInner = radialMap.RingInnerRadius(coord.ring);//(tile.ring) * radialDrawer.radialSpacing;
+                float radiusOuter = radialMap.RingOuterRadius(coord.ring);// (tile.ring+1) * radialDrawer.radialSpacing;
+                radiusToUse = radiusOuter;
+                float angleToUse2 = coordEndAngleInTurns;
+                if (!IsCounterClockwiseOf(coord.AngleInTurns, neighborCoord.AngleInTurns))
+                {
+                    radiusToUse = radiusInner;
+                    angleToUse2 = coordStartAngleInTurns;
+                }
+                angleDir = RadialCoord.GetRadialDirection(angleToUse2) * radiusToUse;
+                Vector3 result = Vector2ToMazePlanePosition(angleDir);
+                Debug.Log("Generated Corner same ring radial edge (angle: " + angleToUse2 + ")   for coord:" + coord + "(angle: "+coord.AngleInTurns+") with neighborIndex: " + neighborIndex + " (" + neighborCoord + "- angle: "+ neighborCoord.AngleInTurns+") : pos " + result);
+                return result;
+            }
+
+
+            float neighborStartAngleInTurns = neighborCoord.AngleInTurns - neighborRingTileWidthInTurns * 0.5f;
+            float neighborEndAngleInTurns = neighborCoord.AngleInTurns + neighborRingTileWidthInTurns * 0.5f;
+            /*
+            float coordStart = IsCounterClockwiseOf(coordStartAngleInTurns, coordEndAngleInTurns) ? coordStartAngleInTurns : coordEndAngleInTurns;
+            float neighborStart = IsCounterClockwiseOf(coordStartAngleInTurns, neighborEndAngleInTurns) ? coordStartAngleInTurns : neighborEndAngleInTurns;
+            //lesser of the two most counter-clockwise angles
+            float overlapStart = !IsCounterClockwiseOf(neighborStartAngleInTurns, neighborStartAngleInTurns)? neighborStartAngleInTurns : neighborStartAngleInTurns;
+            //lesser of the two most clockwise angles
+            float overlapEnd = IsCounterClockwiseOf(coordEndAngleInTurns, neighborEndAngleInTurns) ? coordEndAngleInTurns : neighborEndAngleInTurns;
+            */
+            float angleToUse;
+            if (coord.ring > neighborCoord.ring)
+            {
+                radiusToUse = radialMap.RingInnerRadius(coord.ring);
+                angleToUse = coordEndAngleInTurns;
+            }
+            else
+            {
+                radiusToUse = radialMap.RingOuterRadius(coord.ring);
+                angleToUse = coordStartAngleInTurns;
+            }
+
+            if (coord.ring != 0)
+                angleDir = RadialCoord.GetRadialDirection(angleToUse) * radiusToUse;
+            else// ring 0 only has one tile which start and end at rotation 0 and 1, but we want corners with ring 1 for edges
+                angleDir = RadialCoord.GetRadialDirection(neighborStartAngleInTurns) * radiusToUse;
+            Vector3 result2 = Vector2ToMazePlanePosition(angleDir);
+            Debug.Log("Generated Corner for coord:" + coord + " with neighborIndex: " + neighborIndex + " (" + coord.GetSpatialNeighbor(neighborIndex) + ") : pos " + result2);
+            return result2;
+
+        }
+        protected override Vector3 EdgeDirFrom(Edge e, int cornerIndex)//override for radial
+        {
+            RadialCoord sideA = e.sideACoord;
+            RadialCoord sideB = e.sideBCoord;
+            if(sideA.ring == sideB.ring)// straight line
+            {
+                return base.EdgeDirFrom(e, cornerIndex);
+            }
+            if (e.cornerA == cornerIndex)
+            {
+                Vector3 perp = Vector3.Cross(uniqueCorners[e.cornerA].position, mazeDrawer.drawConfig.mazeNormal);
+                if (Vector3.Dot(perp, (uniqueCorners[e.cornerB].position - uniqueCorners[e.cornerA].position)) < 0f)
+                    perp = -perp;
+                return perp.normalized;
+            }
+            if (e.cornerB == cornerIndex)
+            {
+                Vector3 perp = Vector3.Cross(uniqueCorners[e.cornerB].position, mazeDrawer.drawConfig.mazeNormal);
+                if (Vector3.Dot(perp, (uniqueCorners[e.cornerA].position - uniqueCorners[e.cornerB].position)) < 0f)
+                    perp = -perp;
+                return perp.normalized;
+            }
+            throw new System.Exception("Invalid corner index (" + cornerIndex + ")passed to EdgeDirFrom.  Edge only contains indexes " + e.cornerA + " and " + e.cornerB);
+
+        }
+
+        protected override Vector3 GetPointOnWallFace(Vector3 bottomLeft, Vector3 topLeft, Vector3 topRight, Vector3 bottomRight, Vector2 uv, RadialCoord sideACoord, RadialCoord sideBCoord)
+        {
+            if (sideACoord.ring == sideBCoord.ring) 
+                return base.GetPointOnWallFace(bottomLeft, topLeft, topRight, bottomRight, uv, sideACoord, sideBCoord);
+            return GetPointOnCurvedRectange(bottomLeft, topLeft, topRight, bottomRight, uv);
+            //return GetPointOnCurvedRectange(p00, p10, p01, p11, uv);
+        }
+        protected override Vector3 GetPointInWall(Vector3 normalizedPoint,
+            Vector3 startBottomLeft, Vector3 startTopLeft, Vector3 startTopRight, Vector3 startBottomRight,
+            Vector3 endBottomLeft, Vector3 endTopLeft, Vector3 endTopRight, Vector3 endBottomRight, 
+            RadialCoord sideACoord, RadialCoord sideBCoord)
+        {
+            if (sideACoord.ring == sideBCoord.ring) 
+                return base.GetPointInWall(normalizedPoint,
+                                         startBottomLeft, startTopLeft, startTopRight, startBottomRight,
+                                         endBottomLeft, endTopLeft, endTopRight, endBottomRight, sideACoord, sideBCoord);
+            return InterpolateCurvedWallPoint(normalizedPoint,
+                                             startBottomLeft, startTopLeft, startTopRight, startBottomRight,
+                                             endBottomLeft, endTopLeft, endTopRight, endBottomRight);
+        }
+
+        protected override (int, int) MapFuncGetCornerIndexesForEdge(RadialCoord sideA, RadialCoord sideB)
+        {
+            //for radial maps,
+            //we can't use the below basic method because we assume corners match up, specifically, radial map tiles MAY have more neighbors than corners.
+            // (except for the center tile)
+            //   - all tiles in a radial map will have four corners.
+            //   - if the next outward ring doubles the number of tiles in a ring (happens according to formula) then the tile will have FIVE neighbors rather than the usual four- (even though it still only has four corners).
+            //so, for a radial map, we need to find which of the corners to use..
+            //   - if the next ring does NOT double- we can use the existsing formula
+            //   - if it DOES double new ring- we'll need to figure which of the neighboring corners to use, and which of this tiles corners to use (we'll need one from each, or, upon reflection, both from neighbor)
+            //      - note that even in this case ONE of the corners WILL still be shared.
+
+            int sideBNeighborIndex = map.GetSpatialNeighborIndexOf(sideA, sideB);
+            MazeMapRadial radial = map as MazeMapRadial;
+
+            int sectorsA = radial.SectorsAtRing(sideA.ring);
+            int sectorsB = radial.SectorsAtRing(sideB.ring);
+
+            bool sameRing = sideA.ring == sideB.ring;
+
+            // --- SAME RING: unchanged ---
+            if (sameRing)
+            {
+                int cornerA = cornerIndecesByCoordinate[sideA][sideBNeighborIndex];
+                int cornerB = cornerIndecesByCoordinate[sideA][
+                    (sideBNeighborIndex + 1).RingIndex(sideA.NumberOfNeighbors())
+                ];
+                return (cornerA, cornerB);
+            }
+
+            // --- RING TRANSITION ---
+            bool doublingOutward = (sectorsB == sectorsA * 2) || (sideA.ring == 0);
+            int cornerIndexA;
+            int cornerIndexB;
+            // --- NORMAL (no doubling): unchanged ---
+            if (!doublingOutward)
+            {
+                cornerIndexA = cornerIndecesByCoordinate[sideA][sideBNeighborIndex];
+                cornerIndexB = cornerIndecesByCoordinate[sideA][
+                    (sideBNeighborIndex + 1).RingIndex(sideA.NumberOfNeighbors())
+                ];
+            }
+            else
+            {
+                // --- DOUBLING CASE ---
+                // Map neighbor index ? one of 4 corners
+                // Assumption: neighbor indices for radial connections are contiguous pairs
+                // sideA has fewer sectors, neighbor splits into two? use sideB corners
+                int sideANeighborIndex = map.GetSpatialNeighborIndexOf(sideB, sideA);
+                cornerIndexA = cornerIndecesByCoordinate[sideB][sideANeighborIndex];
+                cornerIndexB = cornerIndecesByCoordinate[sideB][
+                    (sideANeighborIndex + 1).RingIndex(sideB.NumberOfNeighbors())
+                ];
+            }
+            return (cornerIndexA, cornerIndexB);
+        }
+        public /*override*/ Mesh NOTRebuildSingleChunk(int chunk)
         {
             chunkMeshes[chunk] = GenerateChunkMesh(coordsPerChuck[chunk], new TaskHandler(false)).AsTask().GetAwaiter().GetResult();
             return chunkMeshes[chunk].ToMesh();
         }
 
-        async public UniTask<MeshData> GenerateChunkMesh(IReadOnlyList<RadialCoord> chunkTiles,TaskHandler taskContext)
+        async  UniTask<MeshData> GenerateChunkMesh(IReadOnlyList<RadialCoord> chunkTiles,TaskHandler taskContext)
         {
             MeshData mesh = new MeshData();
             MazeMap2D<RadialCoord> mazeMap2D = mazeDrawer.maze as MazeMap2D<RadialCoord>;
             Vector3 right = mazeMap2D.MazeOrientation * Vector3.right;
             Vector3 up =mazeMap2D.MazeOrientation * Vector3.up;
 
-            foreach (var tile in chunkTiles)
+            foreach (RadialCoord tile in chunkTiles)
             {
                 int neighborsCount = tile.NumberOfNeighbors();
 
@@ -165,16 +358,14 @@ namespace EyE.Maps.Templates
                     bool inBounds = map.IsWithinBounds(neighbor);
 
                     // skip entirely if out-of-bounds and not drawing borders
-                    if (!inBounds && !displayBorderWalls) continue;
+                    if (!inBounds && !drawConfig.drawBorderWalls) continue;
 
-                    int wallIndex = map.GetSpatialNeighborIndexOf(tile, neighbor);
-                    bool hasWall = (!inBounds) || map.Walls[tile][wallIndex];
-
+                    bool hasWall = (!inBounds) || map.Walls[tile][ni];
                     if (!hasWall)
                     {
                         continue;
                     }
-                    if (!isTileVisible(tile) && ((!inBounds&& displayBorderWalls) || !isTileVisible(neighbor))) continue;
+                    if (!isTileVisible(tile) && ((!inBounds&& drawConfig.drawBorderWalls) || !isTileVisible(neighbor))) continue;
 
                     if (tile.ring == neighbor.ring)
                     {
@@ -244,8 +435,8 @@ namespace EyE.Maps.Templates
            // Debug.Log("GenerateRadialWall-  angleInTurns:" + angleInTurns + "  from-["+ tile + "] tile.AngleInTurns:" + tile.AngleInTurns + "  ["+ neighbor + "]neighbor.AngleInTurns:" + neighbor.AngleInTurns);
             float radiusInner = radialMap.RingInnerRadius(tile.ring);//(tile.ring) * radialDrawer.radialSpacing;
             float radiusOuter = radialMap.RingOuterRadius(tile.ring);// (tile.ring+1) * radialDrawer.radialSpacing;
-            radiusInner -= wallThickness * 0.5f;
-            radiusOuter += wallThickness * 0.5f;
+            radiusInner -= drawConfig.wallThickness * 0.5f;
+            radiusOuter += drawConfig.wallThickness * 0.5f;
 
 
             // Radial line from inner to outer radius at tile's angle
@@ -264,7 +455,7 @@ namespace EyE.Maps.Templates
         List<float> GetWallSegmentAnglesInTurns(RadialCoord tile, int curvy)
         {
             float segementAngleLengthInTurns = .5f / radialMap.SectorsAtRing(tile.ring);
-            segementAngleLengthInTurns *= mazeDrawer.wallWidthFraction;
+            //segementAngleLengthInTurns *=  mazeDrawer.wallWidthFraction;
             float startAngle = (tile.AngleInTurns - segementAngleLengthInTurns);// * 2f * Mathf.PI;
             float endAngle = (tile.AngleInTurns + segementAngleLengthInTurns);// * 2f * Mathf.PI;
 
@@ -286,7 +477,8 @@ namespace EyE.Maps.Templates
 
             List<Vector3> verts = mesh.vertices != null ? new List<Vector3>(mesh.vertices) : new List<Vector3>();
             List<int> tris = mesh.triangles != null && mesh.triangles[0] != null ? new List<int>(mesh.triangles[0]) : new List<int>();
-
+            List<Vector2> uvs = mesh.meshUV0s != null  ? new List<Vector2>(mesh.meshUV0s) : new List<Vector2>();
+            float oneOverN = 1f / (float)(n-1);
             for (int i = 0; i < n - 1; i++)
             {
                 Vector3 dir = (bottomVerts[i + 1] - bottomVerts[i]).normalized;
@@ -299,59 +491,66 @@ namespace EyE.Maps.Templates
                     perpendicular2D1 = perpendicular2D;
                 }
 
-                Vector3 b0i = bottomVerts[i] - perpendicular2D0 * wallThickness * 0.5f;
-                Vector3 b1i = bottomVerts[i + 1] - perpendicular2D1 * wallThickness * 0.5f;
-                Vector3 b0o = bottomVerts[i] + perpendicular2D0 * wallThickness * 0.5f;
-                Vector3 b1o = bottomVerts[i + 1] + perpendicular2D1 * wallThickness * 0.5f;
+                Vector3 b0i = bottomVerts[i] - perpendicular2D0 * drawConfig.wallThickness * 0.5f;
+                Vector3 b1i = bottomVerts[i + 1] - perpendicular2D1 * drawConfig.wallThickness * 0.5f;
+                Vector3 b0o = bottomVerts[i] + perpendicular2D0 * drawConfig.wallThickness * 0.5f;
+                Vector3 b1o = bottomVerts[i + 1] + perpendicular2D1 * drawConfig.wallThickness * 0.5f;
 
-                Vector3 t0i = b0i + heightDir * wallHeight;
-                Vector3 t1i = b1i + heightDir * wallHeight;
-                Vector3 t0o = b0o + heightDir * wallHeight;
-                Vector3 t1o = b1o + heightDir * wallHeight;
+                Vector3 t0i = b0i + heightDir * drawConfig.wallHeight;
+                Vector3 t1i = b1i + heightDir * drawConfig.wallHeight;
+                Vector3 t0o = b0o + heightDir * drawConfig.wallHeight;
+                Vector3 t1o = b1o + heightDir * drawConfig.wallHeight;
+                float u0 = i * oneOverN;
+                float u1 = (i + 1) * oneOverN;
+                Vector2 uv00 = new Vector2(u0,0);
+                Vector2 uv01 = new Vector2(u0, 1);
+                Vector2 uv11 = new Vector2(u1, 0); 
+                Vector2 uv10 = new Vector2(u1, 1);
 
                 int start = verts.Count;
 
                 // FRONT (inner)
                 verts.AddRange(new[] { b0i, b1i, t1i, t0i });
-                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                 tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
                 start += 4;
 
                 // BACK (outer)
                 verts.AddRange(new[] { b1o, b0o, t0o, t1o });
-                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                 tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
                 start += 4;
                 if (i == 0)
                 {
                     // LEFT
                     verts.AddRange(new[] { b0o, b0i, t0i, t0o });
-                    //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                     tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                    uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
                     start += 4;
                 }
                 if (i == n - 2)
                 {
                     // RIGHT
                     verts.AddRange(new[] { b1i, b1o, t1o, t1i });
-                    //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                     tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                    uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
                     start += 4;
                 }
                 // TOP
                 verts.AddRange(new[] { t0i, t1i, t1o, t0o });
-                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                 tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
                 start += 4;
 
                 // BOTTOM
                 verts.AddRange(new[] { b0o, b1o, b1i, b0i });
-                //tris.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
                 tris.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                uvs.AddRange(new[] { uv00, uv10, uv11, uv01 });
             }
 
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris);
+            mesh.SetUVs(0, uvs);
         }
 
         void ReorientAllVerts(MeshData mesh, Quaternion orientataion)

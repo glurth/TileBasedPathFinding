@@ -438,6 +438,12 @@ public class TopoViz : MonoBehaviour
 
     private IEnumerator LayoutRoutine()
     {
+        //memory reuse
+        Vector2 p1;
+        Vector2 p2;
+        Vector2 p3;
+        Vector2 p4;
+
         while (true)
         {
             if (runSimulation && state != null)
@@ -548,10 +554,7 @@ public class TopoViz : MonoBehaviour
             node.ApplyTorqueToNode(angleDiff * alignmentTorque * 0.01f * Time.fixedDeltaTime);
         }
 
-        Vector2 p1;
-        Vector2 p2;
-        Vector2 p3;
-        Vector2 p4;
+
         void HandleEdgeRepulsion(Topology.Edge e1, Topology.Edge e2)
         {
             // 1. Get current segment positions

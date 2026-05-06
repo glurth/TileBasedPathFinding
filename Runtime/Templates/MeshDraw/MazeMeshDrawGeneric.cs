@@ -47,6 +47,36 @@ static public class strext
 }
 
 
+static public class MeshDataExtension
+{
+    public static void ScaleVertices(this MeshData mesh, Vector3 scale)
+    {
+        TransformVertices(mesh, scale, Quaternion.identity);
+    }
+    public static void TransformVertices(this MeshData mesh, Vector3 scale, Quaternion orient)
+    {
+        Vector3[] verts = mesh.vertices;
+
+        Vector3 min = verts[0];
+        Vector3 max = verts[0];
+
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector3 v = Vector3.Scale(verts[i], scale);
+            v = orient * v;
+            verts[i] = v;
+
+            min = Vector3.Min(min, v);
+            max = Vector3.Max(max, v);
+        }
+        mesh.vertices = verts;
+        mesh.bounds = new Bounds
+        {
+            center = (min + max) * 0.5f,
+            size = (max - min)
+        };
+    }
+}
 
 namespace EyE.Maps.Templates
 {
@@ -61,17 +91,12 @@ namespace EyE.Maps.Templates
         public abstract UniTask SetMazeAsync<T>(GenericMazeMap<T> toValue, TaskHandler taskContext) where T : ITileCoordinate<T>;
         public abstract UniTask SetMazeAsync(GenericMazeMapBase toValue, TaskHandler taskContext);
 
-        public Vector3 mazeNormal = Vector3.up;
-        /// <summary>
-        /// Radius of a circle INSCRIBED on the tile
-        /// </summary>
-        public float TileScale { get => tileScale; }
-        protected float tileScale = 1f;
-        public bool wallDimensionsAsFractionOfTileScale=false;
-        public float wallThicknessFraction = 0.2f;
-        public float wallHeightFraction = 0.2f;
-        public float wallWidthFraction = 1f;
-        public bool drawBorderWalls = true;        // Determines if border walls should be drawn
+        public Vector3 mazeNormal => drawConfig.mazeNormal;
+        public WallDrawConfig drawConfig;
+     //   public float wallThicknessFraction = 0.2f;
+     //   public float wallHeightFraction = 0.2f;
+     //   public float wallWidthFraction = 1f;
+     //   public bool drawBorderWalls = true;        // Determines if border walls should be drawn
         public bool startHidden = false;
 
         public GameObject startPositionMarkerPrefab;             // Prefab for floor tiles
@@ -80,24 +105,132 @@ namespace EyE.Maps.Templates
         /// mostly used for testing- automatically create a random maze upon enable.
         /// </summary>
         public bool createMazeOnEnable = true;
-        public Material wallChunkMaterial;
-        public Material wallChunkSubMeshMaterial;
+      //  public Material wallChunkMaterial;
+      //  public Material wallChunkSubMeshMaterial;
 
         public abstract void BakeMapTexture(RenderTexture targetTexture);
         public abstract bool IsTileVisible(ITileCoordinateBase coord);
         public abstract void SetTileVisibility(ITileCoordinateBase coord, bool isVisible);
-
+        [System.Serializable]
         public class WallDrawConfig
         {
+            private WallDrawConfig()
+            {
+                surfaceDepthTilingResolution = Vector2Int.one;
+                meshPreScale = Vector3.one;
+                meshPreOrient = Quaternion.identity;
+            }
+            public Vector3 mazeNormal = Vector3.up;
+            public int idealTrisPerChunk = 1000;
+
+            //thickness and height of walls in ModelSpace
+            public float wallThickness = 0.2f;
+            public float wallHeight = 0.2f;
+
+            public bool drawBorderWalls = true;
+            public Material[] wallMaterials = new Material[0];// usually one, but more if submeshes used in MeshTiling
+            public bool ValidateMaterials()
+            {
+                if (wallMaterials == null) return false;
+                if (wallMaterials.Length == 0) return false;
+                for (int i = 0; i < wallMaterials.Length; i++)
+                    if (wallMaterials[i] == null) return false;
+                return true;
+            }
+
+            public int avgTriPerWall(float wallLength)
+            {
+                if (drawOption == DrawType.Quads)
+                    return 12;
+                if (drawOption == DrawType.SurfaceDepth)
+                    return (surfaceDepthTilingResolution.x * surfaceDepthTilingResolution.y * 2 * 2) + (surfaceDepthTilingResolution.x * 2 * 2);//*2 two tris per quad *2 two sides 
+                int trisPerMesh = (notNormalizedMesh.triangles.Length / 3);
+                return trisPerMesh * NumberOfMeshesToTile(wallLength);
+            }
+
             public enum DrawType { Quads, SurfaceDepth, MeshTiling }
-            public DrawType drawOption= DrawType.Quads;
+            public DrawType drawOption = DrawType.Quads;
 
-            public Texture2D surfaceDepthMap=null;
-            public Vector2Int surfaceDepthTiling;
+            public Texture2D surfaceDepthMap = null;
+            public Vector2Int surfaceDepthTilingResolution;
 
-            public MeshData normalizedMesh;
-            public Vector2 preNormalizedRelativeBounds;
+            public Mesh notNormalizedMesh = null;
+            public Vector3 meshPreScale;
+            public Quaternion meshPreOrient;
+            //generated/cached members & accessors
+            Bounds meshPreBoundsCache;
+            Bounds MeshPreBounds()
+            {
+                if (_normalizedWallMesh == null)
+                    CreateNormalizedMeshAndCachePreBounds();
+                return meshPreBoundsCache;
+            }
 
+            MeshData _normalizedWallMesh = null;
+            public MeshData normalizedWallMesh
+            {
+                get
+                {
+                    if (notNormalizedMesh == null) return null;
+                    if (_normalizedWallMesh == null)
+                    {
+                        CreateNormalizedMeshAndCachePreBounds();
+                    }
+                    return _normalizedWallMesh;
+                }
+            }
+
+
+            void CreateNormalizedMeshAndCachePreBounds()
+            {
+                _normalizedWallMesh = new MeshData(notNormalizedMesh);
+                _normalizedWallMesh.TransformVertices(meshPreScale, meshPreOrient);
+                meshPreBoundsCache = _normalizedWallMesh.bounds;
+                _normalizedWallMesh.Normalize();
+            }
+
+            public int NumberOfMeshesToTile(float wallLength)
+            {
+                if (notNormalizedMesh == null) return 0;
+
+                wallLength = 1;
+                Bounds meshBounds = MeshPreBounds();
+               // Debug.Log("Mesh Bounds.size: " + meshBounds.size + " wall length:"+wallLength+"  wall thicnkess:" + wallThickness);
+
+                float meshWidth = meshBounds.size.x;
+                float meshLength = meshBounds.size.z;
+                float quadAspect = wallLength
+                                   / wallThickness;
+                float meshAspect = meshLength / meshWidth;
+                //Debug.Log("meshAspect: " + meshAspect + " quadAspect:" + quadAspect);
+
+                float idealTileCount = quadAspect / meshAspect;
+
+                int lowerTileCount = Mathf.Max(1, Mathf.FloorToInt(idealTileCount));
+                int upperTileCount = lowerTileCount + 1;
+              //  Debug.Log("lowerTileCount: " + lowerTileCount + " error: "+ GetError(lowerTileCount) + " ---   upperTileCount:" + upperTileCount + " error: "+ GetError(upperTileCount));
+                if (GetError(lowerTileCount) < GetError(upperTileCount))
+                    return lowerTileCount;
+                else
+                    return upperTileCount;
+
+                float GetError(int count)
+                {
+                    float lengthScale = wallLength / (count * meshLength);
+                    float widthScale = wallThickness / meshWidth;
+                    return Mathf.Abs(lengthScale - widthScale);
+                }
+
+            }
+
+            public void ResetCaches()
+            {
+                _normalizedWallMesh = null;
+            }
+        }
+        private void OnValidate()
+        {
+            drawConfig.ResetCaches();
         }
     }
 
@@ -190,10 +323,11 @@ namespace EyE.Maps.Templates
         }
 
         //instance refs
-        public Texture2D sideDepthMap;
-        public Mesh notNormalizedWallMesh;
-        private GameObject instantiatedStartPositionMarker;
+      //  public Texture2D sideDepthMap;
+     //   public Mesh notNormalizedWallMesh;
+        /*private GameObject instantiatedStartPositionMarker;
         private GameObject instantiatedEndPositionMarker;
+        private float tileScaleCache;*/
 
         //visibility stuff
         private Dictionary<T, bool> tileVisibility = new Dictionary<T, bool>();
@@ -280,8 +414,9 @@ namespace EyE.Maps.Templates
         /// </summary>
         void BuildChucks()
         {
-           // Debug.Log("Allocating chunks");
-            chunkHandler = GetChunker(trisPerWall, idealTrisPerChunk);
+            // Debug.Log("Allocating chunks");
+            Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(tileOffset.magnitude / 2), idealTrisPerChunk: 1024);
             chunkHandler.Build();
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -289,11 +424,12 @@ namespace EyE.Maps.Templates
         /// Called internally to (re)allocate and initialize maze chunks.
         /// Subclasses should not override directly — instead, override <see cref="GetChunker"/> to define how chunking is performed.
         /// </summary>
-        async UniTask BuildChucksAsync(TaskHandler taskContext)
+        async UniTask BuildChucksAsync( TaskHandler taskContext)
         {
             //  Debug.Log("Allocating chunks");
             await taskContext.Yield();
-            chunkHandler = GetChunker(trisPerWall, idealTrisPerChunk);
+            Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(tileOffset.magnitude/2), idealTrisPerChunk: 1024);  //magnitude is wrong.. need to compute actuall wall length
             await chunkHandler.BuildAsync(taskContext);
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -315,7 +451,7 @@ namespace EyE.Maps.Templates
         /// </code>
         /// </example>
         protected abstract Chunker<T> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000);
-        public int idealTrisPerChunk = 1000;
+    
 
 
         public TaskContextDisplay processingIndicator;
@@ -333,6 +469,7 @@ namespace EyE.Maps.Templates
                 return;//still processing- dont update yet
             }
             if (maze == null) return;
+            /*
             if (startPositionMarkerPrefab != null)
             {
                 if (instantiatedStartPositionMarker == null)
@@ -340,7 +477,7 @@ namespace EyE.Maps.Templates
                     instantiatedStartPositionMarker = Instantiate(startPositionMarkerPrefab, this.transform);
                     instantiatedStartPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.start);
                     instantiatedStartPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.start);
-                    instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScale;
+                    instantiatedStartPositionMarker.transform.localScale = Vector3.one * tileScaleCache;
                 }
             }
             if (endPositionMarkerPrefab != null)
@@ -350,10 +487,10 @@ namespace EyE.Maps.Templates
                     instantiatedEndPositionMarker = Instantiate(endPositionMarkerPrefab, this.transform);
                     instantiatedEndPositionMarker.transform.localPosition = maze.GetModelSpacePosition(maze.end);
                     instantiatedEndPositionMarker.transform.rotation = maze.GetModelSpaceOrientation(maze.end);
-                    instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScale;
+                    instantiatedEndPositionMarker.transform.localScale = Vector3.one * tileScaleCache;
                 }
             }
-
+            */
             foreach (int chunkIndex in chunkRegenByIndex)
             {
                 RegenChunkMesh(chunkIndex);
@@ -389,15 +526,8 @@ namespace EyE.Maps.Templates
             }
 
             meshComputer = GetNewMeshComputer();
-            float scale = 1f;
-            if (wallDimensionsAsFractionOfTileScale) scale = tileScale;
-            MeshData normalizedWallMesh = null;
-            if (notNormalizedWallMesh != null)
-            {
-                normalizedWallMesh = new MeshData(notNormalizedWallMesh);
-                normalizedWallMesh.Normalize();
-            }
-            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, scale * wallThicknessFraction, scale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext,true, sideDepthMap, normalizedWallMesh);
+            //List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, scale * wallThicknessFraction, scale * wallHeightFraction, chunkHandler.ChunkCoordinateLists(), taskContext,true, sideDepthMap, normalizedWallMesh);
+            List<MeshData> chunkMeshes = await meshComputer.CreateWallsMeshChunksAsync(maze, this, drawConfig, chunkHandler.ChunkCoordinateLists(), taskContext);
 
             if (taskContext.IsCancellationRequested) return;
 
@@ -407,7 +537,7 @@ namespace EyE.Maps.Templates
             {
                 wallChunkMeshes.Add(chunkMeshes[i].ToMesh());
             }
-            Debug.Log("Number of chunks generated: " + wallChunkMeshes.Count);
+           // Debug.Log("Number of chunks generated: " + wallChunkMeshes.Count);
         }
         
         void GenerateWallChunkMeshes()
@@ -434,10 +564,11 @@ namespace EyE.Maps.Templates
         private List<Mesh> wallChunkMeshes = new List<Mesh>();
         private Matrix4x4 cachedWorldTransform; // Stores the last calculated matrix
         //renders chunckmeshes to main camera using Graphics.DrawMesh
+        private Camera cachedCamRef=null;
         void LateUpdate()
         {
             // Check if we have meshes and material
-            if (wallChunkMeshes == null || wallChunkMaterial == null)
+            if (wallChunkMeshes == null || !drawConfig.ValidateMaterials() )// move material validate to on enable- is slow (for every cycle)  // || drawConfig.wallMaterials == null || drawConfig.wallMaterials.Length==0 || drawConfig.wallMaterials[0]==null)
             {
                 return;
             }
@@ -448,7 +579,7 @@ namespace EyE.Maps.Templates
                 cachedWorldTransform = transform.localToWorldMatrix;
                 transform.hasChanged = false;
             }
-
+            if (cachedCamRef == null) cachedCamRef = Camera.main;
             // If the transform hasn't changed, we draw using the old cachedWorldTransform.
 
             const int WallLayer = 0;
@@ -459,28 +590,28 @@ namespace EyE.Maps.Templates
             {
                 if (mesh != null)
                 {
-                    Graphics.DrawMesh(
-                        mesh,
-                        cachedWorldTransform, // Draw with the cached matrix
-                        wallChunkMaterial,
-                        WallLayer,
-                        Camera.main,
-                        0,
-                        null,
-                        true,
-                        true
-                    );
-                    Graphics.DrawMesh(
-                        mesh,
-                        cachedWorldTransform, // Draw with the cached matrix
-                        wallChunkSubMeshMaterial,
-                        WallLayer,
-                        Camera.main,
-                        1,
-                        null,
-                        true,
-                        true
-                    );
+                    int numSubMeshes = mesh.subMeshCount;
+                    int subMeshIndex = 0;
+
+                    int matsMaxIndex = drawConfig.wallMaterials.Length-1;
+                    int matIndex;
+                    while(subMeshIndex < numSubMeshes)
+                    {
+                        if (subMeshIndex > matsMaxIndex) matIndex = matsMaxIndex;
+                        else matIndex = subMeshIndex;
+                        Graphics.DrawMesh(
+                            mesh,
+                            cachedWorldTransform, // Draw with the cached matrix
+                            drawConfig.wallMaterials[matIndex],
+                            WallLayer,
+                            cachedCamRef,
+                            subMeshIndex,
+                            null,
+                            true,
+                            true
+                        );
+                        subMeshIndex++;
+                    }
                 }
             }
         }
@@ -492,7 +623,7 @@ namespace EyE.Maps.Templates
         /// <param name="targetTexture">The RenderTexture to draw the map onto.</param>
         public override void BakeMapTexture(RenderTexture targetTexture)
         {
-            if (wallChunkMeshes == null || wallChunkMeshes.Count == 0 || wallChunkMaterial == null)
+            if (wallChunkMeshes == null || wallChunkMeshes.Count == 0 || !drawConfig.ValidateMaterials())
             {
                 Debug.LogError("Bake failed: Wall meshes or material not set.");
                 return;
@@ -773,7 +904,7 @@ namespace EyE.Maps.Templates
         private void GenerateMazeVisuals()
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = 0.5f * tileOffset.magnitude;//   Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
+            //tileScaleCache = 0.5f * tileOffset.magnitude;//   Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             GenerateWallChunkMeshes();
             return;
         }
@@ -781,7 +912,7 @@ namespace EyE.Maps.Templates
         private async UniTask GenerateMazeVisualsAsync(TaskHandler taskContext)
         {
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            tileScale = 0.5f*tileOffset.magnitude;// Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
+            //tileScaleCache = 0.5f*tileOffset.magnitude;// Mathf.Max(Mathf.Abs(tileOffset.x), Mathf.Abs(tileOffset.y), Mathf.Abs(tileOffset.z));
             await GenerateWallChunkMeshesAsync(taskContext);
             return;
         }
@@ -1038,7 +1169,7 @@ namespace EyE.Maps.Templates
     /// Class exists to keep mesh generation logic, which is a lot, encapsulated.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class WallMeshChunkComputerGeneric<T> where T : ITileCoordinate<T>
+    public class WallMeshChunkComputerGeneric<T> where T : ITileCoordinate<T>, ITileCoordinateBase
     {
         // Maze Mesh Construction Plan (with unique corners and edges)
         //
@@ -1110,9 +1241,10 @@ namespace EyE.Maps.Templates
 
         protected GenericMazeMap<T> map;
         protected MazeMeshDrawGeneric<T> mazeDrawer;
-        protected float wallThickness;
-        protected float wallHeight;
-        protected bool displayBorderWalls;
+        protected MazeMeshDrawBase.WallDrawConfig drawConfig;
+        //protected float wallThickness;
+        //protected float wallHeight;
+        //protected bool displayBorderWalls;
 
         /// <summary>
         /// Returns a list of generated meshes, one for each chunk.
@@ -1127,16 +1259,18 @@ namespace EyE.Maps.Templates
         public virtual List<Mesh> CreateWallsMeshChunks(
                 GenericMazeMap<T> data,
                 MazeMeshDrawGeneric<T> mazeDrawer,
-                float wallThickness,
-                float wallHeight,
+                MazeMeshDrawBase.WallDrawConfig drawConfig,
+                //float wallThickness,
+                //float wallHeight,
                 IReadOnlyList<IReadOnlyList<T>> coordsPerChuck,
             bool displayBorderWalls = true)
         {
             this.map = data;
             this.mazeDrawer = mazeDrawer;
-            this.wallThickness = wallThickness;
-            this.wallHeight = wallHeight;
-            this.displayBorderWalls = displayBorderWalls;
+            this.drawConfig = drawConfig;
+            //this.wallThickness = wallThickness;
+            //this.wallHeight = wallHeight;
+            //this.displayBorderWalls = displayBorderWalls;
 
             Debug.Log("Wall mesh computer running now");
 
@@ -1162,7 +1296,7 @@ namespace EyE.Maps.Templates
 
             List<Mesh> outputMeshes = new List<Mesh>();
             foreach (List<Edge> chuckEdges in edgesByChunk)
-                outputMeshes.Add(GenerateWallModel(chuckEdges));
+                outputMeshes.Add(GenerateWallModel(chuckEdges, drawConfig));
 
             return outputMeshes;
         }
@@ -1180,19 +1314,17 @@ namespace EyE.Maps.Templates
         async public virtual UniTask<List<MeshData>> CreateWallsMeshChunksAsync(
                 GenericMazeMap<T> data,
                 MazeMeshDrawGeneric<T> mazeDrawer,
-                float wallThickness,
-                float wallHeight,
+                MazeMeshDrawBase.WallDrawConfig drawConfig,
                 IReadOnlyList<IReadOnlyList<T>> coordsPerChuck,
-                TaskHandler taskContext,
-                bool displayBorderWalls = true,
-                Texture2D sideDepthMap = null, MeshData normalizedWallMesh=null)
+                TaskHandler taskContext)
         {
 
             this.map = data;
             this.mazeDrawer = mazeDrawer;
-            this.wallThickness = wallThickness;
-            this.wallHeight = wallHeight;
-            this.displayBorderWalls = displayBorderWalls;
+            this.drawConfig = drawConfig;
+            //this.wallThickness = wallThickness;
+            //this.wallHeight = wallHeight;
+            //this.displayBorderWalls = displayBorderWalls;
 
             await AsyncInit();
             // Debug.Log("Wall mesh computer running now");
@@ -1226,12 +1358,12 @@ namespace EyE.Maps.Templates
             if (taskContext.IsCancellationRequested) return null;
             await taskContext.SetStageMessageAndYield("Generation: launching " + edgesByChunk.Count + " tasks to generate chunk meshes");
             UniTask<MeshData>[] tasks = new UniTask<MeshData>[edgesByChunk.Count];
-           // List<MeshData> outputMeshes = new List<MeshData>();
+            // List<MeshData> outputMeshes = new List<MeshData>();
             for (int i = 0; i < edgesByChunk.Count; i++)
 
             {
-                List<Edge> localEdges = edgesByChunk[i]; // capture per iteration
-                tasks[i] = GenerateWallModelAsync(localEdges, taskContext, normalizedWallMesh,Vector3.one, sideDepthMap);
+                List<Edge> chunkEdges = edgesByChunk[i]; // capture per iteration
+                tasks[i] = GenerateWallModelAsync(chunkEdges, taskContext, drawConfig);//.normalizedWallMesh,Vector3.one, sideDepthMap);
             }
             MeshData[] results;
             if (taskContext.IsCancellationRequested) return null;
@@ -1287,7 +1419,7 @@ namespace EyE.Maps.Templates
             Vector3 tilePosition = map.GetModelSpacePosition(coord);
             Vector3 neighborPosition = map.GetModelSpacePosition(neighbor);
 
-            Vector3 wallPosition = (tilePosition + neighborPosition) * 0.5f;
+            Vector3 wallPosition = (tilePosition + neighborPosition) * 0.5f;//avg
             Quaternion wallRotation = map.NeighborBorderOrientation(coord, neighborIndex);
             float neighborDist = (tilePosition - neighborPosition).magnitude;
             float computedEdgeLength = neighborDist * Mathf.Tan(Mathf.PI / neighborCount);
@@ -1308,7 +1440,7 @@ namespace EyE.Maps.Templates
             //string chunkEdgeDetails = strext.Join<Edge>(chuckEdges, (e) => e.cornerA.ToString() + "-" + e.cornerB.ToString(), "\n");
             // Debug.Log("Created Mesh for chunk ("+chunk+") containing " + chuckEdges.Count + " edges.");
 
-            return GenerateWallModel(chuckEdges);
+            return GenerateWallModel(chuckEdges, drawConfig);
         }
 
         //internal storage
@@ -1332,11 +1464,11 @@ namespace EyE.Maps.Templates
         {
             public int cornerA;
             public int cornerB;
-            // public List<T> touchingCoords= new List<T>();
-            public T sideACoord;  //  to replace touching coords list
-            public int sideAEdgeNeighborIndex;  //  to replace touching coords list
-            public T sideBCoord;  //  to replace touching coords list
-            public int sideBEdgeNeighborIndex;  //  to replace touching coords list
+
+            public T sideACoord;
+            public int sideAEdgeNeighborIndex;
+            public T sideBCoord;
+            public int sideBEdgeNeighborIndex;
 
             public bool hasVisibleWall;
             public Vector3[] wallEndAVerts;
@@ -1352,8 +1484,9 @@ namespace EyE.Maps.Templates
             public Color wallEndADebugColor;
             public Color wallEndBDebugColor;
         }
+
         //utility functions
-        Vector3 EdgeDirFrom(Edge e, int cornerIndex)
+        protected virtual Vector3 EdgeDirFrom(Edge e, int cornerIndex)//existsing version- only straight
         {
             if (e.cornerA == cornerIndex)
                 return (uniqueCorners[e.cornerB].position - uniqueCorners[e.cornerA].position).normalized;
@@ -1389,7 +1522,7 @@ namespace EyE.Maps.Templates
         }
         Vector3 Extrude(Vector3 v)
         {
-            return v + (NormalAtModelSpacePosition(v) * wallHeight);
+            return v + (NormalAtModelSpacePosition(v) * drawConfig.wallHeight);
         }
         bool LineIntersection(Ray LineA, Ray LineB, out Vector3 closestPointOnA, out Vector3 closestPointOnB)
         {
@@ -1505,6 +1638,18 @@ namespace EyE.Maps.Templates
             return;
         }
 
+        protected virtual (int,int) MapFuncGetCornerIndexesForEdge(T sideA,T sideB)
+        {
+            int sideBNeighborIndex = map.GetSpatialNeighborIndexOf(sideA, sideB);
+            int cornerA = cornerIndecesByCoordinate[sideA][sideBNeighborIndex];
+            int cornerB = cornerIndecesByCoordinate[sideA][(sideBNeighborIndex+1).RingIndex(sideA.NumberOfNeighbors() )];
+            return (cornerA, cornerB);
+
+            /*            List<int> cornerIndiciesForNeighborCoord = cornerIndecesByCoordinate[neighborCoord];
+                        int coordsNeighborIndexFromNeighbor = map.GetSpatialNeighborIndexOf(neighborCoord, coord);
+                        int neighborCornerA = cornerIndiciesForNeighborCoord[neighborIndexFromNeighbor];
+                        int neighborCornerB = cornerIndiciesForCurrentCoord[(neighborIndexFromNeighbor - 1).RingIndex(cornerCount)];*/
+        }
 
         async UniTask BuildUniqueEdgesAsync(TaskHandler taskContext)
         {
@@ -1532,45 +1677,26 @@ namespace EyE.Maps.Templates
             //string logstr = "";
             foreach (T coord in map.allMapCoords)
             {
-                int cornerCount = coord.NumberOfNeighbors();
-                List<int> cornerIndiciesForCurrentCoord = cornerIndecesByCoordinate[coord];
-                int edgeChunk = chunckIndexByFaceCoord[coord];
-                for (int i = 0; i < cornerCount; i++)
+                int i = 0;
+                foreach (T neighborCoord in coord.GetSpatialNeighbors())
                 {
-                    T neighborCoord = coord.GetSpatialNeighbor(i);
+                    (int,int) corners = MapFuncGetCornerIndexesForEdge(coord, neighborCoord);
+                    int currentCornerA = corners.Item1;
+                    int currentCornerB = corners.Item2;
+                    
 
-                    int currentCornerA = cornerIndiciesForCurrentCoord[i];
-                    int currentCornerB = cornerIndiciesForCurrentCoord[(i + 1).RingIndex(cornerCount)];
-
-                    // see if an edge exists that uses these corners- if not create it
-                    //  void swap(ref int a, ref int b) { int temp = a; a = b; b = temp; }
-                    //if (currentCornerA < currentCornerB) swap(ref currentCornerA, ref currentCornerB);
                     int currentEdgeIndex;
                     if (!edgeLookup.TryGetValue(currentCornerA, currentCornerB, out currentEdgeIndex))
-                        //if (!edgeLookup.TryGetValue((currentCornerB, currentCornerA), out currentEdgeIndex))
                         currentEdgeIndex = -1;
-
-                    //int currentEdgeIndex = uniqueEdges.FindIndex(0, (Edge e) => (e.cornerA == currentCornerA && e.cornerB == currentCornerB) || (e.cornerA == currentCornerB && e.cornerB == currentCornerA));
-                    Edge edge;
-                    int GetNeighborIndex(T source, T neighbor)
+                    if (currentEdgeIndex == -1)// if not already created, create one
                     {
-                        int i = 0;
-                        foreach (T test in source.GetSpatialNeighbors())
-                        {
-                            if (test.Equals(neighbor))
-                                return i;
-                            i++;
-                        }
-                        throw new GeometryException("Tiles are not neighbors: [" + source + "] , [" + neighbor + "]");
-                    }
-                    if (currentEdgeIndex == -1)// if not, create one
-                    {
-                        edge = new Edge() { cornerA = currentCornerA, cornerB = currentCornerB };
+                        int edgeChunk = chunckIndexByFaceCoord[coord];
+                        Edge edge = new Edge() { cornerA = currentCornerA, cornerB = currentCornerB };
                         edge.hasVisibleWall = false;//for now
                         edge.sideACoord = coord;
                         edge.sideAEdgeNeighborIndex = i;
                         edge.sideBCoord = neighborCoord;
-                        edge.sideBEdgeNeighborIndex = GetNeighborIndex(neighborCoord, coord);
+                        edge.sideBEdgeNeighborIndex = map.GetSpatialNeighborIndexOf(neighborCoord, coord);// GetNeighborIndex(neighborCoord, coord);
                         // edge.touchingCoords.Add(coord);
                         // edge.touchingCoords.Add(neighborCoord);
                         currentEdgeIndex = uniqueEdges.Count;
@@ -1615,7 +1741,82 @@ namespace EyE.Maps.Templates
                           logstr = "";
                       }*/
                     }//edgealready exists
+
+                    i++;
                 }
+                /*
+                int cornerCount = coord.NumberOfNeighbors();
+                //this list is corners on the lefthand side of the edge with [neighborIndex]
+                List<int> cornerIndiciesForCurrentCoord = cornerIndecesByCoordinate[coord];
+                int edgeChunk = chunckIndexByFaceCoord[coord];
+                for (int i = 0; i < cornerCount; i++)
+                {
+                    T neighborCoord = coord.GetSpatialNeighbor(i);
+
+                    int currentCornerA = cornerIndiciesForCurrentCoord[i];
+                    int currentCornerB = cornerIndiciesForCurrentCoord[(i + 1).RingIndex(cornerCount)];
+                    
+
+                    // see if an edge exists that uses these corners- if not create it
+                    //  void swap(ref int a, ref int b) { int temp = a; a = b; b = temp; }
+                    //if (currentCornerA < currentCornerB) swap(ref currentCornerA, ref currentCornerB);
+                    int currentEdgeIndex;
+                    if (!edgeLookup.TryGetValue(currentCornerA, currentCornerB, out currentEdgeIndex))
+                        //if (!edgeLookup.TryGetValue((currentCornerB, currentCornerA), out currentEdgeIndex))
+                        currentEdgeIndex = -1;
+
+                    //int currentEdgeIndex = uniqueEdges.FindIndex(0, (Edge e) => (e.cornerA == currentCornerA && e.cornerB == currentCornerB) || (e.cornerA == currentCornerB && e.cornerB == currentCornerA));
+                    Edge edge;
+
+                    if (currentEdgeIndex == -1)// if not, create one
+                    {
+                        edge = new Edge() { cornerA = currentCornerA, cornerB = currentCornerB };
+                        edge.hasVisibleWall = false;//for now
+                        edge.sideACoord = coord;
+                        edge.sideAEdgeNeighborIndex = i;
+                        edge.sideBCoord = neighborCoord;
+                        edge.sideBEdgeNeighborIndex = map.GetSpatialNeighborIndexOf(neighborCoord, coord);// GetNeighborIndex(neighborCoord, coord);
+                        // edge.touchingCoords.Add(coord);
+                        // edge.touchingCoords.Add(neighborCoord);
+                        currentEdgeIndex = uniqueEdges.Count;
+                        uniqueEdges.Add(edge);
+                        edgeLookup.Add(currentCornerA, currentCornerB, currentEdgeIndex);
+                        edge.hasVisibleWall = CheckIsEdgeVisible(edge);// coord, i, neighborCoord);
+
+                        //   logstr += ("\nedge between tiles " + coord + " and " + coord.GetNeighbor(i) + ", has visible wall: " + edge.hasVisibleWall + "  edge dir: " + EdgeDirFrom(edge, currentCornerA));
+                        //   logstr += ("\n    corners ["+ currentCornerA + "]: "+ uniqueCorners[currentCornerA].position + " And [" + currentCornerB + "]: " + uniqueCorners[currentCornerB].position);
+
+
+                        // Add edge index to corners' edge lists if not already present
+                        Corner cornerAObj = uniqueCorners[currentCornerA];
+                        Corner cornerBObj = uniqueCorners[currentCornerB];
+                        if (cornerAObj.edges == null)
+                            cornerAObj.edges = new List<int>();
+                        if (cornerBObj.edges == null)
+                            cornerBObj.edges = new List<int>();
+
+                        //  we are only in here if a new edge created: no need to check if it exists in a list
+                        int edgeIndex = currentEdgeIndex;// uniqueEdges.IndexOf(edge);
+                                                         //  if (!cornerAObj.edges.Contains(edgeIndex))
+                        cornerAObj.edges.Add(edgeIndex);
+                        //   if (!cornerBObj.edges.Contains(edgeIndex))
+                        cornerBObj.edges.Add(edgeIndex);
+
+
+                        // addref to this edge to chunk lists  to do: separate for recompute
+
+                        if (map.IsWithinBounds(neighborCoord))
+                            edgeChunk = Mathf.Min(edgeChunk, chunckIndexByFaceCoord[neighborCoord]);
+                        //logstr += "\n    adding edge[" + currentEdgeIndex + "] to chunk[" + edgeChunk + "]";
+
+                        //    if (!edgesByChunk[edgeChunk].Contains(edge))
+                        edgesByChunk[edgeChunk].Add(edge);
+                        //else
+                        //  logstr += "  DUPLICATE  edge";
+
+                    }//edgealready exists
+                }
+                */
                 taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();
             }
@@ -1721,7 +1922,7 @@ namespace EyE.Maps.Templates
             //          - Each edge gets assigned edge.wallEndVerts[A or B][left and right]  (left = fanRing[i], right = fanRing[i+1], and the TIP Vector3 or null),
             //                 -both top and bottom
             //string logstr = "";
-            float halfT = wallThickness * 0.5f;
+            float halfT = drawConfig.wallThickness * 0.5f;
 
             for (int cIndex = 0; cIndex < uniqueCorners.Count; cIndex++)
             {
@@ -1746,7 +1947,8 @@ namespace EyE.Maps.Templates
                 {
                     Edge e = visibleEdges[0];
                     Vector3 thicknessOffset = halfT * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex));
-                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null,false, Color.black);
+                    Debug.Log("single junction edge corner cornerIndex:["+cIndex+"]pos("+c.position+") edgeDir:"+ EdgeDirFrom(e, cIndex) + " thicknessOffset:"+ thicknessOffset);
+                    AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, false, Color.black);
                 }
                 else if (visibleCount > 1)
                 {
@@ -1822,9 +2024,9 @@ namespace EyE.Maps.Templates
         }
 
 
-        Mesh GenerateWallModel(List<Edge> edgesInChunk, MeshData normalizedMeshBase = null, Vector3 meshAspectRatio = default(Vector3), Texture2D sideDepthTexture = null, Vector2Int depthSegements = default(Vector2Int))
+        Mesh GenerateWallModel(List<Edge> edgesInChunk, MazeMeshDrawBase.WallDrawConfig drawConfig)
         {
-            return GenerateWallModelAsync(edgesInChunk, new TaskHandler(false), normalizedMeshBase , meshAspectRatio, sideDepthTexture , depthSegements).GetAwaiter().GetResult().ToMesh();
+            return GenerateWallModelAsync(edgesInChunk, new TaskHandler(false), drawConfig).GetAwaiter().GetResult().ToMesh();
         }
         struct CacheWallPoint
         {
@@ -1833,7 +2035,7 @@ namespace EyE.Maps.Templates
             public Vector3 pointOnQuadCenter;
             public float depth;
         }
-        async UniTask<MeshData> GenerateWallModelAsync(List<Edge> edgesInChunk, TaskHandler taskContext, MeshData normalizedMeshBase=null, Vector3 meshAspectRatio= default(Vector3), Texture2D sideDepthTexture = null, Vector2Int depthSegements = default(Vector2Int))
+        async UniTask<MeshData> GenerateWallModelAsync(List<Edge> edgesInChunk, TaskHandler taskContext, MazeMeshDrawBase.WallDrawConfig drawConfig)
         {
             // Step 5: Generate Wall Geometry
             // ------------------------------
@@ -1853,10 +2055,8 @@ namespace EyE.Maps.Templates
             List<int> subMeshTris = new List<int>();
             List<Vector2> uvs = new List<Vector2>();
             List<Color> colors = new List<Color>();
-            if (depthSegements == default(Vector2Int))
-                depthSegements = new Vector2Int(64, 64);
             string logstr = "";
-            List<MeshData> mergeableMeshes= new List<MeshData>();
+            List<MeshData> mergeableMeshes = new List<MeshData>();
 
             for (int edgeIndexInChunk = 0; edgeIndexInChunk < edgesInChunk.Count; edgeIndexInChunk++)
             {
@@ -1886,18 +2086,116 @@ namespace EyE.Maps.Templates
                 var bColor = e.wallEndBDebugColor;
                 bool bIsJunction = e.wallEndBIsJunction;
 
-               
+                Vector2Int tilingResolution = Vector2Int.one;
+                if (drawConfig.drawOption == MazeMeshDrawBase.WallDrawConfig.DrawType.SurfaceDepth)
+                    tilingResolution = drawConfig.surfaceDepthTilingResolution;
+                int minXsegs = GetMinimalUVxSegements();
+                if (minXsegs > tilingResolution.x)
+                    tilingResolution.x = minXsegs;
 
-                if (sideDepthTexture == null)
+                Vector3 startBottomLeft = aBot[1];
+                Vector3 startTopLeft = aTop[0];
+                Vector3 startTopRight = aTop[1];
+                Vector3 startBottomRight = aBot[0];
+                Vector3 endBottomLeft = bBot[1];
+                Vector3 endTopLeft = bTop[0];
+                Vector3 endTopRight = bTop[1];
+                Vector3 endBottomRight = bBot[0];
+                if (false)//debug stuff
                 {
-                    if (normalizedMeshBase != null)
+                    // --- centers / basis ---
+                    Vector3 startCenter = (startBottomLeft + startBottomRight + startTopLeft + startTopRight) * 0.25f;
+                    Vector3 endCenter = (endBottomLeft + endBottomRight + endTopLeft + endTopRight) * 0.25f;
+
+                    Vector3 forward = (endCenter - startCenter).normalized;
+
+                    // derive up from both edges (more stable than single edge)
+                    Vector3 upStart = ((startTopLeft + startTopRight) * 0.5f - (startBottomLeft + startBottomRight) * 0.5f).normalized;
+                    Vector3 upEnd = ((endTopLeft + endTopRight) * 0.5f - (endBottomLeft + endBottomRight) * 0.5f).normalized;
+
+                    Vector3 up = (upStart + upEnd).normalized;
+
+                    Vector3 expectedRight = Vector3.Cross(up, forward).normalized;
+
+                    // --- actual directions ---
+                    Vector3 bottomRightDirStart = (startBottomRight - startBottomLeft).normalized;
+                    Vector3 topRightDirStart = (startTopRight - startTopLeft).normalized;
+
+                    Vector3 bottomRightDirEnd = (endBottomRight - endBottomLeft).normalized;
+                    Vector3 topRightDirEnd = (endTopRight - endTopLeft).normalized;
+
+                    // --- dot tests ---
+                    float startBottomDot = Vector3.Dot(expectedRight, bottomRightDirStart);
+                    float startTopDot = Vector3.Dot(expectedRight, topRightDirStart);
+
+                    float endBottomDot = Vector3.Dot(expectedRight, bottomRightDirEnd);
+                    float endTopDot = Vector3.Dot(expectedRight, topRightDirEnd);
+
+                    // --- vertical consistency (this is what you were missing)
+                    float verticalLeftDot = Vector3.Dot(
+                        (startTopLeft - startBottomLeft).normalized,
+                        (startTopRight - startBottomRight).normalized * -1f // should be opposite directions
+                    );
+
+                    // --- logs ---
+                    Debug.Log(
+                        $"Wall L/R Debug:\n" +
+                        $" expectedRight: {expectedRight}\n" +
+                        $" startBottomDot: {startBottomDot}\n" +
+                        $" startTopDot:    {startTopDot}\n" +
+                        $" endBottomDot:   {endBottomDot}\n" +
+                        $" endTopDot:      {endTopDot}\n" +
+                        $" verticalLeftDot(opposition check): {verticalLeftDot}"
+                    );
+
+                    // --- assertions ---
+                    if (startBottomDot < 0f) Debug.LogError("Start bottom L/R flipped");
+                    if (startTopDot < 0f) Debug.LogError("Start top L/R flipped");
+                    if (endBottomDot < 0f) Debug.LogError("End bottom L/R flipped");
+                    if (endTopDot < 0f) Debug.LogError("End top L/R flipped");
+
+                    // this catches the diagonal-cross bug specifically
+                    if (startBottomDot > 0f && startTopDot > 0f)
                     {
-                        int numCopies = 3;
+                        float crossCheck = Vector3.Dot(
+                            (startBottomRight - startBottomLeft).normalized,
+                            (startTopLeft - startTopRight).normalized
+                        );
+
+                        if (crossCheck > 0.5f)
+                        {
+                            Debug.LogError("Diagonal pairing detected (bottomRight aligns with topLeft)");
+                        }
+                    }
+                }
+                switch (drawConfig.drawOption)
+                {
+                    case MazeMeshDrawBase.WallDrawConfig.DrawType.Quads:
+
+                        BuildLengthwiseWallFaces(e.sideACoord, e.sideBCoord,
+                            startBottomLeft, startTopLeft, startTopRight, startBottomRight,
+                            endBottomLeft, endTopLeft, endTopRight, endBottomRight,
+                            aColor, bColor, verts, tris, subMeshTris, uvs, colors,
+                            tilingResolution, false);
+
+                        break;
+
+                    case MazeMeshDrawBase.WallDrawConfig.DrawType.SurfaceDepth:
+                        BuildLengthwiseWallFaces(e.sideACoord, e.sideBCoord,
+                            startBottomLeft, startTopLeft, startTopRight, startBottomRight,
+                            endBottomLeft, endTopLeft, endTopRight, endBottomRight,
+                            aColor, bColor, verts, tris, subMeshTris, uvs, colors,
+                            tilingResolution, true);
+                        break;
+                    case MazeMeshDrawBase.WallDrawConfig.DrawType.MeshTiling:
+                        int numCopies = drawConfig.NumberOfMeshesToTile((aBot[0] - bBot[0]).magnitude * 0.5f);
                         float tInc = 1f / numCopies;
                         float t0 = 0;
-                        for (int i = 0; i < numCopies; i++,t0+=tInc)
+
+
+                        for (int i = 0; i < numCopies; i++, t0 += tInc)
                         {
-                            float t1 = t0+tInc;
+                            float t1 = t0 + tInc;
                             if (t1 > 1f) t1 = 1f;
 
                             // match your original parameter mapping exactly
@@ -1912,49 +2210,16 @@ namespace EyE.Maps.Templates
                             Vector3 seg_bTop0 = Vector3.Lerp(aTop[0], bTop[0], t1);
 
                             MeshData wallMesh = TransformNormaizedMeshAlongWall(
-                                normalizedMeshBase,
+                                drawConfig.normalizedWallMesh,
                                 seg_aBot0, seg_aBot1, seg_aTop1, seg_aTop0,
-                                seg_bBot0, seg_bBot1, seg_bTop1, seg_bTop0
+                                seg_bBot0, seg_bBot1, seg_bTop1, seg_bTop0,
+                                e.sideACoord,e.sideBCoord
                             );
 
                             mergeableMeshes.Add(wallMesh);
                         }
-                        /*
-                        int numCopies = 3;//test with hard coded 3, for now
-                        // add loop to go along length of wall (from start to end) "numCopies" amount of times, and create a transformed meshData, for each section.
-                        {
-                            //note: normalized mesh has all verts defined between 0,0,0 and 1,1,1
-
-                            //definition:  MeshData TransformNormaizedMeshAlongWall(MeshData normalizdMesh,
-                            //   Vector3 cornerBottomLeftStart, Vector3 cornerBottomRightStart, Vector3 cornerTopLeftStart, Vector3 cornerTopRightStart,
-                            //   Vector3 cornerBottomLeftEnd, Vector3 cornerBottomRightEnd, Vector3 cornerTopLeftEnd, Vector3 cornerTopRightEnd)
-                            MeshData wallMesh = TransformNormaizedMeshAlongWall(normalizedMeshBase, aBot[0], aBot[1], aTop[1], aTop[0],
-                                bBot[0], bBot[1], bTop[1], bTop[0]);
-                            mergeableMeshes.Add(wallMesh);
-                        }*/
-                    }
-                    else
-                    {
-                        // Bottom quad (A[0]→B[1], A[1]→B[0])
-                        AddQuad(aBot[0], aBot[1], bBot[1], bBot[0], aColor, bColor, verts, subMeshTris, uvs, colors);
-                        // Top quad
-                        AddQuad(aTop[0], aTop[1], bTop[1], bTop[0], aColor, bColor, verts, subMeshTris, uvs, colors);
-
-                        // Front face: A[0]→ATop[0]→BTop[1]→B[1]
-                        AddQuad(aBot[1], aTop[0], bTop[0], bBot[1], aColor, bColor, verts, tris, uvs, colors);
-
-                        // Back face: A[1]→ATop[1]→BTop[0]→B[0]
-                        AddQuad(aTop[1], aBot[0], bBot[0], bTop[1], aColor, bColor, verts, tris, uvs, colors);
-                    }
-                }
-                else
-                {
-
-                    BuildLengthwiseWallFaces(
-                            aBot[0], aBot[1], bBot[1], bBot[0],
-                            aTop[0], aTop[1], bTop[1], bTop[0],
-                            aColor, bColor, verts, tris, subMeshTris, uvs, colors);
-
+                        break;
+                    default: break;
                 }
 
                 // End A
@@ -1962,10 +2227,15 @@ namespace EyE.Maps.Templates
                 {
                     AddTri(aBot[1], aBot[0], aTip.Value, aColor, verts, subMeshTris, uvs, colors);
                     AddTri(aTop[1], aTop[0], aTipTop.Value, aColor, verts, subMeshTris, uvs, colors);
+                    if (drawConfig.drawOption == MazeMeshDrawBase.WallDrawConfig.DrawType.MeshTiling)
+                    {
+                        //draw quad at face of junction- reversed (face of junction itself)
+                        AddQuad(aBot[0], aBot[1], aTop[0], aTop[1], aColor, aColor, verts, subMeshTris, uvs, colors);
+                    }
                 }
                 else
                 {
-                    if(!aIsJunction && normalizedMeshBase==null)// only draw end cap when NO junction at all
+                    if (!aIsJunction && drawConfig.drawOption != MazeMeshDrawBase.WallDrawConfig.DrawType.MeshTiling)// only draw end cap when NO junction at all
                         AddQuad(aBot[1], aBot[0], aTop[1], aTop[0], aColor, aColor, verts, subMeshTris, uvs, colors);
                 }
 
@@ -1974,16 +2244,21 @@ namespace EyE.Maps.Templates
                 {
                     AddTri(bBot[0], bBot[1], bTip.Value, bColor, verts, subMeshTris, uvs, colors);
                     AddTri(bTop[0], bTop[1], bTipTop.Value, bColor, verts, subMeshTris, uvs, colors);
+                    if (drawConfig.drawOption == MazeMeshDrawBase.WallDrawConfig.DrawType.MeshTiling)
+                    {
+                        //draw quad at face of junction- reversed (face of junction itself)
+                        AddQuad(bBot[1], bBot[0], bTop[1], bTop[0], bColor, bColor, verts, subMeshTris, uvs, colors);
+                    }
                 }
                 else
                 {
-                    if(!bIsJunction && normalizedMeshBase == null)// only draw end cap when NO junction at all
+                    if (!bIsJunction && drawConfig.drawOption != MazeMeshDrawBase.WallDrawConfig.DrawType.MeshTiling)// only draw end cap when NO junction at all
                         AddQuad(bBot[0], bBot[1], bTop[0], bTop[1], bColor, bColor, verts, subMeshTris, uvs, colors);
                 }
                 taskContext.IncrementProgress(0.5f);
                 await taskContext.Yield();
             }
-            // Debug.Log(logstr);
+             Debug.Log(logstr);
             MeshData mesh = new MeshData();
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris, 0);
@@ -1999,7 +2274,7 @@ namespace EyE.Maps.Templates
             }
 
             mesh.RecalculateNormals();
-            
+
             taskContext.IncrementProgress(0.2f);
             // string chunkEdgeDetails = strext.Join<Edge>(edgesInChunk, (e) => e.cornerA.ToString() + "-" + e.cornerB.ToString(), "\n");
             // Debug.Log("Created Mesh for chunk containing " + edgesInChunk.Count + " edges. Final vertex count: " + verts.Count + "\n" + chunkEdgeDetails);
@@ -2009,7 +2284,7 @@ namespace EyE.Maps.Templates
 
             float SampleDepth(Vector2 uv)
             {
-                Color c = sideDepthTexture.GetPixelBilinear(uv.x, uv.y);
+                Color c = drawConfig.surfaceDepthMap.GetPixelBilinear(uv.x, uv.y);
                 return 1f - c.grayscale; // scale externally if needed
             }
             void AddQuad(Vector3 bl, Vector3 tl, Vector3 tr, Vector3 br,
@@ -2067,21 +2342,19 @@ namespace EyE.Maps.Templates
 
             }
 
-            MeshData TransformNormaizedMeshAlongWall(MeshData normalizdMesh,
-            Vector3 cornerBottomLeftStart, Vector3 cornerBottomRightStart, Vector3 cornerTopLeftStart, Vector3 cornerTopRightStart,
-            Vector3 cornerBottomLeftEnd, Vector3 cornerBottomRightEnd, Vector3 cornerTopLeftEnd, Vector3 cornerTopRightEnd)
+            MeshData TransformNormaizedMeshAlongWall(MeshData normalizedMesh,
+                Vector3 cornerBottomLeftStart, Vector3 cornerBottomRightStart, Vector3 cornerTopLeftStart, Vector3 cornerTopRightStart,
+                Vector3 cornerBottomLeftEnd, Vector3 cornerBottomRightEnd, Vector3 cornerTopLeftEnd, Vector3 cornerTopRightEnd,
+                T sideACoord, T sideBCoord)
             {
-                MeshData result = new MeshData(normalizdMesh);
+                MeshData result = new MeshData(normalizedMesh);
                 Vector3[] verts = result.vertices;
-
-                // Precompute vertical offset (constant over shape)
-                Vector3 heightOffset = cornerTopLeftStart - cornerBottomLeftStart;
 
                 for (int i = 0; i < verts.Length; i++)
                 {
-                    Vector3 v = verts[i];
-
-                    float x = v.x; // left -> right
+                   // Vector3 v = verts[i];
+                    verts[i] = GetPointInWall(verts[i], cornerBottomLeftStart, cornerTopLeftStart, cornerTopLeftStart, cornerBottomRightStart, cornerBottomLeftEnd, cornerTopLeftEnd, cornerTopRightEnd, cornerBottomRightEnd, sideACoord, sideBCoord);
+                    /*float x = v.x; // left -> right
                     float y = v.y; // bottom -> top
                     float z = v.z; // start -> end
 
@@ -2093,55 +2366,62 @@ namespace EyE.Maps.Templates
                     Vector3 basePos = Vector3.Lerp(leftPos, rightPos, x);
 
                     // 3) apply vertical offset and assign back to array
-                    verts[i] = basePos + heightOffset * y;
+                    verts[i] = basePos + heightOffset * y;*/
                 }
 
                 //result.vertices = verts;// shouldn't be needed- we are working on the arrayRef
                 return result;
             }
-            void BuildLengthwiseWallFaces(
-                Vector3 botA0, Vector3 botA1, Vector3 botB1, Vector3 botB0,
-                Vector3 topA0, Vector3 topA1, Vector3 topB1, Vector3 topB0,
+
+            void BuildLengthwiseWallFaces(T sideACoord, T sideBCoord,
+                Vector3 startBottomLeft, Vector3 startTopLeft, Vector3 startTopRight, Vector3 startBottomRight,  
+                Vector3 endBottomLeft, Vector3 endTopLeft, Vector3 endTopRight, Vector3 endBottomRight,
                 Color colorA, Color colorB,
-                List<Vector3> verts, List<int> tris, List<int> subMeshTris,List<Vector2> uvs, List<Color> colors)
+                List<Vector3> verts, List<int> tris, List<int> subMeshTris, List<Vector2> uvs, List<Color> colors,
+                Vector2Int surfaceResolution, bool doDepthOffset)
             {
-                float incU = 1f / depthSegements.x;
-                float incV = 1f / depthSegements.y;
+                float incU = 1f / surfaceResolution.x;
+                float incV = 1f / surfaceResolution.y;
 
-                int uCount = depthSegements.x + 1;
-                int vCount = depthSegements.y + 1;
+                int uCount = surfaceResolution.x + 1;
+                int vCount = surfaceResolution.y + 1;
 
-                //center quad- we will LERP towards UV's on this, rather than offset by a normal for depth (old method)
-                Vector3 botACenter = (botA0 + botA1) * 0.5f;
-                Vector3 botBCenter = (botB0 + botB1) * 0.5f;
-                Vector3 topACenter = (topA0 + topA1) * 0.5f;
-                Vector3 topBCenter = (topB0 + topB1) * 0.5f;
+                Vector3 startBottomCenter = (startBottomLeft + startBottomRight) * 0.5f;
+                Vector3 endBottomCenter = (endBottomLeft + endBottomRight) * 0.5f;
+                Vector3 startTopCenter = (startTopLeft + startTopRight) * 0.5f;
+                Vector3 endTopCenter = (endTopLeft + endTopRight) * 0.5f;
 
-                // Cache all depth samples up front
                 CacheWallPoint[,] wallPointCache = new CacheWallPoint[uCount, vCount];
 
-                float[,] depthCache = new float[uCount, vCount];
                 for (int ui = 0; ui < uCount; ui++)
                     for (int vi = 0; vi < vCount; vi++)
                     {
                         Vector2 uv = new Vector2(ui * incU, vi * incV);
-                        depthCache[ui, vi] = SampleDepth(uv);
+
                         CacheWallPoint cachePt;
-                        cachePt.depth = SampleDepth(uv);
-                        cachePt.pointOnQuadL = GetPointOnQuad(botA1, botB1, topA0, topB0, uv);
-                        cachePt.pointOnQuadR = GetPointOnQuad(botA0, botB0, topA1, topB1, uv);
-                        cachePt.pointOnQuadCenter = GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, uv);
+                        if (doDepthOffset)
+                            cachePt.depth = SampleDepth(uv);
+                        else
+                            cachePt.depth = 0;
+
+                        //quads go down length of wall from start to end. "Left" is defined by looking from start towards end.
+                        //orient both sides (Left and right) the same- to iterate uv.x from start to end.
+                        cachePt.pointOnQuadR = GetPointOnWallFace(startBottomRight, startTopRight, endTopRight, endBottomRight, uv, sideACoord, sideBCoord);
+                        cachePt.pointOnQuadL = GetPointOnWallFace(startBottomLeft, startTopLeft, endTopLeft, endBottomLeft, uv, sideACoord, sideBCoord);
+                        
+                        cachePt.pointOnQuadCenter = GetPointOnWallFace(startBottomCenter, startTopCenter, endTopCenter, endBottomCenter, uv, sideACoord, sideBCoord);
+
                         wallPointCache[ui, vi] = cachePt;
                     }
 
-                for (int j = 0; j < depthSegements.y; j++)
+                for (int j = 0; j < surfaceResolution.y; j++)
                 {
                     float V = j * incV;
                     float VNext = V + incV;
                     bool isBottomRow = j == 0;
-                    bool isTopRow = j == depthSegements.y - 1;
+                    bool isTopRow = j == surfaceResolution.y - 1;
 
-                    for (int i = 0; i < depthSegements.x; i++)
+                    for (int i = 0; i < surfaceResolution.x; i++)
                     {
                         float U = i * incU;
                         float UNext = U + incU;
@@ -2151,43 +2431,42 @@ namespace EyE.Maps.Templates
                         CacheWallPoint cachePtTL = wallPointCache[i, j + 1];
                         CacheWallPoint cachePtTR = wallPointCache[i + 1, j + 1];
 
-                        float dBL = cachePtBL.depth;// depthCache[i, j];
-                        float dBR = cachePtBR.depth;//depthCache[i + 1, j];
-                        float dTL = cachePtTL.depth;//depthCache[i, j + 1];
-                        float dTR = cachePtTR.depth;//depthCache[i + 1, j + 1];
+                        float dBL = cachePtBL.depth;
+                        float dBR = cachePtBR.depth;
+                        float dTL = cachePtTL.depth;
+                        float dTR = cachePtTR.depth;
 
-                        // ── BOTTOM FACE (first V row only) ──────────────────────────────
                         if (isBottomRow && !(dBL >= 0.99f && dBR >= 0.99f))
                         {
-                            // Bottom face rail: lerp between botA0↔botB0 and botA1↔botB1
-                            Vector3 posBL = cachePtBL.pointOnQuadL;//  Vector3.Lerp(botA0, botB0, U);
-                            Vector3 posBR = cachePtBL.pointOnQuadR;// Vector3.Lerp(botA1, botB1, U);
-                            Vector3 posTL = cachePtBR.pointOnQuadL;// Vector3.Lerp(botA0, botB0, UNext);
-                            Vector3 posTR = cachePtBR.pointOnQuadR;// Vector3.Lerp(botA1, botB1, UNext);
+                            Vector3 posBL = cachePtBL.pointOnQuadL;
+                            Vector3 posBR = cachePtBL.pointOnQuadR;
+                            Vector3 posTL = cachePtBR.pointOnQuadL;
+                            Vector3 posTR = cachePtBR.pointOnQuadR;
 
-                            Vector3 posCenter0 = cachePtBL.pointOnQuadCenter;// Vector3.Lerp(botACenter, botBCenter, U);
-                            Vector3 posCenter1 = cachePtBR.pointOnQuadCenter;// Vector3.Lerp(botACenter, botBCenter, UNext);
+                            if (doDepthOffset)
+                            {
+                                Vector3 posCenter0 = cachePtBL.pointOnQuadCenter;
+                                Vector3 posCenter1 = cachePtBR.pointOnQuadCenter;
 
-                            posBL = Vector3.Lerp(posBL, posCenter0, dBL);
-                            posBR = Vector3.Lerp(posBR, posCenter0, dBL);
-                            posTL = Vector3.Lerp(posTL, posCenter1, dBR);
-                            posTR = Vector3.Lerp(posTR, posCenter1, dBR);
+                                posBL = Vector3.Lerp(posBL, posCenter0, dBL);
+                                posBR = Vector3.Lerp(posBR, posCenter0, dBL);
+                                posTL = Vector3.Lerp(posTL, posCenter1, dBR);
+                                posTR = Vector3.Lerp(posTR, posCenter1, dBR);
+                            }
 
-                            //top and bottom faces, edges depth cuts into uv, rather than squishing
-                            float uvL0 = dBL * 0.5f;        // left edge trimmed inward
-                            float uvR0 = 1f - (dBL * 0.5f); // right edge trimmed inward
+                            float uvL0 = dBL * 0.5f;
+                            float uvR0 = 1f - (dBL * 0.5f);
                             float uvL1 = dBR * 0.5f;
                             float uvR1 = 1f - (dBR * 0.5f);
 
                             AddQuad(posBL, posBR, posTR, posTL, colorA, colorB, verts, subMeshTris, uvs, colors,
                                 new List<Vector2> {
-                                    new Vector2(uvL0, 0),
-                                    new Vector2(uvL1, 1),   // note: U/UNext axis is V here (along wall length)
-                                    new Vector2(uvR1, 1),
-                                    new Vector2(uvR0, 0) });
+                        new Vector2(uvL0, 0),
+                        new Vector2(uvL1, 1),
+                        new Vector2(uvR1, 1),
+                        new Vector2(uvR0, 0) });
                         }
 
-                        // ── SIDE FACES (front + back, every row) ────────────────────────
                         if (!(dBL >= 0.99f && dBR >= 0.99f && dTL >= 0.99f && dTR >= 0.99f))
                         {
                             Vector2 UV_BL = new Vector2(U, V);
@@ -2195,104 +2474,252 @@ namespace EyE.Maps.Templates
                             Vector2 UV_TL = new Vector2(U, VNext);
                             Vector2 UV_TR = new Vector2(UNext, VNext);
 
-                            Vector3 centerBottomLeft = cachePtBL.pointOnQuadCenter;// GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_BL);
-                            Vector3 centerBottomRight = cachePtBR.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_BR);
-                            Vector3 centerTopLeft = cachePtTL.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_TL);
-                            Vector3 centerTopRight = cachePtTR.pointOnQuadCenter;//GetPointOnQuad(botACenter, botBCenter, topACenter, topBCenter, UV_TR);
+                            Vector3 centerBottomLeft = cachePtBL.pointOnQuadCenter;
+                            Vector3 centerBottomRight = cachePtBR.pointOnQuadCenter;
+                            Vector3 centerTopLeft = cachePtTL.pointOnQuadCenter;
+                            Vector3 centerTopRight = cachePtTR.pointOnQuadCenter;
 
-                            // left face: botA1→topA0→topB0→botB1
                             {
-                                Vector3 bl = cachePtBL.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_BL);
-                                Vector3 br = cachePtBR.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_BR);
-                                Vector3 tl = cachePtTL.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_TL);
-                                Vector3 tr = cachePtTR.pointOnQuadL;//GetPointOnQuad(botA1, botB1, topA0, topB0, UV_TR);
+                                Vector3 bl = cachePtBL.pointOnQuadL;
+                                Vector3 br = cachePtBR.pointOnQuadL;
+                                Vector3 tl = cachePtTL.pointOnQuadL;
+                                Vector3 tr = cachePtTR.pointOnQuadL;
 
-                                bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
-                                br = Vector3.Lerp(br, centerBottomRight, dBR);
-                                tl = Vector3.Lerp(tl, centerTopLeft, dTL);
-                                tr = Vector3.Lerp(tr, centerTopRight, dTR);
-                                AddQuad(bl,tl,tr,br,
-                                        colorA, colorB, verts, tris, uvs, colors,
-                                        new List<Vector2> { UV_BL, UV_TL, UV_TR, UV_BR });
+                                if (doDepthOffset)
+                                {
+                                    bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
+                                    br = Vector3.Lerp(br, centerBottomRight, dBR);
+                                    tl = Vector3.Lerp(tl, centerTopLeft, dTL);
+                                    tr = Vector3.Lerp(tr, centerTopRight, dTR);
+                                }
 
+                                AddQuad(bl, tl, tr, br,
+                                    colorA, colorB, verts, tris, uvs, colors,
+                                    new List<Vector2> { UV_BL, UV_TL, UV_TR, UV_BR });
                             }
 
-                            // right face: botA0→topA1→topB1→botB0
                             {
-                                Vector3 bl = cachePtBL.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_BL);
-                                Vector3 br = cachePtBR.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_BR);
-                                Vector3 tl = cachePtTL.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_TL);
-                                Vector3 tr = cachePtTR.pointOnQuadR;//GetPointOnQuad(botA0, botB0, topA1, topB1, UV_TR);
-                                bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
-                                br = Vector3.Lerp(br, centerBottomRight, dBR);
-                                tl = Vector3.Lerp(tl, centerTopLeft, dTL);
-                                tr = Vector3.Lerp(tr, centerTopRight, dTR);
+                                Vector3 bl = cachePtBL.pointOnQuadR;
+                                Vector3 br = cachePtBR.pointOnQuadR;
+                                Vector3 tl = cachePtTL.pointOnQuadR;
+                                Vector3 tr = cachePtTR.pointOnQuadR;
+
+                                if (doDepthOffset)
+                                {
+                                    bl = Vector3.Lerp(bl, centerBottomLeft, dBL);
+                                    br = Vector3.Lerp(br, centerBottomRight, dBR);
+                                    tl = Vector3.Lerp(tl, centerTopLeft, dTL);
+                                    tr = Vector3.Lerp(tr, centerTopRight, dTR);
+                                }
 
                                 UV_BL.x = 1f - UV_BL.x;
                                 UV_BR.x = 1f - UV_BR.x;
                                 UV_TL.x = 1f - UV_TL.x;
                                 UV_TR.x = 1f - UV_TR.x;
 
-                                AddQuad(tl,bl,br,tr,
-                                        colorA, colorB, verts, tris, uvs, colors,
-                                        new List<Vector2> { UV_TL, UV_BL, UV_BR, UV_TR });
-                                /* old
-                                Vector3 bNormal = Vector3.Cross(tl - bl, br - bl).normalized * -1f;
-                                AddQuad(
-                                    tl - bNormal * dTL * wallThickness * 0.5f,
-                                    bl - bNormal * dBL * wallThickness * 0.5f,
-                                    br - bNormal * dBR * wallThickness * 0.5f,
-                                    tr - bNormal * dTR * wallThickness * 0.5f,
+                                AddQuad(tl, bl, br, tr,
                                     colorA, colorB, verts, tris, uvs, colors,
-                                    new List<Vector2> { UV_TL, UV_BL, UV_BR, UV_TR });*/
+                                    new List<Vector2> { UV_TL, UV_BL, UV_BR, UV_TR });
                             }
                         }
 
-                        // ── TOP FACE (last V row only) ───────────────────────────────────
                         if (isTopRow && !(dTL >= 0.99f && dTR >= 0.99f))
                         {
-                            // Top face rail: lerp between topA0↔topB0 and topA1↔topB1
-                            Vector3 posL0 = cachePtTL.pointOnQuadL;//  Vector3.Lerp(topA0, topB0, U);
-                            Vector3 posR0 = cachePtTL.pointOnQuadR;//  Vector3.Lerp(topA1, topB1, U);
-                            Vector3 posL1 = cachePtTR.pointOnQuadL;//  Vector3.Lerp(topA0, topB0, UNext);
-                            Vector3 posR1 = cachePtTR.pointOnQuadR;//  Vector3.Lerp(topA1, topB1, UNext);
+                            Vector3 posL0 = cachePtTL.pointOnQuadL;
+                            Vector3 posR0 = cachePtTL.pointOnQuadR;
+                            Vector3 posL1 = cachePtTR.pointOnQuadL;
+                            Vector3 posR1 = cachePtTR.pointOnQuadR;
 
-                            Vector3 posCenter0 = cachePtTL.pointOnQuadCenter;// Vector3.Lerp(topACenter, topBCenter, U);
-                            Vector3 posCenter1 = cachePtTR.pointOnQuadCenter;//Vector3.Lerp(topACenter, topBCenter, UNext);
+                            if (doDepthOffset)
+                            {
+                                Vector3 posCenter0 = cachePtTL.pointOnQuadCenter;
+                                Vector3 posCenter1 = cachePtTR.pointOnQuadCenter;
 
-                            Vector3 vBL = Vector3.Lerp(posL0, posCenter0, dTL);
-                            Vector3 vBR = Vector3.Lerp(posR0, posCenter0, dTL);
-                            Vector3 vTL = Vector3.Lerp(posL1, posCenter1, dTR);
-                            Vector3 vTR = Vector3.Lerp(posR1, posCenter1, dTR);
+                                posL0 = Vector3.Lerp(posL0, posCenter0, dTL);
+                                posR0 = Vector3.Lerp(posR0, posCenter0, dTL);
+                                posL1 = Vector3.Lerp(posL1, posCenter1, dTR);
+                                posR1 = Vector3.Lerp(posR1, posCenter1, dTR);
+                            }
 
-                            //top and bottom faces, edges depth cuts into uv, rather than squishing
                             float vOffset = dTL * 0.5f;
                             float vOffsetNext = dTR * 0.5f;
-                            // Facing up (matches original BuildTopWallMesh isTop=true winding)
-                            AddQuad(vBL, vBR, vTR, vTL, colorA, colorB, verts, subMeshTris, uvs, colors,
-                                new List<Vector2> {
-                                    new Vector2(U, vOffset),// dTL * 0.5f),        // bl
-                                    new Vector2(U, 1f-vOffset),//dTR * 0.5f);//,        // br
-                                    new Vector2(UNext, 1f-vOffsetNext),//1f - dTR * 0.5f),   // tr
-                                    new Vector2(UNext, vOffsetNext) });// 1f - dTL * 0.5f) }); // tl
 
+                            AddQuad(posL0, posR0, posR1, posL1, colorA, colorB, verts, subMeshTris, uvs, colors,
+                                new List<Vector2> {
+                        new Vector2(U, vOffset),
+                        new Vector2(U, 1f - vOffset),
+                        new Vector2(UNext, 1f - vOffsetNext),
+                        new Vector2(UNext, vOffsetNext) });
                         }
                     }
                 }
-
-                static Vector3 GetPointOnQuad(Vector3 p00, Vector3 p10, Vector3 p01, Vector3 p11, Vector2 uv)
-                {
-                    return Vector3.Lerp(
-                        Vector3.Lerp(p00, p10, uv.x),
-                        Vector3.Lerp(p01, p11, uv.x),
-                        uv.y);
-                }
             }
         }
-    }
+        protected virtual int GetMinimalUVxSegements()
+        {
+            return 1;
+        }
+
+        protected virtual Vector3 GetPointOnWallFace(Vector3 bottomLeft, Vector3 topLeft, Vector3 topRight, Vector3 bottomRight, Vector2 uv, T sideACoord, T sideBCoord)
+        {
+            return GetPointOnQuad(bottomLeft, topLeft, topRight, bottomRight, uv);
+        }
+        protected virtual Vector3 GetPointInWall(Vector3 normalizedPoint,
+            Vector3 startBottomLeft, Vector3 startTopLeft, Vector3 startTopRight, Vector3 startBottomRight,
+            Vector3 endBottomLeft, Vector3 endTopLeft, Vector3 endTopRight, Vector3 endBottomRight, T sideACoord, T sideBCoord)
+        {
+            return InterpolateStraightWallPoint( normalizedPoint,
+                 startBottomLeft,  startTopLeft,  startTopRight,  startBottomRight,
+                 endBottomLeft,  endTopLeft,  endTopRight,  endBottomRight);
+        }
+
+        static Vector3 GetPointOnQuad(Vector3 bottomLeft, Vector3 topLeft, Vector3 topRight, Vector3 bottomRight, Vector2 uv)
+        {
+            return Vector3.Lerp(
+                Vector3.Lerp(bottomLeft, bottomRight, uv.x),
+                Vector3.Lerp(topLeft, topRight, uv.x),
+                uv.y);
+        }
+        //curve axis passed through origin (Vector3.zero) .. right left, is viewed from outside curve
+        // "rectangle" so  we assume topLeft - bottomLeft == topRight- bottomRight.. the dir as our curve axis
+        //                 we assume left right differences are perpendicular to normal)
+        //                 we assume all vectors are equidistant from the curve axis
+        static protected Vector3 GetPointOnCurvedRectange(Vector3 bottomLeft, Vector3 topLeft, Vector3 topRight,  Vector3 bottomRight, Vector2 uv)
+        {
+            //Vector3 normal = topLeft - bottomLeft; // we assume == to topRight- bottomRight.. same dir as axis
+            //we ALSO assume left right differences are perpendicular to normal)
+            Vector3 axis = (topLeft - bottomLeft).normalized;
+
+            float angle = Vector3.SignedAngle(bottomLeft, bottomRight, axis);
+            angle *= uv.x;
+
+            Quaternion curveFraction = Quaternion.AngleAxis(angle, axis);
+
+            Vector3 curveBottomLR = curveFraction * bottomLeft;
+            Vector3 curveTopLR = curveFraction * topLeft;
+
+            return Vector3.Lerp(curveBottomLR, curveTopLR, uv.y);
+        }
+
+        static Vector3 InterpolateStraightWallPoint(Vector3 normalizedPoint,
+            Vector3 startBottomLeft, Vector3 startTopLeft, Vector3 startTopRight, Vector3 startBottomRight,
+            Vector3 endBottomLeft, Vector3 endTopLeft, Vector3 endTopRight, Vector3 endBottomRight)
+        {
+            // 1) move along the two side rails (these are parallel by constraint)
+            Vector3 leftPos = Vector3.Lerp(startBottomLeft, endBottomLeft, normalizedPoint.z);
+            Vector3 rightPos = Vector3.Lerp(startBottomRight, endBottomRight, normalizedPoint.z);
+
+            // 2) interpolate across width (handles non-parallel start/end edges)
+            Vector3 basePos = Vector3.Lerp(leftPos, rightPos, normalizedPoint.x);
+
+            // 3) apply vertical offset and assign back to array
+            Vector3 heightOffset = startTopLeft - startBottomLeft;
+            return basePos + heightOffset * normalizedPoint.y; 
+        }
+        //Vector3.zero is center of curve 
+
+        static public Vector3 InterpolateCurvedWallPoint(Vector3 normalizedPoint,
+                Vector3 startBottomLeft, Vector3 startTopLeft, Vector3 startTopRight, Vector3 startBottomRight,
+                Vector3 endBottomLeft, Vector3 endTopLeft, Vector3 endTopRight, Vector3 endBottomRight)
+        {
+
+            Vector3 axis = (startTopLeft - startBottomLeft).normalized;
+
+            float angleLeft = Vector3.SignedAngle(startBottomLeft, endBottomLeft, axis);
+            float angleRight = Vector3.SignedAngle(startBottomRight, endBottomRight, axis);
+
+            angleLeft *= normalizedPoint.x;
+            angleRight *= normalizedPoint.x;
+
+            Quaternion curveFractionLeft = Quaternion.AngleAxis(angleLeft, axis);
+            Quaternion curveFractionRight = Quaternion.AngleAxis(angleRight, axis);
+
+            Vector3 curvePointBootomLeft = curveFractionLeft * startBottomLeft;
+            Vector3 curvePointBottomRight = curveFractionRight * startBottomRight;
+            Vector3 curvePointBottom = Vector3.Lerp(curvePointBootomLeft, curvePointBottomRight, normalizedPoint.z);
+            
+            Vector3 heightOffset = startTopLeft - startBottomLeft;
+            return curvePointBottom + heightOffset * normalizedPoint.y;
+        }
+        
+        
+        static void DeAffineQuadUVs(Vector3[] v, ref Vector4[] uv)
+        {
+            // --- build quad plane normal ---
+            Vector3 n = Vector3.Cross(v[1] - v[0], v[2] - v[0]);
+            if (n.sqrMagnitude < 1e-8f) return;
+            n.Normalize();
+
+            // --- pick projection axis (drop dominant normal component) ---
+            int ax = Mathf.Abs(n.x) > Mathf.Abs(n.y)
+                ? (Mathf.Abs(n.x) > Mathf.Abs(n.z) ? 0 : 2)
+                : (Mathf.Abs(n.y) > Mathf.Abs(n.z) ? 1 : 2);
+
+            System.Func<Vector3, Vector2> P = (p) =>
+            {
+                return ax == 0 ? new Vector2(p.y, p.z)
+                     : ax == 1 ? new Vector2(p.x, p.z)
+                                : new Vector2(p.x, p.y);
+            };
+
+            Vector2 a = P(v[0]);
+            Vector2 b = P(v[1]);
+            Vector2 c = P(v[2]);
+            Vector2 d = P(v[3]);
+
+            // --- segment intersection (diagonals) ---
+            bool Intersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out Vector2 hit)
+            {
+                Vector2 r = p2 - p1;
+                Vector2 s = p4 - p3;
+
+                float rxs = r.x * s.y - r.y * s.x;
+                float qpxr = (p3 - p1).x * r.y - (p3 - p1).y * r.x;
+
+                if (Mathf.Abs(rxs) < 1e-8f)
+                {
+                    hit = (p1 + p2 + p3 + p4) * 0.25f;
+                    return false;
+                }
+
+                float t = ((p3 - p1).x * s.y - (p3 - p1).y * s.x) / rxs;
+                hit = p1 + t * r;
+                return true;
+            }
+
+            Vector2 p;
+            Intersect(a, c, b, d, out p);
+
+            // --- 2D triangle area helper ---
+            float Area(Vector2 u, Vector2 v, Vector2 w)
+            {
+                return Mathf.Abs((v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x)) * 0.5f;
+            }
+
+            // --- projective weights via sub-triangles around intersection ---
+            float w0 = Area(p, b, c);
+            float w1 = Area(p, c, d);
+            float w2 = Area(p, d, a);
+            float w3 = Area(p, a, b);
+
+            float sum = w0 + w1 + w2 + w3;
+            if (sum < 1e-8f) return;
+
+            w0 /= sum;
+            w1 /= sum;
+            w2 /= sum;
+            w3 /= sum;
+
+            // --- apply to UVs (w = weight) ---
+            uv[0].w = w0;
+            uv[1].w = w1;
+            uv[2].w = w2;
+            uv[3].w = w3;
+        }
+    }// end wallmeshchunkcomputer class
 }
 
-
+//uses a unordered PAIR of Key values to uniquely identify an entry
 public class PairedKeyDictionary<K, V> : IEnumerable<KeyValuePair<(K, K), V>>
 {
     private readonly Dictionary<(K, K), V> _dict;

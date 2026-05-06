@@ -45,6 +45,8 @@ namespace EyE.Maps.Templates
         {
             if (ring == 0) return mapRef.baseSectors;
             bool outerRingDoubles = (mapRef.SectorsAtRing(ring) < mapRef.SectorsAtRing(ring + 1));
+            if (mapRef.size.ring == ring+1)
+                outerRingDoubles = false;
             if (outerRingDoubles) return 5;//two outer ring sectors + inner, left, right
             return 4;//one outer ring sector+ inner, left, right
         }
@@ -87,9 +89,9 @@ namespace EyE.Maps.Templates
             {
                 case 0: // same-ring clockwise
                     return new RadialCoord(ring, circ(sector + 1));
-                case 1: // same-ring counter-clockwise
+                case 2: // same-ring counter-clockwise
                     return new RadialCoord(ring, circ(sector - 1));
-                case 2: // inner-ring
+                case 1: // inner-ring
                     {
                         if (ring == 1)
                             return new RadialCoord(0, 0);

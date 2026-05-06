@@ -19,13 +19,10 @@ namespace EyE.Maps.Templates
             await maze.GenerateMazeAsync(taskContext);
             return maze;
         }
-  //      protected override HexIndex2D DefaultMazeSize()
-  //      {
-  //          return new HexIndex2D(10, 10);
-  //      }
+
         protected override Chunker<HexIndex2D> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {
-            return new HexChunker(mazeSize);
+            return new HexChunker(mazeSize, trisPerWall , idealTrisPerChunk);
         }
         protected override WallMeshChunkComputerGeneric<HexIndex2D> GetNewMeshComputer()
         {
