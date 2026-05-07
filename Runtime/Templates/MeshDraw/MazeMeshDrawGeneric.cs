@@ -124,8 +124,46 @@ namespace EyE.Maps.Templates
             public int idealTrisPerChunk = 1000;
 
             //thickness and height of walls in ModelSpace
-            public float wallThickness = 0.2f;
-            public float wallHeight = 0.2f;
+            public bool scaleThicknessAndHeightByTileSize = true;
+            public bool scaleThicknessByAvgNumNeighborsInverse = true;
+            float tileSize=1f;
+            public void SetTileSize(float size)
+            {
+                tileSize = size;
+            }
+            float avgNumNeighbors = 3f;
+            public void SetAvgNumNeighbors(float size)
+            {
+                avgNumNeighbors = size;
+            }
+
+            [SerializeField]
+            float _wallThickness = 0.2f;
+            [SerializeField]
+            float _wallHeight = 0.2f;
+            public float wallThickness
+            {
+                get
+                {
+                    if (!scaleThicknessAndHeightByTileSize)
+                        return _wallThickness;
+                    float scale = tileSize;
+                    if (scaleThicknessByAvgNumNeighborsInverse)
+                        scale *= 3f / avgNumNeighbors;
+                    return _wallThickness * scale;
+
+                }
+                set { _wallThickness = value; }
+            }
+            public float wallHeight
+            {
+                get {
+                    if (!scaleThicknessAndHeightByTileSize)
+                        return _wallHeight;
+                    return _wallHeight * tileSize;
+                }
+                set { _wallHeight = value; }
+            }
 
             public bool drawBorderWalls = true;
             public Material[] wallMaterials = new Material[0];// usually one, but more if submeshes used in MeshTiling
@@ -416,7 +454,10 @@ namespace EyE.Maps.Templates
         {
             // Debug.Log("Allocating chunks");
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(tileOffset.magnitude / 2), idealTrisPerChunk: 1024);
+            float offsetMag = tileOffset.magnitude;
+            drawConfig.SetTileSize(offsetMag);
+            drawConfig.SetAvgNumNeighbors(maze.size.NumberOfNeighbors());
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 1024);
             chunkHandler.Build();
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -429,8 +470,14 @@ namespace EyE.Maps.Templates
             //  Debug.Log("Allocating chunks");
             await taskContext.Yield();
             Vector3 tileOffset = maze.SingleTileModelSpaceOffset();
-            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(tileOffset.magnitude/2), idealTrisPerChunk: 1024);  //magnitude is wrong.. need to compute actuall wall length
+            Debug.Log(" maze.SingleTileModelSpaceOffset(): " + tileOffset);
+            float offsetMag = tileOffset.magnitude;
+            drawConfig.SetTileSize(offsetMag);
+            drawConfig.SetAvgNumNeighbors(maze.size.NumberOfNeighbors());
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 1024);  //magnitude is wrong.. need to compute actuall wall length
             await chunkHandler.BuildAsync(taskContext);
+
+
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
 

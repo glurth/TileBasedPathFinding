@@ -158,8 +158,6 @@ namespace EyE.Maps.Templates
         public override Vector3 GetModelSpacePosition(FaceCoordinate coord)
         {
             return sourceMap.faceDetails[coord.faceIndex].faceCenterPosition;
-
-
         }
         public override Vector3 SingleTileModelSpaceOffset()
         {

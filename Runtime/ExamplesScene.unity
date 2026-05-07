@@ -1471,7 +1471,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 267646356}
-  m_Mesh: {fileID: 4300000, guid: 6c8251b1fc2a98f43997333f1048a7f0, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 7f9cda21e35f4dd4f804b499096bbbca, type: 2}
 --- !u!1 &272009857
 GameObject:
   m_ObjectHideFlags: 0
@@ -1489,7 +1489,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &272009858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1520,10 +1520,13 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
-    wallMaterials: []
+    wallMaterials:
+    - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
     drawOption: 0
     surfaceDepthMap: {fileID: 0}
     surfaceDepthTilingResolution: {x: 1, y: 1}
@@ -1538,7 +1541,7 @@ MonoBehaviour:
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 44bbd85b32a72ce40b535b59c6279360,
+  createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 93d90c87ffee41a428a3a22e8f010ba2,
     type: 2}
 --- !u!4 &272009860
 Transform:
@@ -2040,7 +2043,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &419970631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2071,10 +2074,13 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
-    wallMaterials: []
+    wallMaterials:
+    - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
     drawOption: 0
     surfaceDepthMap: {fileID: 0}
     surfaceDepthTilingResolution: {x: 1, y: 1}
@@ -2089,7 +2095,7 @@ MonoBehaviour:
   createMazeOnEnable: 1
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
-  createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: 86b67ac3b64abc34ca9bc61dc4de2966,
+  createOnEnableSourceFacesAndNeighbors: {fileID: 11400000, guid: e030e8fded5ddff459d6f512ad3832da,
     type: 2}
 --- !u!4 &419970633
 Transform:
@@ -2099,7 +2105,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 419970630}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15, y: 15, z: -28.4}
+  m_LocalPosition: {x: 17.27, y: 15, z: -28.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2321,7 +2327,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 464108778}
-  m_Mesh: {fileID: 4300000, guid: 58a1b190973ce3547902674d73d3cc11, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 5d6b1a61a50a09c4d9ef3bf49a720cc1, type: 2}
 --- !u!1 &474559264
 GameObject:
   m_ObjectHideFlags: 0
@@ -2407,10 +2413,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   drawConfig:
-    mazeNormal: {x: 0, y: 1, z: 0}
+    mazeNormal: {x: 0, y: 0, z: -1}
     idealTrisPerChunk: 15000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 0
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials:
     - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
@@ -3356,8 +3364,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials: []
     drawOption: 0
@@ -3796,8 +3806,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials: []
     drawOption: 0
@@ -4728,8 +4740,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials: []
     drawOption: 0
@@ -4799,8 +4813,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials: []
     drawOption: 0
@@ -5528,8 +5544,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 1, z: 0}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials: []
     drawOption: 0
@@ -5582,7 +5600,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1686376025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5598,8 +5616,10 @@ MonoBehaviour:
   drawConfig:
     mazeNormal: {x: 0, y: 0, z: -1}
     idealTrisPerChunk: 1000
-    wallThickness: 0.2
-    wallHeight: 0.2
+    scaleThicknessAndHeightByTileSize: 1
+    scaleThicknessByAvgNumNeighborsInverse: 1
+    _wallThickness: 0.2
+    _wallHeight: 0.2
     drawBorderWalls: 1
     wallMaterials:
     - {fileID: 2100000, guid: 00c8f47cbdc0ae6489cde4d6683b149d, type: 2}
@@ -5616,8 +5636,8 @@ MonoBehaviour:
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
-    m_ring: 3
-    m_sector: 4
+    m_ring: 6
+    m_sector: 6
 --- !u!4 &1686376027
 Transform:
   m_ObjectHideFlags: 0
