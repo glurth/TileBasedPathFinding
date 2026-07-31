@@ -1,0 +1,263 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+/// <summary>
+/// Represents a consistently ordered list of unique elements.
+/// Provides O(1) lookup for Contains and IndexOf using an internal dictionary.
+/// Add and index-based access are O(1).
+/// Insert and remove operations are O(n) due to list shifting and dictionary updates.
+/// Trades memory for fast uniqueness enforcement and indexing.
+/// </summary>
+public class UniqueList<K> : IList<K>
+{
+    List<K> internalList= new List<K>();                 // The underlying list to hold the elements, and keep them in order.
+    Dictionary<K, int> internalDictionary= new Dictionary<K, int>(); // The dictionary for O(1) lookup by key.
+    public UniqueList(){ }
+
+    /// <summary>
+    /// Generate a unique list from the provided list.  duplicate element values are ignored, and only added to the unique list once.  No exceptions thrown.
+    /// </summary>
+    /// <param name="copyFrom"></param>
+    public UniqueList(IList<K> copyFrom)
+    {
+        AddRange(copyFrom);
+        /*foreach (K element in copyFrom)
+        {
+            Add(element);
+        }*/
+    }
+
+    /// <summary>
+    /// Rebuilds the internal dictionary from clear, by iterating through the list and assigning an index for each item.
+    /// This method is used to ensure that the dictionary is up-to-date.
+    /// </summary>
+    protected void RebuildInternalDic()
+    {
+        internalDictionary.Clear();
+        for (int i = 0; i < internalList.Count; i++)
+            internalDictionary.Add(internalList[i], i);
+    }
+    
+    /// <summary>
+    /// Updates dictionary with correct index for all items in the list. 
+    /// NOTE: ASSUMES that no entries in the dictionary exist that do not also exist in the internal list.  Such entires will not be updated.
+    /// </summary>
+    void UpdateInternalDicValues()
+    {
+        for (int i = 0; i < internalList.Count; i++)
+            internalDictionary[internalList[i]]= i;
+    }
+
+    /// <summary>
+    /// Indexer for accessing elements by index. O(1) for list access.
+    /// The setter removes the old value from the dictionary and adds the new value.
+    /// </summary>
+    public K this[int index]
+    {
+        get => internalList[index]; // O(1) for list access.
+
+        set
+        {
+            
+            K oldValue = internalList[index]; // O(1) to access old value.
+            if (internalDictionary.ContainsKey(value)) 
+                throw new System.Exception("Cannot set elemnt in UniqueList to given value, it already exists in the list.");
+            internalDictionary.Remove(oldValue); // O(1) for dictionary removal.
+            internalList[index] = value; // O(1) for list modification.
+            internalDictionary.Add(value, index); // O(1) for dictionary addition.
+        }
+    }
+
+    /// <summary>
+    /// Gets the count of elements in the list. O(1) as it's a property of the list.
+    /// </summary>
+    public int Count => internalList.Count;
+
+    /// <summary>
+    /// Indicates whether the list is read-only. O(1).
+    /// </summary>
+    public bool IsReadOnly => false;
+
+    /// <summary>
+    /// Adds an item to the list and updates the dictionary. 
+    /// Throws an exception if the item already exists. 
+    /// This operation is O(1) for both list and dictionary operations.
+    /// </summary>
+    public void Add(K item) { Add(item, false); }
+    public void Add(K item, bool dontThrowOnExists)
+    {
+        if (internalDictionary.ContainsKey(item))
+            throw new System.ArgumentException("Item already exists in unique list");
+        internalDictionary.Add(item, internalList.Count); // Add to dictionary as key with index it will have in the list as the value.
+        internalList.Add(item);// Add to list.
+    }
+
+    /// <summary>
+    /// Adds collection of item to the list and updates the internal dictionary. 
+    /// If any elements in the parameter already exists in the uniquelist, they will be ignored. 
+    /// </summary>
+    public void AddRange(IEnumerable<K> itemCollection)
+    {
+        foreach (K item in itemCollection)
+        {
+            if (internalDictionary.ContainsKey(item))
+                continue;
+            internalDictionary.Add(item, internalList.Count); // Add to dictionary as key with index it will have in the list as the value.
+            internalList.Add(item);// Add to list.
+        }
+    }
+
+
+    /// <summary>
+    /// Returns the index of the item in this list, after either being found-in or added-to the list.
+    /// </summary>
+    /// <param name="item">item to find or add</param>
+    /// <returns></returns>
+    public int GetIndexOrAdd(K item)
+    {
+        if (internalDictionary.TryGetValue(item, out int i))
+            return i;
+        internalDictionary.Add(item, internalList.Count); // Add to dictionary with new index.
+        int idx = internalList.Count;
+        internalList.Add(item);                           // Add to list.
+        return idx;
+    }
+
+
+    /// <summary>
+    /// Clears the list and the dictionary. O(n) for clearing list, O(1) for clearing dictionary.
+    /// </summary>
+    public void Clear()
+    {
+        internalList.Clear();
+        internalDictionary.Clear();
+    }
+
+    /// <summary>
+    /// Checks if an item exists in the list using the dictionary. 
+    /// O(1) lookup.
+    /// </summary>
+    public bool Contains(K item)
+    {
+        return internalDictionary.ContainsKey(item);
+    }
+
+    /// <summary>
+    /// Copies the elements to the specified array starting at the given index. O(n).
+    /// </summary>
+    public void CopyTo(K[] array, int arrayIndex)
+    {
+        internalList.CopyTo(array, arrayIndex);
+    }
+
+    /// <summary>
+    /// Gets an enumerator for the list. O(1) for getting the enumerator.
+    /// </summary>
+    public IEnumerator<K> GetEnumerator()
+    {
+        return internalList.GetEnumerator();
+    }
+
+    /// <summary>
+    /// Finds the index of an item using the dictionary. O(1) lookup.
+    /// </summary>
+    public int IndexOf(K item)
+    {
+        if (internalDictionary.TryGetValue(item, out int i))
+            return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// Inserts an item at the specified index.
+    /// This operation is slow because it requires shifting elements in the list (O(n)) and rebuilding the dictionary (O(n)).
+    /// </summary>
+    public void Insert(int index, K item)
+    {
+        internalList.Insert(index, item); // O(n) for shifting elements.
+        internalDictionary.Add(item, index);
+        UpdateInternalDicValues();
+        //RebuildInternalDic(); // O(n) to rebuild dictionary.
+    }
+
+    /// <summary>
+    /// Inserts multiple items starting at the specified index.
+    ///
+    /// Items that already exist in the <see cref="UniqueList{K}"/> are ignored and are not inserted.
+    /// Duplicate values within the provided collection are not supported and may result in an exception.
+    ///
+    /// More efficient than repeatedly calling <see cref="Insert(int, K)"/>, as the underlying list
+    /// is shifted only once and dictionary indices are updated in a single pass.
+    /// </summary>
+    /// <param name="index">The index at which to begin inserting items.</param>
+    /// <param name="items">The items to insert.</param>
+    public void InsertRange(int index, IList<K> items)
+    {
+        List<K> itemsToInsert = new List<K>(items.Count);
+
+        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+        {
+            K item = items[itemIndex];
+
+            if (internalDictionary.ContainsKey(item))
+                continue;
+
+            itemsToInsert.Add(item);
+        }
+
+        if (itemsToInsert.Count == 0)
+            return;
+
+        internalList.InsertRange(index, itemsToInsert);
+
+        for (int insertedItemIndex = 0; insertedItemIndex < itemsToInsert.Count; insertedItemIndex++)
+        {
+            internalDictionary.Add(
+                itemsToInsert[insertedItemIndex],
+                index + insertedItemIndex);
+        }
+
+        for (int listIndex = index + itemsToInsert.Count; listIndex < internalList.Count; listIndex++)
+        {
+            internalDictionary[internalList[listIndex]] = listIndex;
+        }
+    }
+    /// <summary>
+    /// Removes an item from the list. 
+    /// This operation is slow because it requires shifting elements in the list (O(n)) and rebuilding the dictionary (O(n)).
+    /// </summary>
+    public bool Remove(K item)
+    {
+        if (internalDictionary.TryGetValue(item, out int index))
+        {
+            internalList.RemoveAt(index);
+            internalDictionary.Remove(item);
+            UpdateInternalDicValues();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Removes an item at the specified index. 
+    /// This operation is slow because it requires shifting elements in the list (O(n)) and rebuilding the dictionary (O(n)).
+    /// </summary>
+    public void RemoveAt(int index)
+    {
+        if (index < internalList.Count && index >= 0)
+        {
+            K keyValue = internalList[index];
+            internalList.RemoveAt(index);  // O(n) for shifting elements.
+            internalDictionary.Remove(keyValue);
+            UpdateInternalDicValues();
+            //RebuildInternalDic(); // O(n) to rebuild dictionary.
+        }
+    }
+
+    /// <summary>
+    /// Gets an enumerator for the list, as required by IEnumerable. O(1) for getting the enumerator.
+    /// </summary>
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return ((IEnumerable)internalList).GetEnumerator();
+    }
+}

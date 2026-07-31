@@ -13,13 +13,13 @@ namespace EyE.Maps.Templates
             maze.GenerateMaze();
             return maze;
         }
-
-        protected override async UniTask<GenericMazeMap<RectangularCoord>> CreateMazeMapAsync(TaskHandler taskContext)
+        protected override GenericMazeMap<RectangularCoord> GetUninitializedMap() => new MazeMapRect(mazeSize, mazeNormal, 1);
+        /*protected override async UniTask<GenericMazeMap<RectangularCoord>> CreateMazeMapAsync(TaskHandler taskContext)
         {
             MazeMapRect maze = new MazeMapRect(mazeSize, mazeNormal,1);
             await maze.GenerateMazeAsync(taskContext);
             return maze;
-        }
+        }*/
 
 
         protected override Chunker<RectangularCoord> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)

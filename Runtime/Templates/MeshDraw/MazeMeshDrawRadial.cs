@@ -16,13 +16,13 @@ namespace EyE.Maps.Templates
             radialMaze.GenerateMaze();
             return radialMaze;
         }
-
-        protected override async UniTask<GenericMazeMap<RadialCoord>> CreateMazeMapAsync(TaskHandler taskContext)
+        protected override GenericMazeMap<RadialCoord> GetUninitializedMap() => new MazeMapRadial(mazeSize.ring, mazeSize.sector, mazeNormal);
+        /*protected override async UniTask<GenericMazeMap<RadialCoord>> CreateMazeMapAsync(TaskHandler taskContext)
         {
             MazeMapRadial radialMaze = new MazeMapRadial(mazeSize.ring, mazeSize.sector, mazeNormal);
             await radialMaze.GenerateMazeAsync(taskContext);
             return radialMaze;
-        }
+        }*/
 
         protected override Chunker<RadialCoord> GetChunker(int trisPerWall = 12, int idealTrisPerChunk = 1000)
         {

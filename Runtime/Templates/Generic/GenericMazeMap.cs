@@ -4,6 +4,9 @@ using Cysharp.Threading.Tasks;
 
 using EyE.Threading;
 
+using System;
+using System.Collections;
+
 namespace EyE.Maps.Templates
 {
 
@@ -378,7 +381,7 @@ namespace EyE.Maps.Templates
         public T start;
         public T end;
         public abstract IEnumerable<T> allMapCoords { get; }
-        public override IEnumerable<ITileCoordinateBase> allMapBaseCoords { 
+        public override IEnumerable<ITileCoordinateBase> allMapBaseCoords {
             get
             {
                 foreach (T coord in allMapCoords)
@@ -388,6 +391,8 @@ namespace EyE.Maps.Templates
             }
         }
 
+        
+
         //generation parameters
         int numTeleportTilesToGenerate = 3;//used during mesh generation
         bool alwaysReverseTeleport = true;//used during mesh generation
@@ -395,7 +400,7 @@ namespace EyE.Maps.Templates
         int oneWayTileCount;
         int seed;
 
-        public GenericMazeMap(T size, T start, T end, int numTeleportTiles=0,bool alwaysReverseTeleport=true, float worldScale = 1f, int numSolutions = 1, int oneWayTileCount = 0)
+        public GenericMazeMap(T size, T start, T end, int numTeleportTiles = 0, bool alwaysReverseTeleport = true, float worldScale = 1f, int numSolutions = 1, int oneWayTileCount = 0)
         {
             this.start = start;
             this.end = end;
@@ -441,46 +446,6 @@ namespace EyE.Maps.Templates
             Debug.Log("Wallcheck complete");
         }
 
-        private float WeightAgainstCrowding(T candidate, Stack<T> currentPath)
-        {
-            int used = 0;
-            foreach (T n in candidate.GetSpatialNeighbors())
-            {
-                //if (visited.ContainsKey(n) && visited[n] && currentPath.Contains(n))
-                if (currentPath.Contains(n))
-                    used += 30;
-                else
-                {
-                    foreach (T m in n.GetSpatialNeighbors())
-                        if (currentPath.Contains(m))
-                            used += 10;
-                }
-            }
-            // more used neighbors → smaller weight
-            return 1f / (1f + used);
-        }
-        protected virtual T PickWeighted(List<T> list, Stack<T> path)
-        {
-            float total = 0f;
-            float[] w = new float[list.Count];
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                float weight = WeightAgainstCrowding(list[i], path);
-                w[i] = weight;
-                total += weight;
-            }
-
-            float r = (float)random.NextDouble() * total;
-            for (int i = 0; i < list.Count; i++)
-            {
-                r -= w[i];
-                if (r <= 0f)
-                    return list[i];
-            }
-            return list[list.Count - 1]; // fallback
-        }
-
         /// <summary>
         /// Asynchronously generates a maze using time-sliced yielding.
         /// </summary>
@@ -496,7 +461,7 @@ namespace EyE.Maps.Templates
 
             //var yieldTimer = new YieldTimer(cancelRef, cancelRef==null);
             int totalSteps = 0;
-            List<T> cachedAllCoords= new();
+            List<T> cachedAllCoords = new();
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
                 cachedAllCoords.Add((T)tileCoord);
@@ -506,7 +471,7 @@ namespace EyE.Maps.Templates
             foreach (ITileCoordinate<T> tileCoord in allMapCoords)
             {
                 bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
-                bool[] oneWayArray = new bool[tileCoord.NumberOfNeighbors()]; 
+                bool[] oneWayArray = new bool[tileCoord.NumberOfNeighbors()];
                 for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
                 {
                     wallsArray[i] = true;
@@ -514,30 +479,13 @@ namespace EyE.Maps.Templates
                 }
 
                 walls[tileCoord.value] = wallsArray;
-                oneWayWalls[tileCoord.value] = oneWayArray; 
+                oneWayWalls[tileCoord.value] = oneWayArray;
                 visited[tileCoord.value] = false;
 
                 completedSteps++;
                 taskContext.IncrementProgress((float)completedSteps / totalSteps);
                 await taskContext.Yield();
             }
-            /*foreach (ITileCoordinate<T> tileCoord in allMapCoords)
-            {
-                bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
-                for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
-                    wallsArray[i] = true;
-
-                walls[tileCoord.value] = wallsArray;
-                visited[tileCoord.value] = false;
-
-                completedSteps++;
-                taskContext.IncrementProgress((float)completedSteps / totalSteps);
-                //if (progressRef != null)
-                //    progressRef.Value = (float)completedSteps / totalSteps;
-
-                await taskContext.Yield();// yieldTimer.YieldOnTimeSlice();
-            }*/
-
 
             //do shuffle of cachedAllCoords
             int n = cachedAllCoords.Count;
@@ -732,7 +680,7 @@ namespace EyE.Maps.Templates
             while (stack.Count > 0)
             {
                 T current = stack.Peek();
-               // List<T> neighbors = GetUnvisitedNeighbors(current);
+                // List<T> neighbors = GetUnvisitedNeighbors(current);
                 List<NeighborDetails> neighborsDetails = GetUnvisitedNeighbors(current);
 
                 if (neighborsDetails.Count > 0)
@@ -797,17 +745,17 @@ namespace EyE.Maps.Templates
         /// </summary>
         /// <param name="current"></param>
         /// <param name="neighbor"></param>
-        /// <returns></returns>
+        /// <returns>-1 if not a neighbor</returns>
         public int GetSpatialNeighborIndexOf(T current, T neighbor)
         {
             int neighborIndexCounter = 0;
-           //Debug.Log("searching for "+ current + "'s neighborIndex of coord " + neighbor);
+            //Debug.Log("searching for "+ current + "'s neighborIndex of coord " + neighbor);
             foreach (T n in current.GetSpatialNeighbors())
             {
                 //Debug.Log("    Checking neighbor: " + n + "  neighborIndexCounter:"+ neighborIndexCounter);
                 if (n.Equals(neighbor))
                     return neighborIndexCounter;
-                
+
                 neighborIndexCounter++;
             }
             //  Debug.LogError("Unable to find neighbor Index!  current: " + current + "  neighbor: " + neighbor);
@@ -836,10 +784,10 @@ namespace EyE.Maps.Templates
         {
 
             int neighborIndex = GetSpatialNeighborIndexOf(current, next);
-
             // If they aren't spatial neighbors, 'next' must be a teleport destination.
-            if (neighborIndex == -1)
+            if (teleporters != null && neighborIndex == -1)
             {
+                
                 // Find which spatial neighbor of 'current' leads to 'next' via teleport
                 foreach (T spatialNeighbor in current.GetSpatialNeighbors())
                 {
@@ -876,13 +824,6 @@ namespace EyE.Maps.Templates
                 Debug.Log(s);
                 throw (e);
             }
-
-            /*
-// old-pre teleport Standard spatial wall removal
-int nieghborIndex = GetSpatialNeighborIndexOf(current, next);
-int reverseNeighborIndex = GetSpatialNeighborIndexOf(next, current);
-walls[current][nieghborIndex] = false;
-walls[next][reverseNeighborIndex] = false;*/
         }
 
         private void RemoveWallAsOneWay(T from, T to)
@@ -935,6 +876,7 @@ walls[next][reverseNeighborIndex] = false;*/
             }
             return -1;
         }
+       
         override public Bounds GetModelSpaceBounds()
         {
             Bounds bounds;
@@ -945,8 +887,8 @@ walls[next][reverseNeighborIndex] = false;*/
             // but since 0,0 is talso the center of a tile, we nee to ADD half- so cancels
             bounds = new Bounds(sizePos / 2, sizePos);
 
-           //Vector3 singleTileOffset = SingleTileModelSpaceOffset();
-          //  bounds.size += singleTileOffset;
+            //Vector3 singleTileOffset = SingleTileModelSpaceOffset();
+            //  bounds.size += singleTileOffset;
             bounds.center -= singleTileOffset * 0.5f;
             return bounds;
         }
@@ -979,7 +921,7 @@ walls[next][reverseNeighborIndex] = false;*/
         /// <returns>return the closest coordinate to the given position, or possibly a unique "invalid coordinate" value- depending on T</returns>
         override public ITileCoordinateBase GetCoordinate(Vector3 pos)
         {
-            T closest= default(T);
+            T closest = default(T);
             float minDist = float.PositiveInfinity;
             foreach (T coord in allMapCoords)
             {
@@ -997,6 +939,977 @@ walls[next][reverseNeighborIndex] = false;*/
         abstract public bool IsWithinBounds(T coord);
 
         abstract public Quaternion NeighborBorderOrientation(T coord, int neighborIndex);
+
+        //TODO: fix->hard code rect here- function should be abstract- defined by implementer of specific coord type
+        protected ITileCoordinate<T> UVToCoord(Vector2 uv)
+        {
+            RectangularCoord s = //(RectangularCoord)(object)size;
+                    new RectangularCoord( ((RectangularCoord)(object)size).x-1, ((RectangularCoord)(object)size).y-1);
+
+            int x = (int)((float)s.x * uv.x);
+            int y = (int)((float)s.y * uv.y);
+            return (ITileCoordinate<T>)(object)new RectangularCoord(x, y);
+        }
+
+
+        class ExpansionResult
+        {
+            public int pathIndex;
+            public int startIndex;
+            public List<T> sectionToAdd;
+        }
+
+        public async UniTask GenerateFromTopologyAsync(Topology topo, TaskHandler taskContext)
+        {
+            //-------------------------------------------------
+            //Setup wall arrays
+            //-------------------------------------------------
+            int totalSteps = 0;
+            //List<T> cachedAllCoords = new();
+            HashSet<T> validTiles = new HashSet<T>();
+            foreach (T coord in allMapCoords)
+            {
+                validTiles.Add(coord);
+                totalSteps++;
+            }
+            /*foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+            {
+                cachedAllCoords.Add((T)tileCoord);
+                totalSteps++;
+            }*/
+            int completedSteps = 0;
+            foreach (ITileCoordinate<T> tileCoord in allMapCoords)
+            {
+                bool[] wallsArray = new bool[tileCoord.NumberOfNeighbors()];
+                bool[] oneWayArray = new bool[tileCoord.NumberOfNeighbors()];
+                for (int i = 0; i < tileCoord.NumberOfNeighbors(); i++)
+                {
+                    wallsArray[i] = true;
+                    oneWayArray[i] = false;
+                }
+
+                walls[tileCoord.value] = wallsArray;
+                oneWayWalls[tileCoord.value] = oneWayArray;
+                visited[tileCoord.value] = false;
+
+                completedSteps++;
+                taskContext.IncrementProgress((float)completedSteps / totalSteps);
+                await taskContext.Yield();
+            }
+
+            System.Random rng = new System.Random();
+
+            //initially stores node owner for each used coord.
+            List<List<T>> edgeCoordLists = new List<List<T>>();
+            List<List<T>> nodeCoordLists = new List<List<T>>();
+            HashSet<T> allNodeLineCoords = new HashSet<T>();
+            Dictionary<T, int> ownerByCoordinate = new Dictionary<T, int>();
+
+            //-------------------------------------------------
+            // node skeletons first
+            //-------------------------------------------------
+
+            for (int nodeIndex = 0; nodeIndex < topo.nodes.Length; nodeIndex++)
+            {
+                Topology.Node node = topo.nodes[nodeIndex];
+
+                List<T> nodeConnections = new List<T>();
+
+                for (int i = 0; i < node.edgeSequence.Length; i++)
+                {
+                    Vector2 uv = node.GetEdgeConnectionPosition(i);
+                    nodeConnections.Add((T)UVToCoord(uv));
+                }
+
+                List<T> nodeLine = new List<T>();
+                HashSet<T> uniqueness = new HashSet<T>();
+                //populate nodeLine
+                if (nodeConnections.Count == 1)
+                {
+                    nodeLine.Add(nodeConnections[0]);
+                }
+                else
+                {
+                    for (int i = 0; i < nodeConnections.Count-1; i++)
+                    {
+                        T start = nodeConnections[i];
+                        T end = nodeConnections[i + 1];
+
+                        TileOnPath<T> foundPath =
+                            TileAStarPathFinder<T>.GetPathFromTo(
+                                start,
+                                end,
+                                (coord, neighborIndex) =>
+                                {
+                                    T neighbor = coord.GetSpatialNeighbor(neighborIndex);
+
+                                    if (!IsWithinBounds(neighbor))
+                                        return -1;
+
+                                    return 1;
+                                },
+                                teleporters);
+
+                        if (foundPath == null)
+                        {
+                            Debug.LogWarning(
+                                "Failed node perimeter path " +
+                                start + " -> " + end +
+                                " node " + nodeIndex);
+
+                            continue;
+                        }
+                       // foundPath.ToCoordinateList(nodeLine);
+                        List<T> pathList = foundPath.ToCoordinateList();
+                        int startIndex = 0;
+                        if (i > 0) startIndex = 1; //skip first coord for all but first node
+                        
+                        for (int step = startIndex; step < pathList.Count; step++)
+                        {
+                            T coord = pathList[step];
+                            if (!uniqueness.Contains(coord))
+                            {
+                                uniqueness.Add(coord);
+                                nodeLine.Add(coord);
+                            }
+
+                        }
+                    }
+                }
+                //record nodeline
+                int newNodeLineIndex = nodeCoordLists.Count;
+                nodeCoordLists.Add(nodeLine);
+
+
+                foreach (T coord in nodeLine)
+                {
+                    if (ownerByCoordinate.TryGetValue(coord, out int existingOwner))
+                    {
+                        if (existingOwner != nodeIndex)
+                        {
+                            Debug.LogWarning(
+                                "Node overlap: " +
+                                coord +
+                                " owned by " +
+                                existingOwner +
+                                " and " +
+                                nodeIndex);
+                        }
+                    }
+                    else
+                    {
+                        ownerByCoordinate.Add(coord, nodeIndex);
+                        allNodeLineCoords.Add(coord);
+
+                    }
+                }
+
+
+                await taskContext.Yield();
+
+            }
+
+            //-------------------------------------------------
+            // edge skeletons
+            //-------------------------------------------------
+
+            RectangularCoord tst = (RectangularCoord)(object)size; // rectangular for simple testing now
+
+            for (int edgeIndex = 0; edgeIndex < topo.edges.Length; edgeIndex++)
+            {
+                Topology.Edge edge = topo.edges[edgeIndex];
+
+                int nodeA = edge.nodeAidx;
+                int nodeB = edge.nodeBidx;
+
+                T start =
+                    (T)UVToCoord(edge.GetNodeAConnectionPosition());
+
+                T end =
+                    (T)UVToCoord(edge.GetNodeBConnectionPosition());
+
+
+                TileOnPath<T> foundEdgePath =
+                    TileAStarPathFinder<T>.GetPathFromTo(
+                        start,
+                        end,
+                        (coord, neighborIndex) =>
+                        {
+                            T neighbor = coord.GetSpatialNeighbor(neighborIndex);
+
+                            if (!IsWithinBounds(neighbor))
+                                return -1;
+
+                            if (neighbor.Equals(end))
+                                return 1;
+
+                            if (ownerByCoordinate.TryGetValue(neighbor, out int owner))
+                            {
+                                //if (owner != edge.nodeAidx && owner != edge.nodeBidx)
+                                    return -1;
+                            }
+
+                            return 1;
+                        },
+                        teleporters);
+
+
+                List<T> edgeLine = new List<T>();
+
+                if (foundEdgePath != null)
+                {
+                    List<T> fullPath = new List<T>();
+                    foundEdgePath.ToCoordinateList(fullPath);
+                    // remove node endpoint ownership (start at index 1 and end 1 before last)
+                    for (int i = 1; i < fullPath.Count - 1; i++)
+                    {
+                        T coord = fullPath[i];
+                        if (!allNodeLineCoords.Contains(coord))
+                            edgeLine.Add(fullPath[i]);
+                        else
+                            Debug.LogWarning("Skipping element["+i+"] in edge line["+ edgeIndex + "], because it exists in a nodeline");
+                    }
+                    //Debug.Log("Generated unquie edge line[" + edgeIndex + "], final length: "+ edgeLine.Count);
+
+                }
+                else
+                {
+                    Debug.LogWarning(
+                        "Failed edge path " +
+                        start + " -> " + end +
+                        " nodes: "+ edge.nodeAidx + " -> "+ edge.nodeBidx+
+                        " edge: " + edgeIndex);
+                }
+
+
+                edgeCoordLists.Add(edgeLine);
+
+
+                //-------------------------------------------------
+                // assign edge ownership split
+                //-------------------------------------------------
+
+                int splitIndex =
+                    Mathf.Clamp(
+                        Mathf.RoundToInt(edgeLine.Count * 0.5f),
+                        0,
+                        edgeLine.Count);
+
+
+                for (int i = 0; i < edgeLine.Count; i++)
+                {
+                    int owner = i < splitIndex ? nodeA : nodeB;
+
+                    T coord = edgeLine[i];
+
+                    if (ownerByCoordinate.TryGetValue(coord, out int existingOwner))
+                    {
+                        if (existingOwner != owner)
+                        {
+                            Debug.LogWarning(
+                                "Edge overlap: " +
+                                coord +
+                                " already owned by " +
+                                existingOwner +
+                                " trying to assign " +
+                                owner);
+                        }
+                    }
+                    else
+                    {
+                        ownerByCoordinate.Add(coord, owner);
+                    }
+                }
+                await UniTask.SwitchToMainThread();
+
+                GenerateRegionDebugTexture(ownerByCoordinate, tst.x, tst.y, "regionOwnerDebugByEdgeIteration" + edgeIndex + ".png");
+                await UniTask.SwitchToThreadPool();
+                await taskContext.Yield();
+                
+            }
+
+            //this.ownerByCoordinate = ownerByCoordinate;
+
+
+            //-------------------------------
+            // done skeleton- draw debug
+            //-------------------------------
+
+            //RectangularCoord tst = (RectangularCoord)(object)size; // rectangular for simple testing now
+            await UniTask.SwitchToMainThread();
+            
+            GenerateRegionDebugTexture(ownerByCoordinate, tst.x, tst.y, "regionDebug.png");
+            await UniTask.SwitchToThreadPool();
+
+            //-------------------------------
+            // prepare for and do PATH EXPANSIONS
+            //-------------------------------
+
+
+            List<List<T>> allPathsList = new List<List<T>>();
+
+            ownerByCoordinate.Clear();//we are now switching this dictionary- above it stored nodeIndexs, in the below funcs it will use path indexes
+            //add all node and edge lists to a single allPathsList
+            for (int i = 0; i < nodeCoordLists.Count; i++)
+            {
+                int pathIndex = allPathsList.Count;
+                List<T> nodePath = nodeCoordLists[i];
+                allPathsList.Add(nodePath);
+                foreach (T coord in nodePath)
+                {
+                    if (!ownerByCoordinate.ContainsKey(coord))
+                        ownerByCoordinate.Add(coord, pathIndex);
+                    else
+                        Debug.Log("Node list[" + pathIndex + "] contains duplicate coord("+coord+ ").  Owner: " + ownerByCoordinate[coord]);
+                }
+
+            }
+            Debug.Log("allPathsList- Starting Edge list index: " + allPathsList.Count);
+            for (int i = 0; i < edgeCoordLists.Count; i++)
+            {
+                int pathIndex = allPathsList.Count;
+                List<T> edgePath = edgeCoordLists[i];
+                allPathsList.Add(edgePath);
+                foreach (T coord in edgePath)
+                    if (!ownerByCoordinate.ContainsKey(coord))
+                        ownerByCoordinate.Add(coord, pathIndex);
+                    else
+                        Debug.Log("Edge list[" + i + "] contains duplicate coord(" + coord + ").  Owner: "+ ownerByCoordinate[coord]);
+            }
+
+
+
+            //Dictionary<T, float> randomTileAdditionalCost= new Dictionary<T, float>();
+
+            await NewExpandPathsToFillRegion(allPathsList, validTiles, ownerByCoordinate, taskContext);
+
+            await UniTask.SwitchToMainThread();
+            GenerateRegionDebugTexture(ownerByCoordinate, tst.x, tst.y, "postExpansionDebug.png");
+            await UniTask.SwitchToThreadPool();
+
+            //-------------------------------------------------
+            // carve walls along paths
+            //-------------------------------------------------
+            HashSet<T> unqiueSanityCheck = new HashSet<T>();
+            foreach (List<T> finalPath in allPathsList)
+            {
+                await CarvePathInWalls(finalPath, taskContext);
+                foreach (T c in finalPath)
+                {
+                    if (unqiueSanityCheck.Contains(c))
+                        Debug.Log("Sanity check failed: found " + c + " more than once.");
+                    else unqiueSanityCheck.Add(c);
+                }
+            }
+
+
+
+            //-------------------------------------------------
+            // carve walls at connections between nodes and edges
+            //-------------------------------------------------
+          
+            for (int edgeIndex = 0; edgeIndex < topo.edges.Length; edgeIndex++)
+            {
+                Topology.Edge edge = topo.edges[edgeIndex];
+
+                T nodeACoord = (T)UVToCoord(edge.GetNodeAConnectionPosition());
+                T nodeBCoord = (T)UVToCoord(edge.GetNodeBConnectionPosition());
+
+                List<T> edgePath = edgeCoordLists[edgeIndex];
+
+                if (edgePath.Count > 1)
+                {
+                    if (GetSpatialNeighborIndexOf(nodeACoord, edgePath[0]) != -1)
+                    {
+                        RemoveWall(nodeACoord, edgePath[0]);
+                        RemoveWall(nodeBCoord, edgePath[edgePath.Count - 1]);
+                      //  Debug.Log("Removing walls between nodeACoord("+ nodeACoord+ ") and edgePath[0]("+edgePath[0]+") ");
+                      //  Debug.Log("and between nodeBCoord(" + nodeBCoord + ") and edgePath[last](" + edgePath[edgePath.Count - 1] + ") ");
+                    }
+                    else
+                    {
+                        RemoveWall(nodeBCoord, edgePath[0]); // null ref here..
+                        RemoveWall(nodeACoord, edgePath[edgePath.Count - 1]);
+                     //   Debug.Log("Removing walls between nodeBCoord(" + nodeBCoord + ") and edgePath[0](" + edgePath[0] + ") ");
+                     //   Debug.Log("and between nodeACoord(" + nodeACoord + ") and edgePath[last](" + edgePath[edgePath.Count - 1] + ") ");
+                    }
+                }
+
+                await taskContext.Yield();
+            }
+           
+            async UniTask ExpandPathsToFillRegion(IList<List<T>> allPaths,HashSet<T> region,Dictionary<T, int> ownerByCoordinate,TaskHandler taskContext)
+            {
+                int debugNumberOfSuccessfulExpandSingleStepCalls = 0;
+                int debugNumberOfFailedExpandSingleStepCalls = 0;
+
+                System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+                timer.Start();
+
+                List<List<T>> expandedPaths = new List<List<T>>(allPaths);
+
+                List<RandomSeq> randomPathOrders = new List<RandomSeq>();
+                List<int> nextSequenceEntry = new List<int>();
+
+                for (int i = 0; i < expandedPaths.Count; i++)
+                {
+                    randomPathOrders.Add(new RandomSeq(Mathf.Max(0, expandedPaths[i].Count - 1)));
+                    nextSequenceEntry.Add(0);
+                }
+
+                int maxIterations = 1000000;
+                int[] failedToExpandPathCounts = new int[allPaths.Count];
+                int noneExpandedCount = 0;
+
+                while (maxIterations-- > 0)
+                {
+                    bool anyExpanded = false;
+
+                    for (int i = 0; i < expandedPaths.Count; i++)
+                    {
+                        List<T> path = expandedPaths[i];
+
+                        if (failedToExpandPathCounts[i] > path.Count + 2)
+                            continue;
+
+                        bool expanded = await TryExpandSingleStep(path,i,randomPathOrders[i],nextSequenceEntry,ownerByCoordinate,region,taskContext);
+
+                        if (expanded)
+                        {
+                            debugNumberOfSuccessfulExpandSingleStepCalls++;
+                            failedToExpandPathCounts[i] = 0;
+                            anyExpanded = true;
+                        }
+                        else
+                        {
+                            failedToExpandPathCounts[i]++;
+                            debugNumberOfFailedExpandSingleStepCalls++;
+                        }
+                    }
+
+                    if (!anyExpanded)
+                    {
+                        noneExpandedCount++;
+
+                        if (noneExpandedCount > expandedPaths.Count)
+                            break;
+                    }
+
+                    if (maxIterations < 1)
+                    {
+                        await UniTask.SwitchToMainThread();
+                        Debug.Log("Exceeded max of 1M iterations- ceasing and completing");
+                        await UniTask.SwitchToThreadPool();
+                    }
+
+                    taskContext.IncrementProgress(0.1f);
+                    await taskContext.Yield();
+                }
+
+                timer.Stop();
+
+                await UniTask.SwitchToMainThread();
+                Debug.Log(
+                    "Expansion step complete process time: " +
+                    timer.Elapsed +
+                    "       ExpandPath calls,  success: " +
+                    debugNumberOfSuccessfulExpandSingleStepCalls +
+                    "   failed:" +
+                    debugNumberOfFailedExpandSingleStepCalls);
+                await UniTask.SwitchToThreadPool();
+            }
+
+            async UniTask<bool> TryExpandSingleStep(List<T> path,int pathIndex,RandomSeq randomEdges,List<int> randomEdgePositions,
+                                    Dictionary<T, int> ownerByCoordinate,HashSet<T> region,TaskHandler taskContext)
+            {
+                if (randomEdges.Count == 0)
+                    return false;
+
+                int position = randomEdgePositions[pathIndex];
+
+                for (int attempt = 0; attempt < randomEdges.Count; attempt++)
+                {
+                    if (position >= randomEdges.Count)
+                        position = 0;
+
+                    int startIndex = randomEdges[position];
+                    position++;
+
+                    if (startIndex >= path.Count - 1)
+                        continue;
+
+                    int endIndex = startIndex + 1;
+
+                    T startCoordinate = path[startIndex];
+                    T endCoordinate = path[endIndex];
+
+                    float MoveCost(ITileCoordinate<T> coord, int neighborIndex)
+                    {
+                        T neighbor = (T)coord.GetSpatialNeighbor(neighborIndex);
+
+                        if ((coord.Equals(startCoordinate) && neighbor.Equals(endCoordinate)) ||
+                            (coord.Equals(endCoordinate) && neighbor.Equals(startCoordinate)))
+                            return -1;
+
+                        if (!region.Contains(neighbor))
+                            return -1;
+
+                        if (neighbor.Equals(startCoordinate) || neighbor.Equals(endCoordinate))
+                            return 1;
+
+                        if (ownerByCoordinate.ContainsKey(neighbor))
+                            return -1;
+
+                        return 1;
+                    }
+
+                    TileOnPath<T> found =TileAStarPathFinder<T>.GetPathFromTo(startCoordinate,endCoordinate,MoveCost,teleporters);
+
+                    await taskContext.Yield();
+
+                    if (found == null)
+                        continue;
+
+                    List<T> sectionToAdd = found.ToCoordinateList();
+                    sectionToAdd.RemoveAt(0);
+                    sectionToAdd.RemoveAt(sectionToAdd.Count - 1);
+
+                    path.InsertRange(startIndex + 1, sectionToAdd);
+
+                    foreach (T coord in sectionToAdd)
+                    {
+                        if (ownerByCoordinate.TryGetValue(coord, out int foundPathIndex))
+                        {
+                            if (foundPathIndex != pathIndex)
+                                throw new Exception(
+                                    "attempt to add coord(" +
+                                    coord +
+                                    ") to ownerByCoordinate for path(" +
+                                    pathIndex +
+                                    ") failed- coord already exists as part of a different path(" +
+                                    foundPathIndex +
+                                    ").");
+                        }
+                        else
+                        {
+                            ownerByCoordinate.Add(coord, pathIndex);
+                        }
+                    }
+
+                    // One new edge is created for every inserted vertex.
+                    for (int i = 0; i < sectionToAdd.Count; i++)
+                        randomEdges.Expand(startIndex + 1);
+
+                    randomEdgePositions[pathIndex] = position;
+
+                    return true;
+                }
+
+                randomEdgePositions[pathIndex] = position;
+
+                return false;
+            }
+
+
+            static void GenerateRegionDebugTexture(Dictionary<T, int> ownerByCoordinate, int width, int height, string filename)
+            {
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+                tex.filterMode = FilterMode.Point;
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color32[] pixels = new Color32[width * height];
+
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    pixels[i] = Color.black;
+                }
+
+                Dictionary<int, Color32> ownerColors =
+                    new Dictionary<int, Color32>();
+
+                System.Random rng = new System.Random(12345);
+
+                foreach (int owner in ownerByCoordinate.Values)
+                {
+                    if (ownerColors.ContainsKey(owner))
+                        continue;
+
+                    byte r = (byte)rng.Next(40, 256);
+                    byte g = (byte)rng.Next(40, 256);
+                    byte b = (byte)rng.Next(40, 256);
+
+                    ownerColors.Add(owner, new Color32(r, g, b, 255));
+                }
+
+                foreach (KeyValuePair<T, int> kv in ownerByCoordinate)
+                {
+                    RectangularCoord coord = (RectangularCoord)(object)kv.Key;
+
+                    if (coord.x < 0
+                        || coord.y < 0
+                        || coord.x >= width
+                        || coord.y >= height)
+                    {
+                        continue;
+                    }
+
+                    int index = coord.x + coord.y * width;
+
+                    pixels[index] = ownerColors[kv.Value];
+                }
+
+                tex.SetPixels32(pixels);
+                tex.Apply();
+
+                byte[] png = tex.EncodeToPNG();
+
+                string fullPath =
+                    System.IO.Path.Combine(
+                        Application.dataPath,
+                        filename);
+
+                System.IO.File.WriteAllBytes(fullPath, png);
+
+#if UNITY_EDITOR
+                UnityEditor.AssetDatabase.ImportAsset(
+                    "Assets/" + filename,
+                    UnityEditor.ImportAssetOptions.ForceUpdate);
+#endif
+
+                Debug.Log("Saved region debug texture: " + fullPath);
+            }
+
+
+
+            async UniTask NewExpandPathsToFillRegion(IList<List<T>> allPaths,HashSet<T> region,Dictionary<T, int> ownerByCoordinate,TaskHandler taskContext)
+            {
+                int debugNumberOfSuccessfulExpandSingleStepCalls = 0;
+                int debugNumberOfFailedExpandSingleStepCalls = 0;
+
+                System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+                timer.Start();
+
+                List<List<T>> expandedPaths = new List<List<T>>(allPaths);
+
+                List<RandomSeq> randomPathOrders = new List<RandomSeq>();
+                List<int> nextSequenceEntry = new List<int>();
+
+                for (int i = 0; i < expandedPaths.Count; i++)
+                {
+                    randomPathOrders.Add(new RandomSeq(Mathf.Max(0, expandedPaths[i].Count - 1)));
+                    nextSequenceEntry.Add(0);
+                }
+
+                int maxIterations = 1000000;
+                int[] failedToExpandPathCounts = new int[allPaths.Count];
+                int noneExpandedCount = 0;
+
+                while (maxIterations-- > 0)
+                {
+                    bool anyExpanded = false;
+
+                    List<UniTask<ExpansionProposal<T>>> expansionTasks = new List<UniTask<ExpansionProposal<T>>>();
+
+                    for (int i = 0; i < expandedPaths.Count; i++)
+                    {
+                        if (failedToExpandPathCounts[i] > expandedPaths[i].Count + 2)
+                        {
+                            expansionTasks.Add(UniTask.FromResult<ExpansionProposal<T>>(null));
+                            continue;
+                        }
+
+                        expansionTasks.Add(
+                            FindExpansionProposal(expandedPaths[i],i,randomPathOrders[i],nextSequenceEntry,ownerByCoordinate,region,taskContext));
+                    }
+
+                    UniTask<ExpansionProposal<T>[]> allTasks =
+                        UniTask.WhenAll(expansionTasks);
+
+                    while (!allTasks.Status.IsCompleted())
+                    {
+                        taskContext.IncrementProgress(0.1f);
+                        await taskContext.Yield();
+                    }
+
+                    ExpansionProposal<T>[] proposals = await allTasks;
+
+                    for (int i = 0; i < proposals.Length; i++)
+                    {
+                        ExpansionProposal<T> proposal = proposals[i];
+
+                        if (proposal == null)
+                            continue;
+
+                        if (CommitExpansion(proposal,expandedPaths,randomPathOrders,nextSequenceEntry,ownerByCoordinate))
+                        {
+                            debugNumberOfSuccessfulExpandSingleStepCalls++;
+                            failedToExpandPathCounts[i] = 0;
+                            anyExpanded = true;
+                        }
+                        else
+                        {
+                            failedToExpandPathCounts[i]++;
+                            debugNumberOfFailedExpandSingleStepCalls++;
+                        }
+                    }
+
+                    if (!anyExpanded)
+                    {
+                        noneExpandedCount++;
+
+                        if (noneExpandedCount > expandedPaths.Count)
+                            break;
+                    }
+                    else
+                    {
+                        noneExpandedCount = 0;
+                    }
+
+                    if (maxIterations < 1)
+                    {
+                        await UniTask.SwitchToMainThread();
+                        Debug.Log("Exceeded max of 1M iterations- ceasing and completing");
+                        await UniTask.SwitchToThreadPool();
+                    }
+
+                    taskContext.IncrementProgress(0.1f);
+                    await taskContext.Yield();
+                }
+
+                timer.Stop();
+
+                await UniTask.SwitchToMainThread();
+
+                Debug.Log(
+                    "Expansion step complete process time: " +
+                    timer.Elapsed +
+                    "       ExpandPath calls,  success: " +
+                    debugNumberOfSuccessfulExpandSingleStepCalls +
+                    "   failed:" +
+                    debugNumberOfFailedExpandSingleStepCalls);
+
+                await UniTask.SwitchToThreadPool();
+            }
+            async UniTask<ExpansionProposal<T>> FindExpansionProposal(List<T> path,int pathIndex,RandomSeq randomEdges,List<int> randomEdgePositions,Dictionary<T, int> ownerByCoordinate,HashSet<T> region,TaskHandler taskContext)
+            {
+                if (randomEdges.Count == 0)
+                    return null;
+
+                int position = randomEdgePositions[pathIndex];
+
+                for (int attempt = 0; attempt < randomEdges.Count; attempt++)
+                {
+                    if (position >= randomEdges.Count)
+                        position = 0;
+
+                    int startIndex = randomEdges[position];
+                    position++;
+
+                    if (startIndex >= path.Count - 1)
+                        continue;
+
+                    int endIndex = startIndex + 1;
+
+                    T startCoordinate = path[startIndex];
+                    T endCoordinate = path[endIndex];
+
+                    float MoveCost(ITileCoordinate<T> coord, int neighborIndex)
+                    {
+                        T neighbor = (T)coord.GetSpatialNeighbor(neighborIndex);
+
+                        if ((coord.Equals(startCoordinate) && neighbor.Equals(endCoordinate)) ||
+                            (coord.Equals(endCoordinate) && neighbor.Equals(startCoordinate)))
+                            return -1;
+
+                        if (!region.Contains(neighbor))
+                            return -1;
+
+                        if (neighbor.Equals(startCoordinate) || neighbor.Equals(endCoordinate))
+                            return 1;
+
+                        if (ownerByCoordinate.ContainsKey(neighbor))
+                            return -1;
+
+                        return 1;
+                    }
+
+                    TileOnPath<T> found = TileAStarPathFinder<T>.GetPathFromTo(startCoordinate,endCoordinate,MoveCost,teleporters);
+
+                    await taskContext.Yield();
+
+                    if (found == null)
+                        continue;
+
+                    List<T> sectionToAdd = found.ToCoordinateList();
+                    sectionToAdd.RemoveAt(0);
+                    sectionToAdd.RemoveAt(sectionToAdd.Count - 1);
+
+                    return new ExpansionProposal<T>
+                    {
+                        PathIndex = pathIndex,
+                        StartIndex = startIndex,
+                        NextRandomPosition = position,
+                        SectionToAdd = sectionToAdd
+                    };
+                }
+
+                return new ExpansionProposal<T>
+                {
+                    PathIndex = pathIndex,
+                    NextRandomPosition = position,
+                    SectionToAdd = null
+                };
+            }
+
+            bool CommitExpansion(ExpansionProposal<T> proposal,IList<List<T>> paths,List<RandomSeq> randomPathOrders,List<int> randomEdgePositions,Dictionary<T, int> ownerByCoordinate)
+            {
+                if (proposal.SectionToAdd == null)
+                {
+                    randomEdgePositions[proposal.PathIndex] =
+                        proposal.NextRandomPosition;
+                    return false;
+                }
+
+                foreach (T coord in proposal.SectionToAdd)
+                {
+                    if (ownerByCoordinate.TryGetValue(coord, out int foundPathIndex))
+                    {
+                        if (foundPathIndex != proposal.PathIndex)
+                            return false;
+                    }
+                }
+
+                List<T> path = paths[proposal.PathIndex];
+
+                path.InsertRange(
+                    proposal.StartIndex + 1,
+                    proposal.SectionToAdd);
+
+                foreach (T coord in proposal.SectionToAdd)
+                {
+                    if (!ownerByCoordinate.ContainsKey(coord))
+                        ownerByCoordinate.Add(coord, proposal.PathIndex);
+                }
+
+                for (int i = 0; i < proposal.SectionToAdd.Count; i++)
+                    randomPathOrders[proposal.PathIndex].Expand(proposal.StartIndex + 1);
+
+                randomEdgePositions[proposal.PathIndex] =
+                    proposal.NextRandomPosition;
+
+                return true;
+            }
+
+        }
+        class ExpansionProposal<S>
+        {
+            public int PathIndex;
+            public int StartIndex;
+            public int NextRandomPosition;
+            public List<S> SectionToAdd;
+        }
+
+        async UniTask CarvePathInWalls(IList<T> finalPath, TaskHandler taskContext)
+        {
+            //-------------------------------------------------
+            // carve final path
+            //-------------------------------------------------
+
+            for (int i = 0; i < finalPath.Count - 1; i++)
+            {
+                //debug sanity check
+                if (!new List<T>(finalPath[i].GetSpatialNeighbors()).Contains(finalPath[i + 1]))
+                {
+                    await UniTask.SwitchToMainThread();
+                    Debug.LogError("Invalid path provided to CarvePathInWalls.  element["+i+"]: "+ finalPath[i] + " does not have element["+(i+1)+"]: "+ finalPath[i+1] + " as  valid spatial neighbor");
+                    await UniTask.SwitchToThreadPool();
+                }
+
+
+                RemoveWall(finalPath[i], finalPath[i + 1]);
+
+                if ((i & 31) == 0)
+                    await taskContext.Yield();
+            }
+          //  await UniTask.SwitchToMainThread();
+          //  Debug.Log("Region output path" + string.Join(",", finalPath));
+          //  await UniTask.SwitchToThreadPool();
+        }
+
+
+        protected void Shuffle<K>(List<K> list)
+        {
+            int n = list.Count;
+
+            while (n > 1)
+            {
+                n--;
+
+                int k = random.Next(n + 1);
+
+                K temp = list[k];
+                list[k] = list[n];
+                list[n] = temp;
+            }
+        }
     }
 }
 
+class RandomSeq:IReadOnlyList<int>
+{
+    
+    public int Count => sequence.Count;
+
+    public int this[int index] => ((IReadOnlyList<int>)sequence)[index];
+
+    protected List<int> sequence;
+    protected System.Random rng = new System.Random();
+
+    public RandomSeq(int length)
+    {
+        sequence = new List<int>(length);
+        for (int i = 0; i < length; i++)
+        {
+            sequence.Add(i);
+        }
+        Shuffle();
+    }
+    public void Expand()
+    {
+        Expand(0);
+    }
+    public void Expand(int after)
+    {
+        int newValue = sequence.Count;
+        if (after > newValue)
+            throw new Exception("'after' Parameter passed to RandomSeq.Expand is larger than the sequence itself.");
+        int newIndex = rng.Next(after, newValue + 1);
+        sequence.Insert(newIndex, newValue);
+    }
+    protected void Shuffle()
+    {
+        int n = sequence.Count;
+        
+        while (n > 1)
+        {
+            n--;
+
+            int k = rng.Next(n + 1);
+
+            int temp = sequence[k];
+            sequence[k] = sequence[n];
+            sequence[n] = temp;
+        }
+    }
+
+    public IEnumerator<int> GetEnumerator()
+    {
+        return ((IEnumerable<int>)sequence).GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return ((IEnumerable)sequence).GetEnumerator();
+    }
+}

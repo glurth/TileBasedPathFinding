@@ -56,25 +56,24 @@ static public class MeshDataExtension
     public static void TransformVertices(this MeshData mesh, Vector3 scale, Quaternion orient)
     {
         Vector3[] verts = mesh.vertices;
-
-        Vector3 min = verts[0];
-        Vector3 max = verts[0];
-
         for (int i = 0; i < verts.Length; i++)
         {
             Vector3 v = Vector3.Scale(verts[i], scale);
             v = orient * v;
             verts[i] = v;
-
-            min = Vector3.Min(min, v);
-            max = Vector3.Max(max, v);
         }
         mesh.vertices = verts;
-        mesh.bounds = new Bounds
+
+    }
+    public static void OffsetVertices(this MeshData mesh, Vector3 offset)
+    {
+        Vector3[] verts = mesh.vertices;
+
+        for (int i = 0; i < verts.Length; i++)
         {
-            center = (min + max) * 0.5f,
-            size = (max - min)
-        };
+            verts[i] += offset;
+        }
+        mesh.vertices = verts;
     }
 }
 
@@ -105,6 +104,8 @@ namespace EyE.Maps.Templates
         /// mostly used for testing- automatically create a random maze upon enable.
         /// </summary>
         public bool createMazeOnEnable = true;
+        public bool useTopoVixForCreateOnEnable = false;
+        public TopoViz topoSource;
       //  public Material wallChunkMaterial;
       //  public Material wallChunkSubMeshMaterial;
 
@@ -119,6 +120,7 @@ namespace EyE.Maps.Templates
                 surfaceDepthTilingResolution = Vector2Int.one;
                 meshPreScale = Vector3.one;
                 meshPreOrient = Quaternion.identity;
+                meshPostNormalizeOffset = Vector3.zero;
             }
             public Vector3 mazeNormal = Vector3.up;
             public int idealTrisPerChunk = 1000;
@@ -175,14 +177,17 @@ namespace EyE.Maps.Templates
                     if (wallMaterials[i] == null) return false;
                 return true;
             }
-
+            public void PrepCachesForAsync()
+            {
+                CreateNormalizedMeshAndCachePreBounds();
+            }
             public int avgTriPerWall(float wallLength)
             {
                 if (drawOption == DrawType.Quads)
                     return 12;
                 if (drawOption == DrawType.SurfaceDepth)
                     return (surfaceDepthTilingResolution.x * surfaceDepthTilingResolution.y * 2 * 2) + (surfaceDepthTilingResolution.x * 2 * 2);//*2 two tris per quad *2 two sides 
-                int trisPerMesh = (notNormalizedMesh.triangles.Length / 3);
+                int trisPerMesh = (normalizedWallMesh.triangles.Length / 3);
                 return trisPerMesh * NumberOfMeshesToTile(wallLength);
             }
 
@@ -195,6 +200,7 @@ namespace EyE.Maps.Templates
             public Mesh notNormalizedMesh = null;
             public Vector3 meshPreScale;
             public Quaternion meshPreOrient;
+            public Vector3 meshPostNormalizeOffset;
             //generated/cached members & accessors
             Bounds meshPreBoundsCache;
             Bounds MeshPreBounds()
@@ -221,10 +227,13 @@ namespace EyE.Maps.Templates
 
             void CreateNormalizedMeshAndCachePreBounds()
             {
+                if (notNormalizedMesh == null || drawOption != DrawType.MeshTiling) return;
                 _normalizedWallMesh = new MeshData(notNormalizedMesh);
                 _normalizedWallMesh.TransformVertices(meshPreScale, meshPreOrient);
                 meshPreBoundsCache = _normalizedWallMesh.bounds;
                 _normalizedWallMesh.Normalize();
+                _normalizedWallMesh.OffsetVertices(meshPostNormalizeOffset);
+                _normalizedWallMesh.RecalculateBounds();
             }
 
             public int NumberOfMeshesToTile(float wallLength)
@@ -323,7 +332,9 @@ namespace EyE.Maps.Templates
         public override async UniTask SetMazeAsync<TCoord>(GenericMazeMap<TCoord> toValue, TaskHandler taskContext) 
         // public async UniTask SetMazeAsync(GenericMazeMap<T> toValue, TaskHandler taskContext)
         {
-
+            await UniTask.SwitchToMainThread();
+            drawConfig.PrepCachesForAsync();
+            await UniTask.SwitchToThreadPool();
             this.taskContext = taskContext;
             mazeGenerationRunning = true;
             //await UniTask.SwitchToThreadPool();
@@ -405,8 +416,12 @@ namespace EyE.Maps.Templates
         /// </remarks>
         protected void OnEnable()
         {
+
             if (createMazeOnEnable && !mazeGenerationRunning)
             {
+
+
+
              //   GenericMazeMap<T> newMaze = CreateMazeMap();
              //   SetMaze(newMaze);
              //   return;
@@ -419,7 +434,10 @@ namespace EyE.Maps.Templates
                     try
                     {
                         await taskContext.SetStageMessageAndYield("Creating random maze");
-                        GenericMazeMap<T> newMaze = await CreateMazeMapAsync(taskContext);
+                        Topology topo = null;
+                        if (useTopoVixForCreateOnEnable)
+                            topo=topoSource.topo;
+                        GenericMazeMap<T> newMaze = await CreateMazeMapAsync(taskContext,topo);
                         await taskContext.Yield();
                         await SetMazeAsync(newMaze, taskContext);
                     }
@@ -457,7 +475,7 @@ namespace EyE.Maps.Templates
             float offsetMag = tileOffset.magnitude;
             drawConfig.SetTileSize(offsetMag);
             drawConfig.SetAvgNumNeighbors(maze.size.NumberOfNeighbors());
-            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 1024);
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 10024);
             chunkHandler.Build();
           //  Debug.Log("Allocated " + chunkHandler.ChunkCoordinateLists().Count + " chunks");
         }
@@ -474,7 +492,7 @@ namespace EyE.Maps.Templates
             float offsetMag = tileOffset.magnitude;
             drawConfig.SetTileSize(offsetMag);
             drawConfig.SetAvgNumNeighbors(maze.size.NumberOfNeighbors());
-            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 1024);  //magnitude is wrong.. need to compute actuall wall length
+            chunkHandler = GetChunker(trisPerWall: drawConfig.avgTriPerWall(offsetMag / 2), idealTrisPerChunk: 10024);  //magnitude is wrong.. need to compute actuall wall length
             await chunkHandler.BuildAsync(taskContext);
 
 
@@ -761,10 +779,6 @@ namespace EyE.Maps.Templates
             int originalLayer = gameObject.layer;
             gameObject.layer = BakeLayer;
 
-            // NOTE: This assumes your LateUpdate() logic or mesh combination logic 
-            // will be run and issue the Graphics.DrawMesh calls for this frame, 
-            // or that the single combined mesh is already assigned to this GameObject 
-            // and is placed on the BakeLayer.
 
             // 4. Forced Render (The Rasterization Step)
             bakeCameraInstance.Render();
@@ -795,7 +809,22 @@ namespace EyE.Maps.Templates
         /// </example>
         protected abstract GenericMazeMap<T> CreateMazeMap();
 
-        protected abstract UniTask<GenericMazeMap<T>> CreateMazeMapAsync(TaskHandler taskContext);
+        protected abstract GenericMazeMap<T> GetUninitializedMap();
+        protected async UniTask<GenericMazeMap<T>> CreateMazeMapAsync(TaskHandler taskContext, Topology mazeTopology)
+        {
+            await Cysharp.Threading.Tasks.UniTask.SwitchToMainThread();
+            GenericMazeMap<T> maze = GetUninitializedMap();
+            await Cysharp.Threading.Tasks.UniTask.SwitchToThreadPool();
+
+            if (mazeTopology == null)
+                await maze.GenerateMazeAsync(taskContext);
+            else
+            {
+                await maze.GenerateFromTopologyAsync(mazeTopology, taskContext);
+            }
+            return maze;
+        }
+
 
         public T editorDefinedCreateOnEnableSize;
         /// <summary>
@@ -1059,7 +1088,7 @@ namespace EyE.Maps.Templates
                 numChunks = totalTris / idealTrisPerChunk;
             }
 
-            await taskContext.SetStageMessageAndYield("Chunk Generation");
+            await taskContext.SetStageMessageAndYield("Chunk Generation : launching");
             chunkCoordinateLists =await GenerateChunksAsync(numChunks, size, taskContext);
             numChunks = chunkCoordinateLists.Count;
             chunkIDbyCoordinate = new Dictionary<T, int>();
@@ -1202,6 +1231,7 @@ namespace EyE.Maps.Templates
         /// <returns>A list of chunks, where each chunk is a list of coordinates.</returns>
         protected List<List<T>> GenerateChunks(int numChunks, T size)
         {
+            Debug.Log("sync chunk gen running");
             return GenerateChunksAsync(numChunks,size,new TaskHandler(false)).AsTask().GetAwaiter().GetResult();
         }
 
@@ -1994,7 +2024,7 @@ namespace EyE.Maps.Templates
                 {
                     Edge e = visibleEdges[0];
                     Vector3 thicknessOffset = halfT * -Vector3.Cross(cornerNormal, EdgeDirFrom(e, cIndex));
-                    Debug.Log("single junction edge corner cornerIndex:["+cIndex+"]pos("+c.position+") edgeDir:"+ EdgeDirFrom(e, cIndex) + " thicknessOffset:"+ thicknessOffset);
+                   // Debug.Log("single junction edge corner cornerIndex:["+cIndex+"]pos("+c.position+") edgeDir:"+ EdgeDirFrom(e, cIndex) + " thicknessOffset:"+ thicknessOffset);
                     AssignToEdge(e, cIndex, c.position + thicknessOffset, c.position - thicknessOffset, null, false, Color.black);
                 }
                 else if (visibleCount > 1)
@@ -2148,7 +2178,7 @@ namespace EyE.Maps.Templates
                 Vector3 endTopLeft = bTop[0];
                 Vector3 endTopRight = bTop[1];
                 Vector3 endBottomRight = bBot[0];
-                if (false)//debug stuff
+                /* if (false)//debug stuff
                 {
                     // --- centers / basis ---
                     Vector3 startCenter = (startBottomLeft + startBottomRight + startTopLeft + startTopRight) * 0.25f;
@@ -2185,6 +2215,7 @@ namespace EyE.Maps.Templates
                     );
 
                     // --- logs ---
+                    
                     Debug.Log(
                         $"Wall L/R Debug:\n" +
                         $" expectedRight: {expectedRight}\n" +
@@ -2194,7 +2225,7 @@ namespace EyE.Maps.Templates
                         $" endTopDot:      {endTopDot}\n" +
                         $" verticalLeftDot(opposition check): {verticalLeftDot}"
                     );
-
+                    
                     // --- assertions ---
                     if (startBottomDot < 0f) Debug.LogError("Start bottom L/R flipped");
                     if (startTopDot < 0f) Debug.LogError("Start top L/R flipped");
@@ -2214,7 +2245,7 @@ namespace EyE.Maps.Templates
                             Debug.LogError("Diagonal pairing detected (bottomRight aligns with topLeft)");
                         }
                     }
-                }
+                }*/
                 switch (drawConfig.drawOption)
                 {
                     case MazeMeshDrawBase.WallDrawConfig.DrawType.Quads:
@@ -2305,7 +2336,7 @@ namespace EyE.Maps.Templates
                 taskContext.IncrementProgress(0.5f);
                 await taskContext.Yield();
             }
-             Debug.Log(logstr);
+           //  Debug.Log(logstr);
             MeshData mesh = new MeshData();
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris, 0);

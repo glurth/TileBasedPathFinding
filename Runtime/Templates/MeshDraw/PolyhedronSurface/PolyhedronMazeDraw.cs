@@ -27,14 +27,15 @@ namespace EyE.Maps.Templates
             maze.GenerateMaze();
             return maze;
         }
-
-        protected override async UniTask<GenericMazeMap<FaceCoordinate>> CreateMazeMapAsync(TaskHandler taskContext)
+        protected override GenericMazeMap<FaceCoordinate> GetUninitializedMap() => new FaceMazeMap(createOnEnableSourceFacesAndNeighbors);
+        /*protected override async UniTask<GenericMazeMap<FaceCoordinate>> CreateMazeMapAsync(TaskHandler taskContext)
         {
             FaceMazeMap maze = await FaceMazeMap.CreateFaceMazeMapAsync(createOnEnableSourceFacesAndNeighbors);//  new FaceMazeMap(createOnEnableSourceFacesAndNeighbors);
             await maze.GenerateMazeAsync(taskContext);// CancelBoolRef()); ;
+         //   Debug.Log("Maze create complete");
             return maze;
         }
-
+        */
         protected override FaceCoordinate DefaultMazeSize()
         {
             
@@ -80,15 +81,19 @@ namespace EyE.Maps.Templates
 
         protected override async UniTask<List<List<FaceCoordinate>>> GenerateChunksAsync(int numChunks, FaceCoordinate ignored, TaskHandler taskContext)
         {
+            await taskContext.SetStageMessageAndYield("Checks Generation: initialziing face normals");
+
             int faceCount = map.faceDetails.Count;
             List<Vector3> normals = new List<Vector3>(faceCount);
             for (int i = 0; i < faceCount; i++)
                 normals.Add(map.faceDetails[i].normal);
 
+
             // K-means clustering on normals
             List<Vector3> centroids = new List<Vector3>();
             System.Random rand = new System.Random();
             HashSet<int> used = new HashSet<int>();
+            await taskContext.SetStageMessageAndYield("Checks Generation: computing centroids");
             // Initialize centroids randomly
             while (centroids.Count < numChunks)
             {
@@ -101,14 +106,18 @@ namespace EyE.Maps.Templates
                 }
 
             }
+
+
             await taskContext.Yield();
             int maxIter = 25;
             List<int>[] clusters = new List<int>[numChunks];
             for (int i = 0; i < numChunks; i++)
                 clusters[i] = new List<int>();
-
+            
             for (int iter = 0; iter < maxIter; iter++)
             {
+
+                await taskContext.SetStageMessageAndYield("Chunks Generation pass "+iter+": assigning coordinates");
                 // Clear clusters
                 for (int i = 0; i < numChunks; i++) clusters[i].Clear();
 
@@ -130,6 +139,7 @@ namespace EyE.Maps.Templates
                 }
                 taskContext.IncrementProgress(0.1f);
                 await taskContext.Yield();
+                await taskContext.SetStageMessageAndYield("Chunks Generation pass " + iter + ": updating centroids");
                 // Update centroids
                 for (int c = 0; c < numChunks; c++)
                 {

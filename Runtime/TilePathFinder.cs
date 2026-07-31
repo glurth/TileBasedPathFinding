@@ -104,6 +104,7 @@ namespace EyE.Maps
         /// <summary>
         /// The target tile coordinate for pathfinding.
         /// </summary>
+        [ThreadStatic]
         static public ITileCoordinate<T> targetTileCoord;  //consider moving inside TileCoordinate<T> as member-  bigger but can handle finding multiple paths at once
 
         /// <summary>
@@ -159,6 +160,8 @@ namespace EyE.Maps
             pathStart.previousStep = newPath;
             RecomputeCosts();
         }
+       
+        
         /// <summary>
         /// Creates a new distinct copy of the current path.
         /// </summary>
@@ -175,6 +178,26 @@ namespace EyE.Maps
             return copy;
 
         }
+
+        public List<T> ToCoordinateList()
+        {
+            List<T> retVal = new List<T>();
+            ToCoordinateList(retVal);
+            return retVal;
+        }
+        public void ToCoordinateList(List<T> output)
+        {
+            output.Clear();
+
+            TileOnPath<T> currentStep = this;
+            while (currentStep != null)
+            {
+                output.Add((T)currentStep.coordinate);
+                currentStep = currentStep.previousStep;
+            }
+
+            output.Reverse();
+        }
     }
     
     /// <summary>
@@ -188,6 +211,7 @@ namespace EyE.Maps
         //this delegate defines the signature that a move cost function must have
         public delegate float MoveCost(ITileCoordinate<T> coord, int neighborIndex);
 
+        [ThreadStatic]
         static Priority_Queue.PriorityHeap<TileOnPath<T>> staticPriorityQueue = new Priority_Queue.PriorityHeap<TileOnPath<T>>(1000);
         /// <summary>
         /// 
@@ -223,7 +247,9 @@ namespace EyE.Maps
 
             Dictionary<ITileCoordinate<T>, TileOnPath<T>> tileByCoordinateForRemoval = new Dictionary<ITileCoordinate<T>, TileOnPath<T>>();
 
+            if (staticPriorityQueue == null) staticPriorityQueue = new Priority_Queue.PriorityHeap<TileOnPath<T>>(1000);
             Priority_Queue.PriorityHeap<TileOnPath<T>> frontier = staticPriorityQueue;// new Priority_Queue.PriorityHeap<TileOnPath>(1000000);
+
             frontier.Clear();
             frontier.Enqueue(new TileOnPath<T>(startCoordinate, 0, null));
 
@@ -283,7 +309,7 @@ namespace EyE.Maps
 
             }//  end while frontier contains any elements
             findTimer.Stop();
-            Debug.Log("route NOT found- loop count: " + loopCounter.ToString() + " timer(ms): " + findTimer.ElapsedMilliseconds);
+            //Debug.Log("route ("+startCoordinate+" -> "+endCoordinate+") NOT found- loop count: " + loopCounter.ToString() + " timer(ms): " + findTimer.ElapsedMilliseconds);
             return null;
 
 
