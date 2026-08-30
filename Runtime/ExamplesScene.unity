@@ -2359,7 +2359,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 474559264}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6b6659c35d2359b4baf70a3b3c9d4e5a, type: 3}
   m_Name: 
@@ -2371,12 +2371,10 @@ MonoBehaviour:
     nodes: []
     edges: []
   springStrength: 0.001
-  nodeRepulsion: 0.003
-  nodeEdgeRepulsion: 0.1
-  edgeRepulsion: 1
-  edgeUncrossingStength: 4
-  alignmentTorque: 1
-  perpendicularStrength: 0.01
+  perpendicularSpringStrength: 0
+  edgeSpacingStrength: 0.002
+  boundrySpacingStrength: 0.001
+  idealEdgeSpacing: 0.05
   idealEdgeLength: 0.5
 --- !u!4 &474559266
 Transform:
@@ -4812,7 +4810,7 @@ MonoBehaviour:
   processingIndicator: {fileID: 1083129183}
   showDebugGUI: 0
   editorDefinedCreateOnEnableSize:
-    data: {x: 80, y: 80}
+    data: {x: 60, y: 60}
 --- !u!114 &1408425214
 MonoBehaviour:
   m_ObjectHideFlags: 0

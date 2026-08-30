@@ -1115,6 +1115,7 @@ namespace EyE.Maps.Templates
 
             RectangularCoord tst = (RectangularCoord)(object)size; // rectangular for simple testing now
 
+
             for (int edgeIndex = 0; edgeIndex < topo.edges.Length; edgeIndex++)
             {
                 Topology.Edge edge = topo.edges[edgeIndex];
@@ -1122,12 +1123,192 @@ namespace EyE.Maps.Templates
                 int nodeA = edge.nodeAidx;
                 int nodeB = edge.nodeBidx;
 
-                T start =
-                    (T)UVToCoord(edge.GetNodeAConnectionPosition());
+                T start = (T)UVToCoord(edge.GetNodeAConnectionPosition());
+                T end = (T)UVToCoord(edge.GetNodeBConnectionPosition());
 
-                T end =
-                    (T)UVToCoord(edge.GetNodeBConnectionPosition());
+                List<T> nodeALine = nodeCoordLists[nodeA];
+                List<T> nodeBLine = nodeCoordLists[nodeB];
 
+                int nodeAStartIndex = nodeALine.IndexOf(start);
+                int nodeBStartIndex = nodeBLine.IndexOf(end);
+
+                int nodeAMinIndex = nodeAStartIndex;
+                int nodeBMinIndex = nodeBStartIndex;
+
+                int nodeAEdgeSeqIndex = Array.IndexOf(topo.nodes[nodeA].edgeSequence, edgeIndex);
+                if (nodeAEdgeSeqIndex > 0)
+                {
+                    int previousEdge = topo.nodes[nodeA].edgeSequence[nodeAEdgeSeqIndex - 1];
+
+                    if (previousEdge < edgeIndex)
+                    {
+                        List<T> previousEdgeLine = edgeCoordLists[previousEdge];
+
+                        if (previousEdgeLine.Count > 0)
+                            nodeAMinIndex = nodeALine.IndexOf(previousEdgeLine[0]);
+                    }
+                    else
+                    {
+                        T previousConnection =
+                            (T)UVToCoord(
+                                topo.nodes[nodeA].GetEdgeConnectionPosition(nodeAEdgeSeqIndex - 1));
+
+                        nodeAMinIndex = nodeALine.IndexOf(previousConnection);
+                    }
+                }
+
+                int nodeBEdgeSeqIndex = Array.IndexOf(topo.nodes[nodeB].edgeSequence, edgeIndex);
+                if (nodeBEdgeSeqIndex > 0)
+                {
+                    int previousEdge = topo.nodes[nodeB].edgeSequence[nodeBEdgeSeqIndex - 1];
+
+                    if (previousEdge < edgeIndex)
+                    {
+                        List<T> previousEdgeLine = edgeCoordLists[previousEdge];
+
+                        if (previousEdgeLine.Count > 0)
+                            nodeBMinIndex = nodeBLine.IndexOf(previousEdgeLine[previousEdgeLine.Count - 1]);
+                    }
+                    else
+                    {
+                        T previousConnection =
+                            (T)UVToCoord(
+                                topo.nodes[nodeB].GetEdgeConnectionPosition(nodeBEdgeSeqIndex - 1));
+
+                        nodeBMinIndex = nodeBLine.IndexOf(previousConnection);
+                    }
+                }
+
+                TileOnPath<T> foundEdgePath = null;
+                T usedStart = start;
+                T usedEnd = end;
+
+                for (int a = nodeAStartIndex; a >= nodeAMinIndex && foundEdgePath == null; a--)
+                {
+                    usedStart = nodeALine[a];
+
+                    for (int b = nodeBStartIndex; b >= nodeBMinIndex && foundEdgePath == null; b--)
+                    {
+                        usedEnd = nodeBLine[b];
+
+                        foundEdgePath =
+                            TileAStarPathFinder<T>.GetPathFromTo(
+                                usedStart,
+                                usedEnd,
+                                (coord, neighborIndex) =>
+                                {
+                                    T neighbor = coord.GetSpatialNeighbor(neighborIndex);
+
+                                    if (!IsWithinBounds(neighbor))
+                                        return -1;
+
+                                    if (neighbor.Equals(usedEnd))
+                                        return 1;
+
+                                    if (ownerByCoordinate.TryGetValue(neighbor, out int owner))
+                                    {
+                                        if (owner != nodeA && owner != nodeB)
+                                            return -1;
+                                    }
+
+                                    return 1;
+                                },
+                                teleporters);
+                    }
+                }
+
+                List<T> edgeLine = new List<T>();
+
+                if (foundEdgePath != null)
+                {
+                    foundEdgePath.ToCoordinateList(edgeLine);
+                }
+                else
+                {
+                    Debug.LogWarning(
+                        "Failed edge path " +
+                        start + " -> " + end +
+                        " nodes: " + nodeA + " -> " + nodeB +
+                        " edge: " + edgeIndex);
+                }
+
+                edgeCoordLists.Add(edgeLine);
+
+                //-------------------------------------------------
+                // assign edge ownership split
+                //-------------------------------------------------
+
+                int splitIndex =
+                    Mathf.Clamp(
+                        Mathf.RoundToInt(edgeLine.Count * 0.5f),
+                        0,
+                        edgeLine.Count);
+
+                for (int i = 0; i < edgeLine.Count; i++)
+                {
+                    int owner = i < splitIndex ? nodeA : nodeB;
+
+                    T coord = edgeLine[i];
+
+                    if (ownerByCoordinate.TryGetValue(coord, out int existingOwner))
+                    {
+                        if (existingOwner != owner)
+                        {
+                            Debug.LogWarning(
+                                "Edge overlap: " +
+                                coord +
+                                " already owned by " +
+                                existingOwner +
+                                " trying to assign " +
+                                owner);
+                        }
+                    }
+                    else
+                    {
+                        ownerByCoordinate.Add(coord, owner);
+                    }
+                }
+
+                await UniTask.SwitchToMainThread();
+
+                GenerateRegionDebugTexture(ownerByCoordinate, tst.x, tst.y, "regionOwnerDebugByEdgeIteration" + edgeIndex + ".png");
+
+                await UniTask.SwitchToThreadPool();
+                await taskContext.Yield();
+            }
+
+            //-------------------------------------------------
+            // remove edge endpoints that belong to node lines
+            //-------------------------------------------------
+
+            for (int edgeIndex = 0; edgeIndex < edgeCoordLists.Count; edgeIndex++)
+            {
+                List<T> edgeLine = edgeCoordLists[edgeIndex];
+
+                if (edgeLine.Count <= 2)
+                    continue;
+
+                if (allNodeLineCoords.Contains(edgeLine[0]))
+                    edgeLine.RemoveAt(0);
+
+                if (edgeLine.Count > 0 && allNodeLineCoords.Contains(edgeLine[edgeLine.Count - 1]))
+                    edgeLine.RemoveAt(edgeLine.Count - 1);
+            }
+
+            /*
+            for (int edgeIndex = 0; edgeIndex < topo.edges.Length; edgeIndex++)
+            {
+                Topology.Edge edge = topo.edges[edgeIndex];
+
+
+
+                int nodeA = edge.nodeAidx;
+                int nodeB = edge.nodeBidx;
+                T start = (T)UVToCoord(edge.GetNodeAConnectionPosition());
+
+                T end = (T)UVToCoord(edge.GetNodeBConnectionPosition());
+
+        
 
                 TileOnPath<T> foundEdgePath =
                     TileAStarPathFinder<T>.GetPathFromTo(
@@ -1145,10 +1326,10 @@ namespace EyE.Maps.Templates
 
                             if (ownerByCoordinate.TryGetValue(neighbor, out int owner))
                             {
-                                //if (owner != edge.nodeAidx && owner != edge.nodeBidx)
+                                if (owner != edge.nodeAidx && owner != edge.nodeBidx)
                                     return -1;
                             }
-
+                            
                             return 1;
                         },
                         teleporters);
@@ -1174,11 +1355,17 @@ namespace EyE.Maps.Templates
                 }
                 else
                 {
+                    //move one step back on nodeA's path, and try again.  ( GetNodeAConnectionPosition uses edge spacing (distance to previous edge) to determine location- this is what we will want to iterate down through
+                    // fail if we move all the way back to the previous edge
+
+
                     Debug.LogWarning(
                         "Failed edge path " +
                         start + " -> " + end +
                         " nodes: "+ edge.nodeAidx + " -> "+ edge.nodeBidx+
                         " edge: " + edgeIndex);
+
+                    
                 }
 
 
@@ -1227,7 +1414,7 @@ namespace EyE.Maps.Templates
                 await taskContext.Yield();
                 
             }
-
+            */
             //this.ownerByCoordinate = ownerByCoordinate;
 
 

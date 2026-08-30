@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 [System.Serializable]
 public partial class Topology
@@ -177,7 +178,7 @@ public partial class Topology
 
         public Vector2 uvPosition;
         public float rotationAngleRad;
-        static public float defaultDistanceBetweenEdges = 0.01f;
+        static public float defaultDistanceBetweenEdges = 0.005f;
         public float[] edgeSpacing;
         public float drawnLength
         {
@@ -240,18 +241,105 @@ public partial class Topology
         //applies forces will modify these values
         Vector2 velocity;
         float angularVelocity;
+
+        Vector2 accumulatedForce;
+        public Vector2[] accumulatedEdgeForces;
+        public float[] edgeSpacingVelocity;
+        public void ResetForceAccumulators()
+        {
+            if (accumulatedEdgeForces == null || accumulatedEdgeForces.Length != edgeSequence.Length)
+                accumulatedEdgeForces = new Vector2[edgeSequence.Length];
+
+            accumulatedForce = Vector2.zero;
+
+            for (int i = 0; i < accumulatedEdgeForces.Length; i++)
+                accumulatedEdgeForces[i] = Vector2.zero;
+        }
+        public void AccumulateEdgeConnectionForce(int seqIndex, Vector2 force)
+        {
+            accumulatedEdgeForces[seqIndex] += force;
+        }
+
+        public void AccumulateForce(Vector2 force)
+        {
+            accumulatedForce += force;
+        }
+
+        public void AccumulateForceAtPosition(Vector2 position, Vector2 force)
+        {
+            accumulatedForce += force;
+            angularVelocity += 100f * Cross(position - uvPosition, force);
+
+            float Cross(Vector2 a, Vector2 b)
+            {
+                return a.x * b.y - a.y * b.x;
+            }
+        }
+        public void ResolveAccumulatedForces()
+        {
+            Vector2 axis = new Vector2(Mathf.Cos(rotationAngleRad), Mathf.Sin(rotationAngleRad));
+
+            velocity += accumulatedForce;
+            //string s = "Accumulating force on node " + mapIndex;
+
+            for (int i = 0; i < accumulatedEdgeForces.Length; i++)
+            {
+                Vector2 force = accumulatedEdgeForces[i];
+
+                float spacingForce = Vector2.Dot(force, axis);
+
+                if (i > 0)//if not left-most node
+                    edgeSpacingVelocity[i - 1] += spacingForce;
+
+                if (i < edgeSpacingVelocity.Length) //if not rightmost node
+                    edgeSpacingVelocity[i] -= spacingForce;
+
+                
+                Vector2 perpendicular = force - axis * spacingForce;
+               // s += "edge in seq[" + i + "] total force: "+ force+"   spacingForce = " + spacingForce +"  plus perpendicular force = "+ perpendicular;
+               // Debug.Log(s);
+                velocity += perpendicular;
+                angularVelocity += 100f * Cross(GetEdgeConnectionOffset(i), perpendicular);
+            }
+            
+            float Cross(Vector2 a, Vector2 b)
+            {
+                return a.x * b.y - a.y * b.x;
+            }
+        }
+
         // called at the start(or end if after Update) of each iteration "frame"
         public void Reset()
         {
             velocity = Vector2.zero;
             angularVelocity = 0;
+            if (edgeSpacingVelocity != null)
+            {
+                for (int i = 0; i < edgeSpacingVelocity.Length; i++)
+                    edgeSpacingVelocity[i] = 0;
+            }
         }
         // called at the end of each iteration "frame"
         public void UpdatePositionAndRotation(bool thenReset = true)
         {
-            if (map.isNodeFixed(mapIndex)) return;
-            uvPosition += velocity;
-            rotationAngleRad += angularVelocity;
+
+
+                for (int i = 0; i < edgeSpacing.Length; i++)
+                {
+                    edgeSpacing[i] += edgeSpacingVelocity[i];
+
+                    // prevent invalid/negative spacing
+                  //  if (edgeSpacing[i] < defaultDistanceBetweenEdges * 0.1f)
+                    //    edgeSpacing[i] = defaultDistanceBetweenEdges * 0.1f;
+                }
+
+
+            if (!map.isNodeFixed(mapIndex))
+            {
+                uvPosition += velocity;
+                rotationAngleRad += angularVelocity;
+            }
+
             if (thenReset)
                 Reset();
         }
@@ -262,7 +350,7 @@ public partial class Topology
             velocity += force;
         }
         // called by layout iterator
-        public void ApplyForceToEdgeConnection(int seqIndex,Vector2 force)
+        public void XXApplyForceToEdgeConnection(int seqIndex,Vector2 force)
         {
             //we will use mass of 1, and time unit of 1
             velocity += force;
@@ -273,7 +361,7 @@ public partial class Topology
                 return a.x * b.y - a.y * b.x;
             }
         }
-        public void ApplyForceAtPosition(Vector2 position, Vector2 force)
+        public void XXApplyForceAtPosition(Vector2 position, Vector2 force)
         {
             //we will use mass of 1, and time unit of 1
             velocity += force;
@@ -293,6 +381,9 @@ public partial class Topology
         {
             velocity *= (1f - amount);
             angularVelocity *= (1f - amount);
+
+            for (int i = 0; i < edgeSpacingVelocity.Length; i++)
+                edgeSpacingVelocity[i] *= (1f - amount);
         }
     }
     //geometric layout information
@@ -473,6 +564,8 @@ public partial class Topology
     /// </summary>
     public static Topology Parse(string text)
     {
+
+        Debug.Log("Starting Parse Process");
         string[] lines = text.Split(new[] { '\r', '\n' },
             System.StringSplitOptions.RemoveEmptyEntries);
 
@@ -493,7 +586,6 @@ public partial class Topology
             return idx;
         }
 
-        // key -> (a, b, hasA, hasB)
         Dictionary<string, (int a, int b, bool hasA, bool hasB)> edges =
             new Dictionary<string, (int, int, bool, bool)>();
 
@@ -507,31 +599,38 @@ public partial class Topology
             return $"{min}:{max}:{label}";
         }
 
-        List<List<int>> sequences = new List<List<int>>();
+        List<List<string>> sequenceKeys = new List<List<string>>();
+        HashSet<int> declaredNodes = new HashSet<int>();
 
         Topology topo = new Topology();
 
-        // -------- PARSE --------
         foreach (string raw in lines)
         {
             string line = raw.Trim();
-            if (line.Length == 0) continue;
+            Debug.Log("   Processing line: " + line);
+
+            if (line.Length == 0)
+                continue;
 
             string[] parts = line.Split(':');
+
             if (parts.Length != 2)
                 throw new System.Exception("Bad line: " + line);
 
             int from = GetNode(parts[0].Trim());
+            declaredNodes.Add(from);
 
-            while (sequences.Count <= from)
-                sequences.Add(new List<int>());
+            while (sequenceKeys.Count <= from)
+                sequenceKeys.Add(new List<string>());
 
             string[] tokens = parts[1].Split(',');
 
             foreach (string tRaw in tokens)
             {
                 string t = tRaw.Trim();
-                if (t.Length == 0) continue;
+
+                if (t.Length == 0)
+                    continue;
 
                 bool isOut = false;
                 bool isIn = false;
@@ -561,72 +660,207 @@ public partial class Topology
 
                 int to = GetNode(nodeName);
 
-                while (sequences.Count <= to)
-                    sequences.Add(new List<int>());
+                while (sequenceKeys.Count <= to)
+                    sequenceKeys.Add(new List<string>());
 
                 string key = MakeKey(from, to, label);
 
+                sequenceKeys[from].Add(key);
+
                 if (!edges.TryGetValue(key, out var e))
-                {
                     e = (from, to, false, false);
-                }
 
                 if (!isOut && !isIn)
-                {
-                    e = (e.Item1, e.Item2, true, true);
-                }
+                    e = (e.a, e.b, true, true);
                 else if (isOut)
-                {
-                    e = (e.Item1, e.Item2, true, e.Item4);
-                }
-                else if (isIn)
-                {
-                    e = (e.Item1, e.Item2, e.Item3, true);
-                }
-
-                edges[key] = e;
+                    e = (e.a, e.b, true, e.hasB);
+                else
+                    e = (e.a, e.b, e.hasA, true);
 
                 edges[key] = e;
             }
         }
 
-        // -------- BUILD --------
         List<Topology.Edge> edgeList = new List<Topology.Edge>();
+        Dictionary<string, int> edgeLookup = new Dictionary<string, int>();
 
         foreach (var kv in edges)
         {
             var e = kv.Value;
-
+            Debug.Log("   Processing edge: " + kv.Key);
             if (!e.hasA || !e.hasB)
                 throw new System.Exception("Incomplete edge: " + kv.Key);
 
             int index = edgeList.Count;
 
+            edgeLookup[kv.Key] = index;
             edgeList.Add(new Topology.Edge(topo, index, e.a, e.b));
-
-            sequences[e.a].Add(index);
-            sequences[e.b].Add(index);
         }
 
         Topology.Node[] nodes = new Topology.Node[nodeNames.Count];
 
+        string debugString = "PARSE DEBUG";
+
         for (int i = 0; i < nodeNames.Count; i++)
         {
+            List<int> sequence = new List<int>();
+
+            if (declaredNodes.Contains(i))
+            {
+                foreach (string key in sequenceKeys[i])
+                    sequence.Add(edgeLookup[key]);
+            }
+            else
+            {
+                for (int e = 0; e < edgeList.Count; e++)
+                {
+                    if (edgeList[e].nodeAidx == i ||
+                        edgeList[e].nodeBidx == i)
+                    {
+                        sequence.Add(e);
+                    }
+                }
+            }
+
             nodes[i] = new Topology.Node(
                 topo,
                 i,
                 nodeNames[i],
-                sequences[i].ToArray());
+                sequence.ToArray());
+
+            debugString += "\nNode: " + i +
+                "  seq: " + string.Join(",", sequence);
         }
+
+        for (int i = 0; i < edgeList.Count; i++)
+        {
+            debugString += "\nEdges: " + i +
+                "  connects: " +
+                edgeList[i].nodeAidx +
+                " , " +
+                edgeList[i].nodeBidx;
+        }
+
+   //     Debug.Log(debugString);
 
         topo.SetupTopo(nodes, edgeList.ToArray(), new int[0]);
 
         return topo;
     }
 
-    public void GenerateInitialLayout()
+    
+    public void AssignInitialLayout(int[] rowByNodeIndex, int[] columnByConnectionIndex)
     {
-        bool normalizeNodeWidth = false;
+        Debug.Log("starting Initial Layout");
+      //  Dictionary<int, List<int>> simplifiedSequences = BuildSimplifiedSequences();
+        bool normalizeNodeWidth = true;
+        string s = "Positioning Log\n";
+
+        s += "-Given columnByConnectionIndex array: " + string.Join(",", columnByConnectionIndex);
+
+        //asign position of nodes
+        for (int nodeIndex = 0; nodeIndex < rowByNodeIndex.Length; nodeIndex++)
+        {
+            int row = rowByNodeIndex[nodeIndex];
+            Node node = nodes[nodeIndex];
+            s += "   Node row: " + row + "  node index: " + nodeIndex + "\n";
+
+            float y = row;
+            if (node.edgeSequence.Length == 0) throw new System.Exception("uNEXPECETED NODE WITH NO EDGES. NOT SURE WHERE TO PLACE IT");
+            int startEdgeIndex = node.edgeSequence[0];
+            int startEdgeColumn = columnByConnectionIndex[startEdgeIndex];
+            float x = startEdgeColumn;
+            s += "       Starting Connection-  connetcionIndex: " + startEdgeIndex + "  connectionColumn:" + startEdgeColumn + "\n";
+            if (node.edgeSequence.Length > 1)
+            {
+                int endEdgeIndex = node.edgeSequence[node.edgeSequence.Length - 1];
+                int endEdgeColumn = columnByConnectionIndex[endEdgeIndex];
+                int width = endEdgeColumn - startEdgeColumn;
+                x += width / 2f;
+            }
+
+            node.uvPosition = new Vector2(x * Node.defaultDistanceBetweenEdges, y * 0.1f);
+            node.rotationAngleRad = Mathf.Deg2Rad * 0f;
+
+            // we CAN do the above AFTER computing edgeSpacing, and use the values from in there.- but not worth moving it yet
+            if (node.edgeSequence.Length <= 1)
+            {
+                node.edgeSpacing = System.Array.Empty<float>();
+                continue;
+            }
+
+            node.edgeSpacing = new float[node.edgeSequence.Length - 1];
+            node.edgeSpacingVelocity = new float[node.edgeSequence.Length - 1];
+            node.accumulatedEdgeForces = new Vector2[node.edgeSequence.Length];
+            int prevColumn = 0;
+            for (int i = 0; i < node.edgeSequence.Length; i++)
+            {
+                int edgeIndex = node.edgeSequence[i];
+                int edgeColumn = columnByConnectionIndex[edgeIndex]; //connectionOrder[edgeIndex];
+                s += "       Connection-  nodeSeq:" + i + "  connetcionIndex: " + edgeIndex + "  connectionColumn:" + edgeColumn + "\n";
+                node.accumulatedEdgeForces[i] = Vector2.zero;
+                if (i > 0)
+                {
+                    node.edgeSpacing[i - 1] = (edgeColumn - prevColumn) * Node.defaultDistanceBetweenEdges;
+                    node.edgeSpacingVelocity[i - 1] = 0;
+                }
+                prevColumn = edgeColumn;
+            }// end connections in current node loop
+
+        }// end row/nodes loop
+        Debug.Log(s);
+        // ------------------------------------------------------------
+        //  normalization 
+        // ------------------------------------------------------------
+        Vector2 min = new Vector2(float.MaxValue, float.MaxValue);
+        Vector2 max = new Vector2(float.MinValue, float.MinValue);
+
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            Node node = nodes[i];
+            int endIndex = node.edgeSequence.Length - 1;
+
+            Vector2 p = node.GetEdgeConnectionPosition(0);
+            if (p.x < min.x) min.x = p.x;
+            if (p.y < min.y) min.y = p.y;
+            if (p.x > max.x) max.x = p.x;
+            if (p.y > max.y) max.y = p.y;
+            p = node.GetEdgeConnectionPosition(endIndex);
+            if (p.x < min.x) min.x = p.x;
+            if (p.y < min.y) min.y = p.y;
+            if (p.x > max.x) max.x = p.x;
+            if (p.y > max.y) max.y = p.y;
+
+        }
+
+
+        Vector2 size = max - min;
+
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            Vector2 p = nodes[i].uvPosition;
+            p = (p - min);
+
+            if (size.x > 0) p.x /= size.x;
+            if (size.y > 0) p.y /= size.y;
+
+            nodes[i].uvPosition = p;
+            float[] spacingArray = nodes[i].edgeSpacing;
+            if (normalizeNodeWidth)
+            {
+                float oneOverSizeX = 1f / size.x;
+                for (int j = 0; j < spacingArray.Length; j++)
+                {
+                    spacingArray[j] *= oneOverSizeX;
+                }
+            }
+        }
+        
+    }
+
+    public void OLDGenerateInitialLayout()
+    {
+        bool normalizeNodeWidth = true;
         Dictionary<int, List<int>> indexedSequences = BuildSimplifiedSequences();
 
         List<List<int>> simplifiedSequences = new List<List<int>>();
@@ -699,15 +933,19 @@ public partial class Topology
             }
 
             node.edgeSpacing = new float[node.edgeSequence.Length - 1];
+            node.edgeSpacingVelocity = new float[node.edgeSequence.Length - 1];
+            node.accumulatedEdgeForces = new Vector2[node.edgeSequence.Length];
             int prevColumn=0;
             for (int i = 0; i < node.edgeSequence.Length; i++)
             {
                 int edgeIndex = node.edgeSequence[i];
                 int edgeColumn= connectionIndexToColumn[edgeIndex]; //connectionOrder[edgeIndex];
                 s += "       Connection-  nodeSeq:" + i + "  connetcionIndex: " + edgeIndex + "  connectionColumn:" + edgeColumn + "\n";
+                node.accumulatedEdgeForces[i] = Vector2.zero;
                 if (i > 0)
                 {
                     node.edgeSpacing[i - 1] = (edgeColumn - prevColumn) * Node.defaultDistanceBetweenEdges;
+                    node.edgeSpacingVelocity[i - 1] = 0;
                 }
                 prevColumn = edgeColumn;
             }// end connections in current node loop
@@ -749,7 +987,7 @@ public partial class Topology
                         lastNeighbor = neighbor;
                     }
                 }
-
+                /*
                 if (physicalNeighbors.Count > 1)
                 {
                     if (physicalNeighbors[0] ==
@@ -757,7 +995,7 @@ public partial class Topology
                     {
                         physicalNeighbors.RemoveAt(physicalNeighbors.Count - 1);
                     }
-                }
+                }*/
 
                 result.Add(node.mapIndex, physicalNeighbors);
             }
@@ -798,12 +1036,22 @@ public partial class Topology
 
             for (int i = 0; i < nodes.Length; i++)
             {
-                Vector2 p = nodes[i].uvPosition;
+                Node node = nodes[i];
+                int endIndex = node.edgeSequence.Length - 1;
+                
+                Vector2 p = node.GetEdgeConnectionPosition(0);
                 if (p.x < min.x) min.x = p.x;
                 if (p.y < min.y) min.y = p.y;
                 if (p.x > max.x) max.x = p.x;
                 if (p.y > max.y) max.y = p.y;
+                p = node.GetEdgeConnectionPosition(endIndex);
+                if (p.x < min.x) min.x = p.x;
+                if (p.y < min.y) min.y = p.y;
+                if (p.x > max.x) max.x = p.x;
+                if (p.y > max.y) max.y = p.y;
+
             }
+
 
             Vector2 size = max - min;
 
@@ -845,28 +1093,206 @@ public class TopoViz : MonoBehaviour
         //topo = BuildSimpleTopology();
         // topo = BuildMediumTopology();
         //topo = BuildComplexTopology();
+        //string s = "Start:MainBranch\n";
+        //s += "MainBranch:Start,DeadEnd1,SecondaryBranch[left],DeadEnd3,SecondaryBranch[right],End\n";
+        //s += "SecondaryBranch: MainBranch[left],DeadEnd2,MainBranch[right]";
+
+
         string s = "Start:MainBranch\n";
-        s += "MainBranch:Start,DeadEnd1,SecondaryBranch[left],DeadEnd3,SecondaryBranch[right],End\n";
+        s += "MainBranch:Start,DeadEnd1,SecondaryBranch[left],DeadEnd3,End,SecondaryBranch[right]\n";
         s += "SecondaryBranch: MainBranch[left],DeadEnd2,MainBranch[right]";
+       // Debug.Log("Conmplex string: " + ComplexMaze1());
+        s = ComplexMaze1();
         topo = Topology.Parse(s);
 
-        topo.GenerateInitialLayout();
-        topo.SetFixedNodes(new int[2] { 0, 5 });
 
-        layoutCoroutine = StartCoroutine(LayoutRoutine());
+
+       // topo.GenerateInitialLayout();
+        //topo.SetFixedNodes(new int[2] { 0, 5 });
+        topo.SetFixedNodes(new int[1] { 0 });
+        layoutCoroutine = StartCoroutine(InitialSolverRoutine());
+        //layoutCoroutine = StartCoroutine(LayoutRoutine());
     }
 
+    static string ComplexMaze1()
+    {
+        return @"Start: Gate
+Gate: Start, Cistern, G1
+Cistern: Gate, Fork, C1
+Fork: Cistern, Gallery, F1
+Gallery: Fork, Chamber, G5
+Chamber: Gallery, Spiral, C5
+Spiral: Chamber, Vault, S1
+Vault: Spiral, Bridge, V1
+Bridge: Vault, Crypt, B1
+Crypt: Bridge, Junction, K1
+Junction: Crypt, Shrine, J1
+Shrine: Junction, Passage, R1
+Passage: Shrine, Antechamber, P1
+Antechamber: Passage, End, A1
+End: Antechamber
+
+G1: Gate, G2
+G2: G1, G3
+G3: G2
+
+C1: Cistern, C2, C3
+C2: C1
+C3: C1, C4
+C4: C3
+
+F1: Fork, F2
+F2: F1, F3, F4
+F3: F2
+F4: F2
+
+G5: Gallery, G6, G8
+G6: G5, G7
+G7: G6
+G8: G5
+
+C5: Chamber, C6
+C6: C5, C7
+C7: C6, C8
+C8: C7
+
+S1: Spiral, S2, S4
+S2: S1, S3
+S3: S2
+S4: S1
+
+V1: Vault, V2, V4
+V2: V1, V3
+V3: V2
+V4: V1
+
+B1: Bridge, B2
+B2: B1, B3
+B3: B2, B4
+B4: B3
+
+K1: Crypt, K2, K3
+K2: K1
+K3: K1, K4
+K4: K3
+
+J1: Junction, J2, J4
+J2: J1, J3
+J3: J2
+J4: J1
+
+R1: Shrine, R2, R4
+R2: R1, R3
+R3: R2
+R4: R1
+
+P1: Passage, P2, P4
+P2: P1, P3
+P3: P2
+P4: P1
+
+A1: Antechamber, A2, A4
+A2: A1, A3
+A3: A2
+A4: A1";
+    }
+
+    static string ComplexMaze2()
+    {
+        return @"Start: Gate
+F2: F1, F3, F4
+V3: V2
+Gate: Start, Cistern, G1
+C4: C3
+J1: Junction, J2, J4
+Gallery: Fork, Chamber, G5
+A3: A2
+S1: Spiral, S2, S4
+Cistern: Gate, Fork, C1
+R4: R1
+B2: B1, B3
+Antechamber: Passage, End, A1
+G7: G6
+K3: K1, K4
+Passage: Shrine, Antechamber, P1
+C6: C5, C7
+F1: Fork, F2
+V1: Vault, V2, V4
+G2: G1, G3
+Shrine: Junction, Passage, R1
+C1: Cistern, C2, C3
+P3: P2
+Bridge: Vault, Crypt, B1
+A1: Antechamber, A2, A4
+S4: S1
+G5: Gallery, G6, G8
+C3: C1, C4
+J3: J2
+B4: B3
+Crypt: Bridge, Junction, K1
+R1: Shrine, R2, R4
+C7: C6, C8
+Fork: Cistern, Gallery, F1
+V4: V1
+P1: Passage, P2, P4
+G8: G5
+K1: Crypt, K2, K3
+S2: S1, S3
+A4: A1
+Chamber: Gallery, Spiral, C5
+R2: R1, R3
+B1: Bridge, B2
+C5: Chamber, C6
+G1: Gate, G2
+J4: J1
+V2: V1, V3
+P4: P1
+C2: C1
+S3: S2
+B3: B2, B4
+Junction: Crypt, Shrine, J1
+A2: A1, A3
+R3: R2
+G6: G5, G7
+Spiral: Chamber, Vault, S1
+K4: K3
+F3: F2
+P2: P1, P3
+Vault: Spiral, Bridge, V1
+K2: K1
+End: Antechamber";
+    }
+
+
     [Header("Force Strengths")]
-    public float springStrength = 5f;
-    public float nodeRepulsion = 0.5f;
-    
-    public float nodeEdgeRepulsion = 0.1f;
-    public float edgeRepulsion = 2f;
-    public float edgeUncrossingStength = 2f;
-    public float alignmentTorque = 2f;
-    public float perpendicularStrength = 0.01f;
+    public float springStrength = 5f;  // for between (edge/node) each connection point and: all other connections points, and boundry.
+    public float perpendicularSpringStrength = 5f;  // for between (edge/node) each connection point and: all other connections points, and boundry.
+    public float edgeSpacingStrength = 1f; // for between endpoints on the same node
+    public float boundrySpacingStrength = 1f; // for between endpoints on the same node
+    public float idealEdgeSpacing = 0.05f;
     public float idealEdgeLength = 0.2f;
 
+    private IEnumerator InitialSolverRoutine()
+    {
+        TopologyLayout initialOrderingLayout = null;
+        System.Exception exception = null;
+        TopologyLayoutSolver solver = new TopologyLayoutSolver(topo);
+        System.Threading.CancellationToken cancellationToken = new System.Threading.CancellationToken();
+        yield return solver.SolveAsync(cancellationToken).ToCoroutine(
+            value => initialOrderingLayout = value,
+            ex => exception = ex);
+
+        Debug.Log("TopologyLayoutSolver solved");
+        if (exception != null)
+        {
+            Debug.LogException(exception);
+          //  yield break;
+        }
+        Debug.Log("TopologyLayoutSolver solved");
+        topo.AssignInitialLayout(initialOrderingLayout.RowByNodeIndex, initialOrderingLayout.ColumnByConnectionIndex);
+        Debug.Log("AssignInitialLayout complete");
+        yield return LayoutRoutine();
+    }
     private IEnumerator LayoutRoutine()
     {
         const int stepsPerFrame = 6;
@@ -877,9 +1303,11 @@ public class TopoViz : MonoBehaviour
 
             if (!runSimulation || topo == null)
                 continue;
-
             for (int step = 0; step < stepsPerFrame; step++)
             {
+                foreach (Topology.Node node in topo.nodes)
+                    node.ResetForceAccumulators();
+
                 foreach (Topology.Edge edge in topo.edges)
                 {
                     HandleEndpoint(edge, true);
@@ -888,10 +1316,81 @@ public class TopoViz : MonoBehaviour
 
                 foreach (Topology.Node node in topo.nodes)
                 {
+                   ApplySpacingSpringForces(node);
+                }
+                foreach (Topology.Node node in topo.nodes)
+                {
+                    node.ResolveAccumulatedForces();
+
                     node.UpdatePositionAndRotation(false);
                     node.ApplyDamping(damping);
                 }
             }
+
+        }
+
+        void ApplySpacingSpringForces(Topology.Node node)
+        {
+            if (node.edgeSpacing == null || node.edgeSpacing.Length == 0)
+                return;
+
+            Vector2 axis = new Vector2(Mathf.Cos(node.rotationAngleRad), Mathf.Sin(node.rotationAngleRad));
+
+            for (int i = 1; i < node.edgeSpacing.Length; i++)
+            {
+                float delta = node.edgeSpacing[i] - idealEdgeSpacing;//positive when spce is too big
+
+                Vector2 force = axis * (-delta * edgeSpacingStrength * simulationSpeed);// towards start when spce is too big
+                if (delta < 0)// if spring is being compressed- we need to increase force apart towards infinity as dist approaches zero
+                {
+                    float spacing = Mathf.Max(node.edgeSpacing[i], 0.0000001f);
+                    force = axis * ((100f / spacing) * edgeSpacingStrength * simulationSpeed);// towards end (space is too small)
+                }
+
+                node.AccumulateEdgeConnectionForce(i-1, force);
+                node.AccumulateEdgeConnectionForce(i, -force);
+            }
+        }
+
+        void ApplyBoundarySpring(Vector2 position, Topology.Node node, int seqIndex)
+        {
+            float left = position.x;
+            float right = 1f - position.x;
+            float bottom = position.y;
+            float top = 1f - position.y;
+
+            float distance = left;
+            Vector2 direction = Vector2.right;
+
+            if (right < distance)
+            {
+                distance = right;
+                direction = Vector2.left;
+            }
+
+            if (bottom < distance)
+            {
+                distance = bottom;
+                direction = Vector2.up;
+            }
+
+            if (top < distance)
+            {
+                distance = top;
+                direction = Vector2.down;
+            }
+
+            const float barrierDistance = 0.05f;
+
+            if (distance >= barrierDistance)
+                return;
+
+            float strength = boundrySpacingStrength * (1f / Mathf.Max(distance, 0.0001f) - 1f / barrierDistance);
+
+            Vector2 force = direction * strength * simulationSpeed;
+
+            //node.ApplyForceToEdgeConnection(seqIndex, force);
+            node.AccumulateEdgeConnectionForce(seqIndex, force);
         }
 
         void HandleEndpoint(Topology.Edge edge, bool useNodeA)
@@ -909,10 +1408,10 @@ public class TopoViz : MonoBehaviour
 
             Vector2 nearPoint = endpointPos +
                                 (otherEndpointPos - endpointPos)*0.1f;//.normalized *
-                                //(idealEdgeLength * 0.1f);
+                                                                      //(idealEdgeLength * 0.1f);
 
             //
-            // Endpoint -> every other edge
+            // Endpoint -> every other edge that does not touch endpointNode
             //
             foreach (Topology.Edge other in topo.edges)
             {
@@ -928,12 +1427,7 @@ public class TopoViz : MonoBehaviour
                     endpointPos,
                     out float t);
 
-                ApplySpring(endpointNode,
-                            seqIndex,
-                            endpointPos,
-                            other,
-                            t,
-                            nearest);
+                ApplySpring(endpointNode, seqIndex, endpointPos, other, t, nearest);
             }
 
             //
@@ -946,10 +1440,7 @@ public class TopoViz : MonoBehaviour
 
                 Vector2 nearest = GetClosestPointOnNode(other, endpointPos, out _);
 
-                ApplySpringToNode(other,
-                                  nearest,
-                                  endpointPos,
-                                  endpointNode);
+                ApplySpringToNode(other, nearest, endpointPos, endpointNode);
             }
             //
             // Endpoint -> own node
@@ -959,10 +1450,12 @@ public class TopoViz : MonoBehaviour
 
                 ApplyEndpointToOwnNode(endpointNode, otherNode, nearPoint, nearest, otherEndpointPos);
             }
+            //endpoint -> boundry edge
+            ApplyBoundarySpring(endpointPos, endpointNode, seqIndex);
+
         }
 
         void ApplyEndpointToOwnNode(Topology.Node node, Topology.Node otherNode, Vector2 nearPoint, Vector2 nearestPoint, Vector2 otherNodeConnectionPosition)
-        //void ApplyEndpointToOwnNode(Topology.Edge edge, bool useNodeA, Vector2 endpointPos, Vector2 nearPoint, Vector2 nearestPoint)
         {
             //Topology.Node node = useNodeA ? edge.NodeA : edge.NodeB;
             //Topology.Node otherNode = useNodeA ? edge.NodeB : edge.NodeA;
@@ -981,9 +1474,9 @@ public class TopoViz : MonoBehaviour
             if (dist >= barrierRadius)
                   return;
 
-            float strength = 0.01f*springStrength * (1f / dist - 1f / barrierRadius);
+            float strength = perpendicularSpringStrength * (1f / dist - 1f / barrierRadius);
 
-            Vector2 force = -delta.normalized * strength * simulationSpeed;
+            Vector2 force = delta.normalized * strength * simulationSpeed;
 
             bool nodeFixed = topo.isNodeFixed(node.mapIndex);
             bool otherNodeFixed = topo.isNodeFixed(otherNode.mapIndex);
@@ -993,13 +1486,12 @@ public class TopoViz : MonoBehaviour
 
             if (!nodeFixed)
             {
-             //   node.ApplyForceToEdgeConnection(seqIndex, force);
-                node.ApplyForceAtPosition(nearestPoint, force);
+                node.AccumulateForceAtPosition(nearestPoint, force);
             }
 
             if (!otherNodeFixed)
             {
-                otherNode.ApplyForceAtPosition(otherNodeConnectionPosition, -force);//  .ApplyForceToEdgeConnection(otherSeqIndex, -force);
+                otherNode.AccumulateForceAtPosition(otherNodeConnectionPosition, -force);
             }
         }
 
@@ -1022,17 +1514,17 @@ public class TopoViz : MonoBehaviour
                 force *= 2f;
 
             if (!topo.isNodeFixed(node.mapIndex))
-                node.ApplyForceToEdgeConnection(seqIndex, force);
+                node.AccumulateEdgeConnectionForce(seqIndex, force);
             else
                 force *= 2f;
 
             if (!nodeAFixed)
-                otherEdge.NodeA.ApplyForceToEdgeConnection(
+                otherEdge.NodeA.AccumulateEdgeConnectionForce(
                     otherEdge.NodeA.MapEdgeIndexToSeqIndex(otherEdge.mapIndex),
                     -force * (1f - t));
 
             if (!nodeBFixed)
-                otherEdge.NodeB.ApplyForceToEdgeConnection(
+                otherEdge.NodeB.AccumulateEdgeConnectionForce(
                     otherEdge.NodeB.MapEdgeIndexToSeqIndex(otherEdge.mapIndex),
                     -force * t);
         }
@@ -1056,10 +1548,10 @@ public class TopoViz : MonoBehaviour
                 force *= 2f;
 
             if (!endPointNodeFixed)
-                endPointsNode.ApplyForceAtPosition(endpointPos, force);
+                endPointsNode.AccumulateForceAtPosition(endpointPos, force);
 
             if (!nodeFixed)
-                node.ApplyForceAtPosition(forcePos, -force);
+                node.AccumulateForceAtPosition(forcePos, -force);
         }
 
         static Vector2 ClosestPointOnLine(Vector2 a, Vector2 b, Vector2 p, out float t)
@@ -1087,614 +1579,6 @@ public class TopoViz : MonoBehaviour
         }
     }
 
-    IEnumerator outlineLayoutRoutine()
-    {
-        const int stepsPerFrame = 6;
-        while (true)
-        {
-            yield return new WaitForEndOfFrame();
-            if (!runSimulation) continue;
-            //  nodes will have a (for now single-shared constant global) moment of inertia and mass pair of values, which will determine
-            //  (when using the applied force's offset from center of mass) how much of the force applied becomes angular torque, and how much a linear force.
-            for (int step = 0; step < stepsPerFrame; step++)
-            {
-
-                //for each connection endpoint
-                //    loop all other connections
-                //      if node at current endpoint shared with other connection: skip
-                //      get distance from endpoint to nearest point on other connection line
-                //      push/pull effect- spring like- constant ideal length for all (for now). force/impulse applied to:
-                //          a) the node, at the current endpoint position
-                //          b) the other connection's nearest point.  This force/impulse will be transfered to both the nodes at the other connection's endpoints.
-                //    
-                //    loop all nodes
-                //      skip the two this connection touches
-                //      get distance from endpoint to nearest point on other node lines
-                //      spring effect like above
-                //      push/pull effect- spring like- constant ideal length for all (for now). force/impulse applied to:
-                //          a) the node, at the current endpoint position
-                //          b) the other node, at the nearest point on the line (may be between endpoints).
-            }
-        }
-    }
-
-    IEnumerator crapLayoutRoutine()
-    {
-        const int stepsPerFrame = 6;
-
-        const float dMin = 0.1f;
-        const float dMax = 0.1f;
-
-        const float repulsionStrength = 2f;
-        const float attractionStrength = 2f;
-
-        while (true)
-        {
-            yield return new WaitForEndOfFrame();
-            if (!runSimulation) continue;
-            for (int step = 0; step < stepsPerFrame; step++)
-            {
-                for (int i = 0; i < topo.nodes.Length; i++)
-                    topo.nodes[i].Reset();
-
-                for (int i = 0; i < topo.edges.Length; i++)
-                {
-                    Topology.Edge e1 = topo.edges[i];
-
-                    Vector2 a1 = e1.GetNodeAConnectionPosition();
-                    Vector2 a2 = e1.GetNodeBConnectionPosition();
-
-                    for (int j = i + 1; j < topo.edges.Length; j++)
-                    {
-                        Topology.Edge e2 = topo.edges[j];
-
-                        if (SharesNode(e1, e2))
-                            continue;
-
-                        Vector2 b1 = e2.GetNodeAConnectionPosition();
-                        Vector2 b2 = e2.GetNodeBConnectionPosition();
-
-                        float d = SegmentDistance(a1, a2, b1, b2, out Vector2 dir);
-
-                        Vector2 force = Vector2.zero;
-
-                        if (d < dMin)
-                        {
-                            // strong repulsion (prevents crossing)
-                            float t = (dMin - d) / (d + 1e-4f);
-                            force = dir * (repulsionStrength * t);
-                        }
-                        else if (d > dMax)
-                        {
-                            // weak attraction (keeps graph compact)
-                            float t = (d - dMax);
-                            force = -dir * (attractionStrength * t);
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                        force *= simulationSpeed;
-                        ApplyEdgeForce(e1, force);
-                        ApplyEdgeForce(e2, -force);
-                    }
-                }
-
-                for (int n = 0; n < topo.nodes.Length; n++)
-                {
-                    topo.nodes[n].ApplyDamping(damping);
-                    topo.nodes[n].UpdatePositionAndRotation(true);
-                }
-            }
-
-            
-        }
-
-        float SegmentDistance(Vector2 a1, Vector2 a2, Vector2 b1, Vector2 b2, out Vector2 dir)
-        {
-            Vector2 c1, c2;
-
-            float d = Mathf.Sqrt(SegmentToSegmentSquared(a1, a2, b1, b2, out c1, out c2));
-
-            dir = c2 - c1;
-            float len = dir.magnitude;
-            if (len < 1e-6f)
-            {
-                dir = Vector2.zero;
-                return d;
-            }
-
-            dir /= len;
-            return d;
-        }
-        float SegmentToSegmentSquared(
-    Vector2 p1, Vector2 p2,
-    Vector2 q1, Vector2 q2,
-    out Vector2 c1, out Vector2 c2)
-        {
-            // standard closest points between segments
-            Vector2 d1 = p2 - p1;
-            Vector2 d2 = q2 - q1;
-            Vector2 r = p1 - q1;
-
-            float a = Vector2.Dot(d1, d1);
-            float e = Vector2.Dot(d2, d2);
-            float f = Vector2.Dot(d2, r);
-
-            float s, t;
-
-            if (a <= 1e-8f && e <= 1e-8f)
-            {
-                c1 = p1;
-                c2 = q1;
-                return (c1 - c2).sqrMagnitude;
-            }
-
-            if (a <= 1e-8f)
-            {
-                s = 0;
-                t = Mathf.Clamp01(f / e);
-            }
-            else
-            {
-                float c = Vector2.Dot(d1, r);
-
-                if (e <= 1e-8f)
-                {
-                    t = 0;
-                    s = Mathf.Clamp01(-c / a);
-                }
-                else
-                {
-                    float b = Vector2.Dot(d1, d2);
-                    float denom = a * e - b * b;
-
-                    if (denom != 0)
-                        s = Mathf.Clamp01((b * f - c * e) / denom);
-                    else
-                        s = 0;
-
-                    t = (b * s + f) / e;
-
-                    if (t < 0)
-                    {
-                        t = 0;
-                        s = Mathf.Clamp01(-c / a);
-                    }
-                    else if (t > 1)
-                    {
-                        t = 1;
-                        s = Mathf.Clamp01((b - c) / a);
-                    }
-                }
-            }
-
-            c1 = p1 + d1 * s;
-            c2 = q1 + d2 * t;
-
-            return (c1 - c2).sqrMagnitude;
-        }
-
-        void ApplyEdgeForce(Topology.Edge e, Vector2 force)
-        {
-            ApplyAtNodeConnection(e.NodeA, e, force, true);
-            ApplyAtNodeConnection(e.NodeB, e, -force, false);
-            void ApplyAtNodeConnection(Topology.Node node, Topology.Edge e, Vector2 force, bool isNodeA)
-            {
-                int seqIndex = node.MapEdgeIndexToSeqIndex(e.mapIndex);
-
-                // linear response
-             //   node.ApplyForce(force);
-
-                // rotational response (prevents edge “shearing through” node)
-                node.ApplyForceToEdgeConnection(seqIndex, force);
-            }
-        }
-        bool SharesNode(Topology.Edge a, Topology.Edge b)
-        {
-            return a.nodeAidx == b.nodeAidx ||
-                   a.nodeAidx == b.nodeBidx ||
-                   a.nodeBidx == b.nodeAidx ||
-                   a.nodeBidx == b.nodeBidx;
-        }
-    }
-
-    private IEnumerator OLDLayoutRoutine()
-    {
-        //memory reuse
-        Vector2 p1;
-        Vector2 p2;
-        Vector2 p3;
-        Vector2 p4;
-
-        while (true)
-        {
-            if (runSimulation && topo != null)
-            {
-                ApplyForces();
-                UpdateTopology();
-            }
-            yield return null;
-        }
-
-
-        Vector2 SpringForceOnA(Vector2 posA, Vector2 posB)
-        {
-            Vector2 offset = posB - posA;
-            if (offset == Vector2.zero)
-            {
-                Debug.LogWarning("Overlapping nodes at pos: "+ posA );
-                return Vector2.one;
-            }
-            float dist = offset.magnitude;
-            Vector2 dir = offset / dist;
-            float diffFromIdeal = dist - idealEdgeLength;
-            //diffFromIdeal = Mathf.Max(diffFromIdeal, 0.001f);
-           // diffFromIdeal *= diffFromIdeal;
-            //negative means too close- push A away from B
-            return dir * diffFromIdeal;
-        }
-        void ApplyForces()
-        {
-            // 1. Node-Node Repulsion (Keep nodes away from each other)
-            for (int i = 0; i < topo.nodes.Length; i++)
-            {
-                Topology.Node nodeA = topo.nodes[i];
-                for (int j = i + 1; j < topo.nodes.Length; j++)
-                {
-                    Topology.Node nodeB = topo.nodes[j];
-                    Vector2 forceOnA = SpringForceOnA(nodeA.uvPosition, nodeB.uvPosition) * springStrength * Time.fixedDeltaTime * simulationSpeed;
-                    nodeA.ApplyForce(forceOnA );
-                    nodeB.ApplyForce(-forceOnA);
-                }
-            }
-
-            foreach (var edge in topo.edges)
-            {
-                Vector2 posA = edge.GetNodeAConnectionPosition();
-                Vector2 posB = edge.GetNodeBConnectionPosition();
-                Vector2 diff = posB - posA;
-                float dist = diff.magnitude;
-
-                Vector2 forceDir = diff.normalized;
-                Vector2 springForce = forceDir * (dist - idealEdgeLength) * springStrength;
-
-                // Find the local indices in the node's edgeSequence
-                int seqIdxA = edge.NodeA.MapEdgeIndexToSeqIndex(edge.mapIndex);
-                int seqIdxB = edge.NodeB.MapEdgeIndexToSeqIndex(edge.mapIndex);
-
-                edge.NodeA.ApplyForceToEdgeConnection(seqIdxA, springForce * Time.fixedDeltaTime * simulationSpeed);
-                edge.NodeB.ApplyForceToEdgeConnection(seqIdxB, -springForce * Time.fixedDeltaTime * simulationSpeed);
-
-                // Alignment Torque: Encourage node to rotate toward the edge neighbor
-                ApplyAlignmentTorque(edge.NodeA, seqIdxA, posB);
-                ApplyAlignmentTorque(edge.NodeB, seqIdxB, posA);
-            }
-        }
-
-        void ApplyForcesFULL()
-        {
-            // 1. Node-Node Repulsion (Keep nodes away from each other)
-            for (int i = 0; i < topo.nodes.Length; i++)
-            {
-                Topology.Node nodeA = topo.nodes[i];
-                for (int j = i + 1; j < topo.nodes.Length; j++)
-                {
-                    Vector2 dir = nodeA.uvPosition - topo.nodes[j].uvPosition;
-                    float dist = Mathf.Max(dir.magnitude, 0.01f);
-                    Vector2 force = (dir.normalized * nodeRepulsion) / (dist * dist);
-
-                    nodeA.ApplyForce(force * Time.fixedDeltaTime);
-                    topo.nodes[j].ApplyForce(-force * Time.fixedDeltaTime);
-                    
-                }
-                
-                foreach (var edge in topo.edges)// we ALSO want to repel node from the center of edges, so they dont touch them.
-                {
-                    if (edge.NodeA == nodeA || edge.NodeB == nodeA) continue;
-                    Vector2 posA = edge.GetNodeAConnectionPosition();
-                    Vector2 posB = edge.GetNodeBConnectionPosition();
-                    Vector2 center = (posB - posA) * 0.5f;
-                    Vector2 dir = nodeA.uvPosition - center;
-                    float dist = Mathf.Max(dir.magnitude, 0.001f);
-                    if (dist < 0.1f)
-                    {
-                        Vector2 force = (dir.normalized * nodeEdgeRepulsion) / (dist * dist);
-
-                        nodeA.ApplyForce(force * Time.fixedDeltaTime);
-                    }
-                }
-                ApplyPerpendicularBias(nodeA);
-            }
-            void ApplyPerpendicularBias(Topology.Node node)
-            {
-                int count = node.edgeSequence.Length;
-                if (count == 0) return;
-
-                for (int i = 0; i < count; i++)
-                {
-                    Vector2 offset = node.GetEdgeConnectionOffset(i);
-                    float len = offset.magnitude;
-                    if (len < 0.0001f) continue;
-
-                    Vector2 radial = offset / len;
-
-                    // get edge direction at this connection
-                    Topology.Edge edge = node.EdgeInSequence(i);
-
-                    Vector2 edgeDir = edge.GetDirectionFromNode(node); // should be normalized
-
-                    // perpendicular condition: dot = 0
-                    float d = Vector2.Dot(radial, edgeDir);
-
-                    // tangential direction around node
-                    Vector2 tangent = new Vector2(-radial.y, radial.x);
-
-                    // drive toward dot = 0
-                    Vector2 force = -tangent * d * perpendicularStrength * Time.fixedDeltaTime;
-
-                    node.ApplyForceToEdgeConnection(i, force);
-                }
-            }
-            // 2. Edge Springs & Alignment Torque
-            foreach (var edge in topo.edges)
-            {
-                Vector2 posA = edge.GetNodeAConnectionPosition();
-                Vector2 posB = edge.GetNodeBConnectionPosition();
-                Vector2 diff = posB - posA;
-                float dist = diff.magnitude;
-
-                Vector2 forceDir = diff.normalized;
-                Vector2 springForce = forceDir * (dist - idealEdgeLength) * springStrength;
-
-                // Find the local indices in the node's edgeSequence
-                int seqIdxA = edge.NodeA.MapEdgeIndexToSeqIndex(edge.mapIndex);
-                int seqIdxB = edge.NodeB.MapEdgeIndexToSeqIndex(edge.mapIndex);
-
-                edge.NodeA.ApplyForceToEdgeConnection(seqIdxA, springForce * Time.fixedDeltaTime);
-                edge.NodeB.ApplyForceToEdgeConnection(seqIdxB, -springForce * Time.fixedDeltaTime);
-
-                // Alignment Torque: Encourage node to rotate toward the edge neighbor
-                ApplyAlignmentTorque(edge.NodeA, seqIdxA, posB);
-                ApplyAlignmentTorque(edge.NodeB, seqIdxB, posA);
-            }
-
-            // 3. Edge-Edge Repulsion (The "Untangler")
-            // We compare edges; if they are crossing or near-crossing, push them away.
-            if (!Mathf.Approximately(edgeRepulsion, 0))
-            {
-                for (int i = 0; i < topo.edges.Length; i++)
-                {
-                    for (int j = i + 1; j < topo.edges.Length; j++)
-                    {
-                        Topology.Edge e1 = topo.edges[i];
-                        Topology.Edge e2 = topo.edges[j];
-                        if (e1.isTeleport || e2.isTeleport) continue;
-                        if (topo.EdgesShareBothNodesAndAreSequentialInThem(e1, e2)) continue;
-                        HandleEdgeRepulsion(e1, e2);
-                        HandleCrossingEdges(e1, e2);
-                    }
-                }
-            }
-        }
-
-        void ApplyAlignmentTorque(Topology.Node node, int seqIdx, Vector2 targetPos)
-        {
-            Vector2 toTarget = (targetPos - node.uvPosition).normalized;
-            Vector2 connectionDir = new Vector2(Mathf.Cos(node.rotationAngleRad), Mathf.Sin(node.rotationAngleRad)); //(node.GetEdgeConnectionPosition(seqIdx) - node.uvPosition).normalized;
-
-            // 2D Cross product gives us the "direction" of the rotation needed
-            float angleDiff = Vector2.SignedAngle(connectionDir, toTarget);
-            node.ApplyTorqueToNode(angleDiff * alignmentTorque * 0.01f * Time.fixedDeltaTime);
-        }
-
-
-        void HandleEdgeRepulsion(Topology.Edge e1, Topology.Edge e2)
-        {
-            // 1. Get current segment positions
-            p1 = e1.GetNodeAConnectionPosition();
-            p2 = e1.GetNodeBConnectionPosition();
-            p3 = e2.GetNodeAConnectionPosition();
-            p4 = e2.GetNodeBConnectionPosition();
-            //  if (!SegmentsIntersect(p1, p2, p3, p4)) return;
-            // 2. Find closest points between segments (p1-p2) and (p3-p4)
-            // t and s are normalized values (0 to 1) along the length of the edges
-            float t, s;
-            float distSq = ClosestPointsOnSegments(p1, p2, p3, p4, out t, out s);
-            float dist = Mathf.Sqrt(distSq);
-
-            // 3. Apply force if they are too close (or crossing)
-            // We use a threshold to provide a "buffer" zone
-            float threshold = idealEdgeLength * 0.5f;
-            if (dist < threshold)
-            {
-                Vector2 posOnE1 = Vector2.Lerp(p1, p2, t);
-                Vector2 posOnE2 = Vector2.Lerp(p3, p4, s);
-
-                // Calculate direction to push: from e2 point toward e1 point
-                Vector2 pushDir;
-                if (dist > 0.0001f)
-                    pushDir = (posOnE1 - posOnE2) / dist;
-                else
-                    // If perfectly overlapping, push in an arbitrary perpendicular direction
-                    pushDir = Vector2.Perpendicular(p2 - p1).normalized;
-
-                // Force magnitude increases as they get closer (inverse square or linear)
-                float forceMag = (threshold - dist) * edgeRepulsion;
-                Vector2 finalForce = pushDir * forceMag * Time.fixedDeltaTime;
-
-                // 4. Distribute forces to nodes based on proximity to the contact point
-                // If the contact is at NodeA (t=0), NodeA gets all the force. 
-                // If in the middle (t=0.5), both get half.
-                e1.NodeA.ApplyForce(finalForce * (1f - t));
-                e1.NodeB.ApplyForce(finalForce * t);
-
-                e2.NodeA.ApplyForce(-finalForce * (1f - s));
-                e2.NodeB.ApplyForce(-finalForce * s);
-            }
-
-
-            // Math helper: Closest distance squared between two 2D segments
-            float ClosestPointsOnSegments(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out float t, out float s)
-            {
-                Vector2 d1 = p2 - p1;
-                Vector2 d2 = p4 - p3;
-                Vector2 r = p1 - p3;
-                float a = Vector2.Dot(d1, d1);
-                float e = Vector2.Dot(d2, d2);
-                float f = Vector2.Dot(d2, r);
-
-                float epsilon = 0.00001f;
-
-                if (a <= epsilon && e <= epsilon)
-                {
-                    t = s = 0f;
-                    return Vector2.SqrMagnitude(p1 - p3);
-                }
-                if (a <= epsilon)
-                {
-                    t = 0f;
-                    s = Mathf.Clamp(f / e, 0f, 1f);
-                }
-                else
-                {
-                    float c = Vector2.Dot(d1, r);
-                    if (e <= epsilon)
-                    {
-                        s = 0f;
-                        t = Mathf.Clamp(-c / a, 0f, 1f);
-                    }
-                    else
-                    {
-                        float b = Vector2.Dot(d1, d2);
-                        float denom = a * e - b * b;
-                        if (denom != 0)
-                        {
-                            t = Mathf.Clamp((b * f - c * e) / denom, 0f, 1f);
-                        }
-                        else
-                        {
-                            t = 0f; // Parallel
-                        }
-                        s = Mathf.Clamp((b * t + f) / e, 0f, 1f);
-                    }
-                }
-                return Vector2.SqrMagnitude((p1 + d1 * t) - (p3 + d2 * s));
-            }
-        }
-        void HandleCrossingEdges(Topology.Edge e1, Topology.Edge e2)
-        {
-            if (!SegmentsIntersect(p1, p2, p3, p4)) return;
-
-            Vector2 d1 = p2 - p1;
-            Vector2 d2 = p4 - p3;
-
-            float len1 = d1.magnitude;
-            float len2 = d2.magnitude;
-            if (len1 < 0.0001f || len2 < 0.0001f) return;
-
-            d1 /= len1;
-            d2 /= len2;
-
-            Vector2 n1 = new Vector2(-d1.y, d1.x);
-            Vector2 n2 = new Vector2(-d2.y, d2.x);
-
-            float angleFactor = 1f - Mathf.Abs(Vector2.Dot(d1, d2));
-            float strength = edgeUncrossingStength * angleFactor * Time.fixedDeltaTime;
-
-            float sideA1 = Mathf.Sign(Vector2.Dot(p3 - p1, n1));
-            float sideA2 = Mathf.Sign(Vector2.Dot(p4 - p1, n1));
-
-            float sideB1 = Mathf.Sign(Vector2.Dot(p1 - p3, n2));
-            float sideB2 = Mathf.Sign(Vector2.Dot(p2 - p3, n2));
-
-            if (sideA1 == 0) sideA1 = 1;
-            if (sideA2 == 0) sideA2 = -1;
-            if (sideB1 == 0) sideB1 = 1;
-            if (sideB2 == 0) sideB2 = -1;
-
-            Vector2 fA1 = n1 * sideA1 * strength;
-            Vector2 fA2 = n1 * sideA2 * strength;
-
-            Vector2 fB1 = n2 * sideB1 * strength;
-            Vector2 fB2 = n2 * sideB2 * strength;
-
-            // --- resolve sequence indices 
-            int e1SeqA = e1.NodeA.MapEdgeIndexToSeqIndex(e1.mapIndex);
-            int e1SeqB = e1.NodeB.MapEdgeIndexToSeqIndex(e1.mapIndex);
-
-            int e2SeqA = e2.NodeA.MapEdgeIndexToSeqIndex(e2.mapIndex);
-            int e2SeqB = e2.NodeB.MapEdgeIndexToSeqIndex(e2.mapIndex);
-
-            // apply forces 
-            e1.NodeA.ApplyForceToEdgeConnection(e1SeqA, fA1);
-            e1.NodeB.ApplyForceToEdgeConnection(e1SeqB, fA2);
-
-            e2.NodeA.ApplyForceToEdgeConnection(e2SeqA, fB1);
-            e2.NodeB.ApplyForceToEdgeConnection(e2SeqB, fB2);
-
-            // --- flip correction (torque) ---
-            if (sideA1 == sideA2)
-            {
-                Vector2 torque = n1 * strength * 0.5f;
-                e1.NodeA.ApplyForceToEdgeConnection(e1SeqA, torque);
-                e1.NodeB.ApplyForceToEdgeConnection(e1SeqB, -torque);
-            }
-
-            if (sideB1 == sideB2)
-            {
-                Vector2 torque = n2 * strength * 0.5f;
-                e2.NodeA.ApplyForceToEdgeConnection(e2SeqA, torque);
-                e2.NodeB.ApplyForceToEdgeConnection(e2SeqB, -torque);
-            }
-
-            bool SegmentsIntersect(Vector2 a1, Vector2 a2, Vector2 b1, Vector2 b2)
-            {
-                float o1 = Orient(a1, a2, b1);
-                float o2 = Orient(a1, a2, b2);
-                float o3 = Orient(b1, b2, a1);
-                float o4 = Orient(b1, b2, a2);
-
-                if (o1 * o2 < 0f && o3 * o4 < 0f)
-                {
-                    return true; // proper intersection
-                }
-
-                // collinear cases
-                if (o1 == 0f && OnSegment(a1, a2, b1)) return true;
-                if (o2 == 0f && OnSegment(a1, a2, b2)) return true;
-                if (o3 == 0f && OnSegment(b1, b2, a1)) return true;
-                if (o4 == 0f && OnSegment(b1, b2, a2)) return true;
-
-                return false;
-
-
-                static float Orient(Vector2 a, Vector2 b, Vector2 c)
-                {
-                    // cross((b - a), (c - a))
-                    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-                }
-
-                static bool OnSegment(Vector2 a, Vector2 b, Vector2 p)
-                {
-                    return p.x >= Mathf.Min(a.x, b.x) &&
-                           p.x <= Mathf.Max(a.x, b.x) &&
-                           p.y >= Mathf.Min(a.y, b.y) &&
-                           p.y <= Mathf.Max(a.y, b.y);
-                }
-            }
-        }
-        void UpdateTopology()
-        {
-            foreach (var node in topo.nodes)
-            {
-                node.UpdatePositionAndRotation(false); // Update without immediate reset
-
-                // Apply damping/friction
-                node.ApplyDamping(damping);
-            }
-        }
-    }
 
     static public Topology BuildMediumTopology()
     {
@@ -2087,9 +1971,10 @@ public class SimpleTopo
 
         //for (int i = 0; i < nodeCount; i++) connectionIndicesInNodes.Add(new List<int>());
 
-        
-      //  Dictionary<NodeConnection, int> connectionLookup = new Dictionary<NodeConnection, int>();
 
+        //  Dictionary<NodeConnection, int> connectionLookup = new Dictionary<NodeConnection, int>();
+
+        string log1 = "generating: ";
         for (int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++)
         {
             List<int> connections = nodeConnections[nodeIndex];
@@ -2097,9 +1982,11 @@ public class SimpleTopo
             List<int> connectionIndicies = new List<int>();
             connectionIndicesInNodes.Add(connectionIndicies);
             Dictionary<NodeConnection, int> pairCounts = new Dictionary<NodeConnection, int>();
+            log1 += "\n node: " + nodeIndex;
             for (int i = 0; i < connections.Count; i++)
             {
                 int otherNodeIndex = connections[i];
+                log1 += "\n connection[" + i + "] in node.  ";
                 //use index 0 for all counting pairs
                 NodeConnection pairKey = new NodeConnection(nodeIndex, otherNodeIndex, 0);
                 int instanceCount=0;
@@ -2115,26 +2002,28 @@ public class SimpleTopo
                     allConnectionsList.Add(fullConnection);// populate with new 
                 }
                 connectionIndicies.Add(fullConnectionIndex);//populate list for this node
+                log1 += "allConnections Index: " + fullConnectionIndex;
             }
         }
         string log = "Connections per node";
         for (int i = 0; i < nodeCount; i++)
         {
             log += "\nNode["+i+"]: ";
-            List<int> list = connectionIndicesInNodes[i];
-            for (int j = 0; j < list.Count; j++)
+            List<int> connectionIndicesInNode = connectionIndicesInNodes[i];
+            for (int j = 0; j < connectionIndicesInNode.Count; j++)
             {
-                int idx = list[j];
+                int idx = connectionIndicesInNode[j];
                 NodeConnection conn = allConnectionsList[idx];
                 log += conn+ " , ";
             }
         }
+        Debug.Log(log1);
         Debug.Log(log);
     }
 
 
     /// <summary>
-    /// This iterator will attmept to go through all variations of connection orders that are valid (meaning, the order of ALL connections, will not contradict the order of connections defined by any single node.
+    /// This iterator will attmept to go through all variations of connection orders that are valid (meaning, the order of ALL connections, will not contradict the order of connections defined by any single node- so really we are ordering nodes.
     /// Prunes iterations to prevent iterating deeper into known invalid orderings.
     /// </summary>
     /// <param name="connectionIndicesInNodes"></param>
@@ -2142,6 +2031,19 @@ public class SimpleTopo
     /// <returns></returns>
     static IEnumerable<int[]> GenerateConnectionOrders(List<List<int>> connectionIndicesInNodes, int connectionCount, int randomSeed)
     {
+        List<int> result= new List<int>();
+        foreach(List<List<int>> nodeOrder in Permutations.PermutationsOf<List<int>>(connectionIndicesInNodes))
+        {
+            result.Clear();
+            foreach (List<int> nodeConnections in nodeOrder)
+                foreach (int connectionIndex in nodeConnections)
+                    result.Add(connectionIndex);
+            yield return result.ToArray();
+
+        }
+
+        /*
+
         List<int>[] successors = new List<int>[connectionCount];
         int[] indegree = new int[connectionCount];
 
@@ -2225,6 +2127,7 @@ public class SimpleTopo
                 used[node] = false;
             }
         }
+       */
     }
 
     static IEnumerable<int[]> GenerateNodeOrders(List<int> nodes, int index)
@@ -2325,28 +2228,45 @@ public class SimpleTopo
 
             int minRow = rowA < rowB ? rowA : rowB;
             int maxRow = rowA > rowB ? rowA : rowB;
+            //Debug.Log("Testing " + connection +" rows " + rowA + "-" + rowB);
 
             // check every row strictly between endpoints
             for (int row = minRow + 1; row < maxRow; row++)
             {
                 int nodeAtRow = nodeOrder[row];
-                //does node start and end, before or after this connection
+
 
                 int startColumn = nodeStartColumn[nodeAtRow];
                 int endColumn = nodeEndColumn[nodeAtRow];
 
+                    /*Debug.Log(
+        " middle node " + nodeAtRow +
+        " span " + nodeStartColumn[nodeAtRow] +
+        "-" + nodeEndColumn[nodeAtRow] +
+        " conn col " + connectionColumn);*/
                 if (startColumn < connectionColumn && endColumn > connectionColumn)
                 {
                     // only endpoints are allowed inside the span
                     if (nodeAtRow != connection.nodeAIndex &&
-                      nodeAtRow != connection.nodeBIndex)
+                        nodeAtRow != connection.nodeBIndex )
                     {
+                        /*Debug.Log(
+                                    "REJECT: connection " + connection +
+                                    " col " + connectionColumn +
+                                    " crosses node " + nodeAtRow +
+                                    " span " + startColumn + "-" + endColumn);*/
                         return false;
                     }
                 }
             }
         }
-
+        Debug.Log("VALID NODE ORDER: " + string.Join(",", nodeOrder));
+        Debug.Log("Node 3 connections:");
+        foreach (int idx in connectionIndicesInNodes[3])
+        {
+            Debug.Log(allConnectionsList[idx] + " column " + connectionIndexToColumn[idx]);
+        }
+        Debug.Log("VALID CONN ORDER: " + string.Join(",", connectionOrder));
         return true;
     }
 
@@ -2411,11 +2331,11 @@ public class SimpleTopo
 
         foreach (int[] connectionOrder in GenerateConnectionOrders(connectionIndicesInNodes, connectionCount, randomSeed))
         {
-            Debug.Log("Trying connection ordering" + string.Join(",", connectionOrder));
+           // Debug.Log("Trying connection ordering" + string.Join(",", connectionOrder));
             foreach (int[] nodeOrder in GenerateNodeOrders(baseNodeOrder, 0))
             {
                 List<int> nodeOrderList = new List<int>(nodeOrder);
-                Debug.Log("Trying node ordering: "+ string.Join(",",nodeOrderList));
+             //   Debug.Log("Trying node ordering: "+ string.Join(",",nodeOrderList));
                 if (ValidateNodeAndConnectionOrderingCombination(nodeOrderList,new List<int>(connectionOrder),allConnectionsList,connectionIndicesInNodes))
                 {
                     yield return (nodeOrderList, new List<int>(connectionOrder));
